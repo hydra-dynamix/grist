@@ -1,8 +1,11 @@
 //! Grist interpretation utility library.
 
+#[cfg(all(feature = "model-output", feature = "rust"))]
+pub mod compatibility;
 pub mod core;
 pub mod detect;
 pub mod ingest;
+pub mod text;
 
 #[cfg(feature = "markdown")]
 pub mod markdown;

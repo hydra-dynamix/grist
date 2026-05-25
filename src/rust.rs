@@ -24,6 +24,7 @@ pub struct RustSymbol {
     pub id: String,
     pub name: String,
     pub kind: RustSymbolKind,
+    pub language: String,
     pub path: Option<String>,
     pub range: SourceRange,
     pub visibility: RustVisibility,
@@ -140,6 +141,10 @@ pub fn parse_rust(text: &str, source: SourceInfo, options: &RustIngestOptions) -
         )]);
     };
     let root = tree.root_node();
+    let source_path = source
+        .path
+        .clone()
+        .or_else(|| Some(source.display_name.clone()));
     let mut collector = RustCollector {
         text,
         line_index: &line_index,
@@ -148,6 +153,7 @@ pub fn parse_rust(text: &str, source: SourceInfo, options: &RustIngestOptions) -
         errors: Vec::new(),
         diagnostics: Vec::new(),
         detail: options.detail,
+        source_path,
     };
     collector.walk(root, None, Vec::new(), Vec::new());
     let detail = match options.detail {
@@ -196,6 +202,7 @@ struct RustCollector<'a, 'b> {
     errors: Vec<RustParseError>,
     diagnostics: Vec<Diagnostic>,
     detail: RustDetailMode,
+    source_path: Option<String>,
 }
 
 impl RustCollector<'_, '_> {
@@ -240,7 +247,8 @@ impl RustCollector<'_, '_> {
                 id: id.clone(),
                 name,
                 kind: symbol_kind,
-                path: None,
+                language: "rust".to_string(),
+                path: self.source_path.clone(),
                 range: self.range(node),
                 visibility: self.visibility_for(node),
                 parent: parent.clone(),

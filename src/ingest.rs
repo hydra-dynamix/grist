@@ -32,6 +32,10 @@ pub struct RepoIngestReport {
     pub ignored: Vec<String>,
     pub unsupported: Vec<String>,
     pub skipped: Vec<SkippedFile>,
+    pub detected_languages: Vec<String>,
+    pub manifest_paths: Vec<String>,
+    pub lockfile_paths: Vec<String>,
+    pub test_hints: Vec<TestHint>,
 }
 
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
@@ -61,6 +65,14 @@ pub struct FileInventoryEntry {
 pub struct SkippedFile {
     pub path: String,
     pub reason: String,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TestHint {
+    pub path: String,
+    pub kind: String,
+    pub name: Option<String>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -187,6 +199,10 @@ pub fn ingest_repo(
     let ignored = Vec::new();
     let mut unsupported = Vec::new();
     let mut skipped = Vec::new();
+    let mut detected_languages = std::collections::BTreeSet::new();
+    let mut manifest_paths = Vec::new();
+    let mut lockfile_paths = Vec::new();
+    let mut test_hints = Vec::new();
 
     let mut builder = ignore::WalkBuilder::new(root);
     builder.hidden(false);
@@ -235,6 +251,13 @@ pub fn ingest_repo(
             .unwrap_or(path)
             .to_string_lossy()
             .replace('\\', "/");
+        if is_default_noisy_path(&rel) && !options.include_ignored {
+            skipped.push(SkippedFile {
+                path: rel,
+                reason: "default noisy/generated path".into(),
+            });
+            continue;
+        }
         if !matches_glob_set(&rel, include_set.as_ref(), true)
             || matches_glob_set(&rel, exclude_set.as_ref(), false)
         {
@@ -257,6 +280,22 @@ pub fn ingest_repo(
         };
         let detection = detect_path(path, &bytes, &options.limits);
         let hashes = Hashes::for_bytes(&bytes, std::str::from_utf8(&bytes).ok());
+        if let Some(language) = &detection.language {
+            detected_languages.insert(language.clone());
+        }
+        if detection.file_kind == FileKind::Manifest {
+            manifest_paths.push(rel.clone());
+        }
+        if detection.file_kind == FileKind::Lockfile {
+            lockfile_paths.push(rel.clone());
+        }
+        if detection.file_kind == FileKind::Test {
+            test_hints.push(TestHint {
+                path: rel.clone(),
+                kind: "test_file".into(),
+                name: None,
+            });
+        }
         files.push(FileInventoryEntry {
             path: rel.clone(),
             kind: detection.file_kind.clone(),
@@ -281,7 +320,14 @@ pub fn ingest_repo(
             SourceInfo::from_path(Path::new(&rel)),
             &file_options,
         );
-        diagnostics.extend(report.diagnostics.clone());
+        diagnostics.extend(
+            report
+                .diagnostics
+                .clone()
+                .into_iter()
+                .map(|diagnostic| ensure_diagnostic_source(diagnostic, &rel)),
+        );
+        collect_artifact_test_hints(&rel, &report.payload.artifact, &mut test_hints);
         if report.payload.skipped {
             skipped.push(SkippedFile {
                 path: rel.clone(),
@@ -340,6 +386,10 @@ pub fn ingest_repo(
         ignored,
         unsupported,
         skipped,
+        detected_languages: detected_languages.into_iter().collect(),
+        manifest_paths,
+        lockfile_paths,
+        test_hints,
     };
     Ok(Envelope::new(
         ArtifactKind::RepoIngest,
@@ -376,6 +426,7 @@ fn parse_detected_text(text: &str, source: SourceInfo, detection: &Detection) ->
                 },
             )
         }
+        ContentKind::Text => serde_json::to_value(crate::text::parse_text(text, source)).ok(),
         _ => None,
     }
 }
@@ -388,8 +439,63 @@ fn kind_from_str(value: &str) -> ArtifactKind {
         "model_output" => ArtifactKind::ModelOutput,
         "repo_ingest" => ArtifactKind::RepoIngest,
         "file_ingest" => ArtifactKind::FileIngest,
+        "text" => ArtifactKind::Text,
         _ => ArtifactKind::Unsupported,
     }
+}
+
+fn ensure_diagnostic_source(mut diagnostic: Diagnostic, source: &str) -> Diagnostic {
+    if diagnostic.source.is_none() {
+        diagnostic.source = Some(source.to_string());
+    }
+    diagnostic
+}
+
+fn collect_artifact_test_hints(
+    path: &str,
+    artifact: &Option<Value>,
+    test_hints: &mut Vec<TestHint>,
+) {
+    let Some(artifact) = artifact else {
+        return;
+    };
+    if artifact.get("kind").and_then(Value::as_str) != Some("rust_code") {
+        return;
+    }
+    let Some(symbols) = artifact
+        .pointer("/payload/symbols")
+        .and_then(Value::as_array)
+    else {
+        return;
+    };
+    for symbol in symbols {
+        let attrs = symbol
+            .get("attributes")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+            .collect::<Vec<_>>();
+        if attrs.iter().any(|attr| attr.contains("test")) {
+            test_hints.push(TestHint {
+                path: path.to_string(),
+                kind: "test_function".into(),
+                name: symbol
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .map(str::to_string),
+            });
+        }
+    }
+}
+
+fn is_default_noisy_path(path: &str) -> bool {
+    path == ".git"
+        || path.starts_with(".git/")
+        || path == "target"
+        || path.starts_with("target/")
+        || path == ".bathysphere"
+        || path.starts_with(".bathysphere/")
 }
 
 fn build_glob_set(globs: &[String]) -> Result<Option<globset::GlobSet>, GristError> {

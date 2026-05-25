@@ -132,7 +132,17 @@ fn cli_parses_model_output_rules_schema_and_think_blocks_end_to_end() {
 fn cli_ingests_repo_with_filters_and_external_artifacts() {
     let repo = temp_dir("repo");
     fs::create_dir_all(repo.join("src")).unwrap();
-    fs::write(repo.join("src/lib.rs"), "pub struct Thing;\n").unwrap();
+    fs::write(
+        repo.join("src/lib.rs"),
+        "#[test]\nfn it_works() {}\npub struct Thing;\n",
+    )
+    .unwrap();
+    fs::write(
+        repo.join("Cargo.toml"),
+        "[package]\nname = \"fixture\"\nversion = \"0.1.0\"\n",
+    )
+    .unwrap();
+    fs::write(repo.join("Cargo.lock"), "# lock\n").unwrap();
     fs::write(repo.join("README.md"), "# Repo\n").unwrap();
     fs::write(repo.join("skip.json"), "{\"skip\":true}\n").unwrap();
     let artifact_dir = repo.join("artifacts");
@@ -142,16 +152,52 @@ fn cli_ingests_repo_with_filters_and_external_artifacts() {
         repo.to_str().unwrap(),
         "--include",
         "src/**",
+        "--include",
+        "Cargo.*",
         "--external-artifact-dir",
         artifact_dir.to_str().unwrap(),
     ]);
     assert_eq!(output["kind"], "repo_ingest");
-    assert_eq!(output["payload"]["artifacts"].as_array().unwrap().len(), 1);
+    assert_eq!(output["payload"]["detected_languages"][0], "rust");
+    assert!(
+        output["payload"]["manifest_paths"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|p| p == "Cargo.toml")
+    );
+    assert!(
+        output["payload"]["lockfile_paths"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|p| p == "Cargo.lock")
+    );
+    assert!(
+        output["payload"]["test_hints"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|hint| hint["name"] == "it_works")
+    );
+    assert_eq!(output["payload"]["artifacts"].as_array().unwrap().len(), 3);
     let artifact_ref = output["payload"]["artifacts"][0]["artifact_ref"]
         .as_str()
         .unwrap();
     assert!(Path::new(artifact_ref).exists());
     assert!(output["payload"]["artifacts"][0]["artifact"].is_null());
+}
+
+#[test]
+fn cli_ingests_plain_text_blocks_for_research_chain_documents() {
+    let output = run_stdin(
+        &["ingest", "file", "-", "--filename", "notes.txt"],
+        "first block\n\nsecond block\n",
+    );
+    assert_eq!(output["kind"], "file_ingest");
+    let artifact = &output["payload"]["artifact"];
+    assert_eq!(artifact["kind"], "text");
+    assert_eq!(artifact["payload"]["blocks"].as_array().unwrap().len(), 2);
 }
 
 #[test]

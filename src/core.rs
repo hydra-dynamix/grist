@@ -36,6 +36,7 @@ pub enum ArtifactKind {
     ModelOutput,
     RepoIngest,
     FileIngest,
+    Text,
     Unsupported,
 }
 

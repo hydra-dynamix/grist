@@ -36,6 +36,10 @@ pub fn list_schemas() -> Vec<SchemaEntry> {
             schema_version: crate::core::SchemaVersion::RUST_CODE_V1.into(),
         },
         SchemaEntry {
+            name: "text".into(),
+            schema_version: "grist/text/v1".into(),
+        },
+        SchemaEntry {
             name: "serialization-envelope".into(),
             schema_version: crate::core::SchemaVersion::ENVELOPE_V1.into(),
         },
@@ -75,6 +79,7 @@ pub fn schema_json(name: &str) -> Option<serde_json::Value> {
         }
         #[cfg(feature = "rust")]
         "rust-code" => Some(serde_json::to_value(schema_for!(crate::rust::RustFile)).ok()?),
+        "text" => Some(serde_json::to_value(schema_for!(crate::text::TextDocument)).ok()?),
         #[cfg(feature = "serialization")]
         "serialization-envelope" => Some(
             serde_json::to_value(schema_for!(
@@ -145,6 +150,7 @@ mod tests {
                 "rust-code",
                 include_str!("../schemas/grist.rust-code.v1.schema.json"),
             ),
+            ("text", include_str!("../schemas/grist.text.v1.schema.json")),
             (
                 "serialization-envelope",
                 include_str!("../schemas/grist.serialization-envelope.v1.schema.json"),
