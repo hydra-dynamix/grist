@@ -4,4 +4,32 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
 
+[features]
+default = ["markdown", "rust", "serialization", "model-output", "schemas"]
+markdown = ["dep:pulldown-cmark", "dep:serde_yaml"]
+rust = ["dep:tree-sitter", "dep:tree-sitter-rust"]
+serialization = ["dep:serde_yaml", "dep:toml", "dep:jsonschema"]
+model-output = []
+schemas = ["dep:schemars"]
+cli = ["dep:clap"]
+
 [dependencies]
+clap = { version = "4.5", features = ["derive"], optional = true }
+globset = "0.4"
+ignore = "0.4"
+jsonschema = { version = "0.26", optional = true }
+pulldown-cmark = { version = "0.12", features = ["serde"], optional = true }
+schemars = { version = "0.8", features = ["derive"], optional = true }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = { version = "0.9", optional = true }
+sha2 = "0.10"
+thiserror = "2"
+toml = { version = "0.8", optional = true }
+tree-sitter = { version = "0.24", optional = true }
+tree-sitter-rust = { version = "0.23", optional = true }
+
+[[bin]]
+name = "grist"
+path = "src/main.rs"
+required-features = ["cli"]

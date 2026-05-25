@@ -1,4 +1,18 @@
-//! Grist library crate.
+//! Grist interpretation utility library.
+
+pub mod core;
+pub mod detect;
+pub mod ingest;
+
+#[cfg(feature = "markdown")]
+pub mod markdown;
+#[cfg(feature = "model-output")]
+pub mod model_output;
+#[cfg(feature = "rust")]
+pub mod rust;
+pub mod schema;
+#[cfg(feature = "serialization")]
+pub mod serialization;
 
 /// Returns the crate version from Cargo metadata.
 pub fn version() -> &'static str {
