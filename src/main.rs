@@ -45,6 +45,11 @@ enum ParseCommand {
         #[arg(long, value_enum, default_value_t = RustDetailArg::Semantic)]
         detail: RustDetailArg,
     },
+    Python {
+        input: String,
+        #[arg(long, value_enum, default_value_t = PythonDetailArg::Semantic)]
+        detail: PythonDetailArg,
+    },
     Json {
         input: String,
         #[arg(long, value_enum, default_value_t = SerializationFormatArg::Json)]
@@ -104,6 +109,14 @@ enum RustDetailArg {
 }
 
 #[cfg(feature = "cli")]
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum PythonDetailArg {
+    Semantic,
+    SemanticWithSyntax,
+    SyntaxDebug,
+}
+
+#[cfg(feature = "cli")]
 #[derive(Subcommand)]
 enum SchemaCommand {
     List,
@@ -150,6 +163,23 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     "grist.cli",
                     "feature.disabled",
                     "rust feature is disabled",
+                ))?;
+            }
+            ParseCommand::Python { input, detail } => {
+                let (text, source) = read_text_input(&input, None)?;
+                #[cfg(feature = "python")]
+                print_json(&grist::python::parse_python(
+                    &text,
+                    source,
+                    &grist::python::PythonIngestOptions {
+                        detail: detail.into(),
+                    },
+                ))?;
+                #[cfg(not(feature = "python"))]
+                print_json(&Diagnostic::error(
+                    "grist.cli",
+                    "feature.disabled",
+                    "python feature is disabled",
                 ))?;
             }
             ParseCommand::Json {
@@ -305,6 +335,16 @@ impl From<SerializationFormatArg> for grist::serialization::SerializationFormat 
 }
 
 #[cfg(feature = "cli")]
+impl From<PythonDetailArg> for grist::python::PythonDetailMode {
+    fn from(value: PythonDetailArg) -> Self {
+        match value {
+            PythonDetailArg::Semantic => Self::Semantic,
+            PythonDetailArg::SemanticWithSyntax => Self::SemanticWithSyntax,
+            PythonDetailArg::SyntaxDebug => Self::SyntaxDebug,
+        }
+    }
+}
+
 impl From<RustDetailArg> for grist::rust::RustDetailMode {
     fn from(value: RustDetailArg) -> Self {
         match value {

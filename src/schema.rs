@@ -36,6 +36,10 @@ pub fn list_schemas() -> Vec<SchemaEntry> {
             schema_version: crate::core::SchemaVersion::RUST_CODE_V1.into(),
         },
         SchemaEntry {
+            name: "python-code".into(),
+            schema_version: crate::core::SchemaVersion::PYTHON_CODE_V1.into(),
+        },
+        SchemaEntry {
             name: "text".into(),
             schema_version: "grist/text/v1".into(),
         },
@@ -53,6 +57,10 @@ pub fn list_schemas() -> Vec<SchemaEntry> {
         },
         SchemaEntry {
             name: "rust-code-envelope".into(),
+            schema_version: crate::core::SchemaVersion::ENVELOPE_V1.into(),
+        },
+        SchemaEntry {
+            name: "python-code-envelope".into(),
             schema_version: crate::core::SchemaVersion::ENVELOPE_V1.into(),
         },
     ]
@@ -79,6 +87,8 @@ pub fn schema_json(name: &str) -> Option<serde_json::Value> {
         }
         #[cfg(feature = "rust")]
         "rust-code" => Some(serde_json::to_value(schema_for!(crate::rust::RustFile)).ok()?),
+        #[cfg(feature = "python")]
+        "python-code" => Some(serde_json::to_value(schema_for!(crate::python::PythonFile)).ok()?),
         "text" => Some(serde_json::to_value(schema_for!(crate::text::TextDocument)).ok()?),
         #[cfg(feature = "serialization")]
         "serialization-envelope" => Some(
@@ -104,6 +114,13 @@ pub fn schema_json(name: &str) -> Option<serde_json::Value> {
         #[cfg(feature = "rust")]
         "rust-code-envelope" => Some(
             serde_json::to_value(schema_for!(crate::core::Envelope<crate::rust::RustFile>)).ok()?,
+        ),
+        #[cfg(feature = "python")]
+        "python-code-envelope" => Some(
+            serde_json::to_value(schema_for!(
+                crate::core::Envelope<crate::python::PythonFile>
+            ))
+            .ok()?,
         ),
         _ => None,
     }
@@ -166,6 +183,14 @@ mod tests {
             (
                 "rust-code-envelope",
                 include_str!("../schemas/grist.rust-code-envelope.v1.schema.json"),
+            ),
+            (
+                "python-code",
+                include_str!("../schemas/grist.python-code.v1.schema.json"),
+            ),
+            (
+                "python-code-envelope",
+                include_str!("../schemas/grist.python-code-envelope.v1.schema.json"),
             ),
         ];
         for (name, checked_in) in fixtures {

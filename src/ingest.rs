@@ -415,6 +415,13 @@ fn parse_detected_text(text: &str, source: SourceInfo, detection: &Detection) ->
             &crate::rust::RustIngestOptions::default(),
         ))
         .ok(),
+        #[cfg(feature = "python")]
+        ContentKind::Python => serde_json::to_value(crate::python::parse_python(
+            text,
+            source,
+            &crate::python::PythonIngestOptions::default(),
+        ))
+        .ok(),
         #[cfg(feature = "serialization")]
         ContentKind::Json | ContentKind::Jsonl | ContentKind::Yaml | ContentKind::Toml => {
             crate::serialization::format_from_content_kind(&detection.content_kind).and_then(
@@ -435,6 +442,7 @@ fn kind_from_str(value: &str) -> ArtifactKind {
     match value {
         "markdown" => ArtifactKind::Markdown,
         "rust_code" => ArtifactKind::RustCode,
+        "python_code" => ArtifactKind::PythonCode,
         "serialization" => ArtifactKind::Serialization,
         "model_output" => ArtifactKind::ModelOutput,
         "repo_ingest" => ArtifactKind::RepoIngest,
@@ -459,7 +467,8 @@ fn collect_artifact_test_hints(
     let Some(artifact) = artifact else {
         return;
     };
-    if artifact.get("kind").and_then(Value::as_str) != Some("rust_code") {
+    let kind = artifact.get("kind").and_then(Value::as_str);
+    if kind != Some("rust_code") && kind != Some("python_code") {
         return;
     }
     let Some(symbols) = artifact
@@ -471,12 +480,14 @@ fn collect_artifact_test_hints(
     for symbol in symbols {
         let attrs = symbol
             .get("attributes")
+            .or_else(|| symbol.get("decorators"))
             .and_then(Value::as_array)
             .into_iter()
             .flatten()
             .filter_map(Value::as_str)
             .collect::<Vec<_>>();
-        if attrs.iter().any(|attr| attr.contains("test")) {
+        let name = symbol.get("name").and_then(Value::as_str).unwrap_or("");
+        if attrs.iter().any(|attr| attr.contains("test")) || name.starts_with("test_") {
             test_hints.push(TestHint {
                 path: path.to_string(),
                 kind: "test_function".into(),

@@ -25,6 +25,7 @@ pub enum FileKind {
 pub enum ContentKind {
     Markdown,
     Rust,
+    Python,
     Json,
     Jsonl,
     Yaml,
@@ -132,6 +133,12 @@ pub fn detect_path(path: &Path, bytes: &[u8], limits: &Limits) -> Detection {
                 confidence = 0.98;
                 reasons.push(".rs extension".to_string());
             }
+            "py" | "pyi" => {
+                content_kind = ContentKind::Python;
+                language = Some("python".to_string());
+                confidence = 0.98;
+                reasons.push("Python extension".to_string());
+            }
             "md" | "markdown" => {
                 content_kind = ContentKind::Markdown;
                 confidence = 0.98;
@@ -181,6 +188,11 @@ pub fn detect_path(path: &Path, bytes: &[u8], limits: &Limits) -> Detection {
             language = Some("rust".to_string());
             confidence = 0.65;
             reasons.push("shebang mentions rust".to_string());
+        } else if text_prefix.starts_with("#!") && text_prefix.contains("python") {
+            content_kind = ContentKind::Python;
+            language = Some("python".to_string());
+            confidence = 0.65;
+            reasons.push("shebang mentions python".to_string());
         } else if text_prefix.contains("# ") || text_prefix.contains("```") {
             content_kind = ContentKind::Markdown;
             confidence = 0.55;
@@ -203,16 +215,19 @@ pub fn detect_path(path: &Path, bytes: &[u8], limits: &Limits) -> Detection {
 }
 
 fn classify_file_kind(filename: &str, extension: &str, path: &Path) -> FileKind {
+    let path_string = path.to_string_lossy().to_ascii_lowercase();
     if matches!(filename, "cargo.toml" | "package.json" | "pyproject.toml") {
         return FileKind::Manifest;
     }
     if filename.ends_with(".lock") || matches!(filename, "cargo.lock" | "pnpm-lock.yaml") {
         return FileKind::Lockfile;
     }
+    if extension == "py" && (path_string.contains("/tests/") || filename.starts_with("test_")) {
+        return FileKind::Test;
+    }
     if extension == "md" || extension == "markdown" {
         return FileKind::Documentation;
     }
-    let path_string = path.to_string_lossy().to_ascii_lowercase();
     if path_string.contains("/target/")
         || path_string.contains("/dist/")
         || path_string.contains("/generated/")
@@ -226,7 +241,7 @@ fn classify_file_kind(filename: &str, extension: &str, path: &Path) -> FileKind 
     {
         return FileKind::Test;
     }
-    if extension == "rs" {
+    if extension == "rs" || extension == "py" || extension == "pyi" {
         return FileKind::Source;
     }
     FileKind::Unknown

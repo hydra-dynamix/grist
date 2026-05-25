@@ -5,13 +5,14 @@ edition = "2024"
 rust-version = "1.85"
 
 [features]
-default = ["markdown", "rust", "serialization", "model-output", "schemas"]
+default = ["markdown", "rust", "python", "serialization", "model-output", "schemas"]
 markdown = ["dep:pulldown-cmark", "dep:serde_yaml"]
 rust = ["dep:tree-sitter", "dep:tree-sitter-rust"]
+python = ["dep:tree-sitter", "dep:tree-sitter-python"]
 serialization = ["dep:serde_yaml", "dep:toml", "dep:jsonschema"]
 model-output = ["serialization"]
 schemas = ["dep:schemars"]
-cli = ["dep:clap", "markdown", "rust", "serialization", "model-output", "schemas"]
+cli = ["dep:clap", "markdown", "rust", "python", "serialization", "model-output", "schemas"]
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"], optional = true }
@@ -28,6 +29,7 @@ thiserror = "2"
 toml = { version = "0.8", optional = true }
 tree-sitter = { version = "0.24", optional = true }
 tree-sitter-rust = { version = "0.23", optional = true }
+tree-sitter-python = { version = "0.23", optional = true }
 
 [[bin]]
 name = "grist"

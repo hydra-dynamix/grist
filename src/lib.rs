@@ -11,6 +11,8 @@ pub mod text;
 pub mod markdown;
 #[cfg(feature = "model-output")]
 pub mod model_output;
+#[cfg(feature = "python")]
+pub mod python;
 #[cfg(feature = "rust")]
 pub mod rust;
 pub mod schema;

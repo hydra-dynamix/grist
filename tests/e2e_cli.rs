@@ -201,6 +201,23 @@ fn cli_ingests_plain_text_blocks_for_research_chain_documents() {
 }
 
 #[test]
+fn cli_parses_python_with_schema_validation_end_to_end() {
+    let output = run_stdin(
+        &["parse", "python", "-", "--detail", "semantic-with-syntax"],
+        "import os\nclass Form:\n    @classmethod\n    def build(cls):\n        return cls()\n",
+    );
+    validate_with_schema(&output, "python-code-envelope");
+    assert_eq!(output["kind"], "python_code");
+    assert!(
+        output["payload"]["symbols"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|symbol| symbol["qualified_name"] == "Form.build")
+    );
+}
+
+#[test]
 fn cli_rust_detail_mode_exposes_syntax_debug() {
     let output = run_stdin(
         &["parse", "rust", "-", "--detail", "syntax-debug"],
