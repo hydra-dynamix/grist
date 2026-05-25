@@ -1,5 +1,5 @@
 #[cfg(feature = "cli")]
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 #[cfg(feature = "cli")]
 use grist::core::{Diagnostic, SourceInfo};
 #[cfg(feature = "cli")]
@@ -42,9 +42,13 @@ enum ParseCommand {
     },
     Rust {
         input: String,
+        #[arg(long, value_enum, default_value_t = RustDetailArg::Semantic)]
+        detail: RustDetailArg,
     },
     Json {
         input: String,
+        #[arg(long, value_enum, default_value_t = SerializationFormatArg::Json)]
+        format: SerializationFormatArg,
         #[arg(long)]
         schema: Option<PathBuf>,
     },
@@ -73,7 +77,30 @@ enum IngestCommand {
         path: PathBuf,
         #[arg(long)]
         include_ignored: bool,
+        #[arg(long = "include")]
+        include_globs: Vec<String>,
+        #[arg(long = "exclude")]
+        exclude_globs: Vec<String>,
+        #[arg(long)]
+        external_artifact_dir: Option<PathBuf>,
     },
+}
+
+#[cfg(feature = "cli")]
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum SerializationFormatArg {
+    Json,
+    Jsonl,
+    Yaml,
+    Toml,
+}
+
+#[cfg(feature = "cli")]
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum RustDetailArg {
+    Semantic,
+    SemanticWithSyntax,
+    SyntaxDebug,
 }
 
 #[cfg(feature = "cli")]
@@ -108,13 +135,15 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     "markdown feature is disabled",
                 ))?;
             }
-            ParseCommand::Rust { input } => {
+            ParseCommand::Rust { input, detail } => {
                 let (text, source) = read_text_input(&input, None)?;
                 #[cfg(feature = "rust")]
                 print_json(&grist::rust::parse_rust(
                     &text,
                     source,
-                    &grist::rust::RustIngestOptions::default(),
+                    &grist::rust::RustIngestOptions {
+                        detail: detail.into(),
+                    },
                 ))?;
                 #[cfg(not(feature = "rust"))]
                 print_json(&Diagnostic::error(
@@ -123,12 +152,16 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     "rust feature is disabled",
                 ))?;
             }
-            ParseCommand::Json { input, schema } => {
+            ParseCommand::Json {
+                input,
+                format,
+                schema,
+            } => {
                 let (text, source) = read_text_input(&input, None)?;
                 #[cfg(feature = "serialization")]
                 print_json(&grist::serialization::parse_serialization_with_options(
                     &text,
-                    grist::serialization::SerializationFormat::Json,
+                    format.into(),
                     source,
                     &grist::serialization::SerializationOptions {
                         schema: load_json_value_optional(schema.as_ref())?,
@@ -150,12 +183,16 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 let (text, source) = read_text_input(&input, None)?;
                 #[cfg(feature = "model-output")]
                 {
-                    let mut options = grist::model_output::ModelOutputOptions::default();
-                    options.schema = load_json_value_optional(schema.as_ref())?;
-                    options.strip_think_blocks = strip_think_blocks;
-                    if let Some(rules_path) = rules.as_ref() {
-                        options.aliases = load_alias_rules(rules_path)?;
-                    }
+                    let options = grist::model_output::ModelOutputOptions {
+                        schema: load_json_value_optional(schema.as_ref())?,
+                        strip_think_blocks,
+                        aliases: if let Some(rules_path) = rules.as_ref() {
+                            load_alias_rules(rules_path)?
+                        } else {
+                            Default::default()
+                        },
+                        ..Default::default()
+                    };
                     print_json(&grist::model_output::parse_model_output(
                         &text, source, &options,
                     ))?;
@@ -198,9 +235,16 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             IngestCommand::Repo {
                 path,
                 include_ignored,
+                include_globs,
+                exclude_globs,
+                external_artifact_dir,
             } => {
                 let options = RepoIngestOptions {
                     include_ignored,
+                    include_globs,
+                    exclude_globs,
+                    inline_artifacts: external_artifact_dir.is_none(),
+                    external_artifact_dir,
                     ..Default::default()
                 };
                 print_json(&grist::ingest::ingest_repo(&path, &options)?)?;
@@ -245,6 +289,29 @@ fn read_text_input(
             std::fs::read_to_string(&path)?,
             SourceInfo::from_path(&path),
         ))
+    }
+}
+
+#[cfg(feature = "cli")]
+impl From<SerializationFormatArg> for grist::serialization::SerializationFormat {
+    fn from(value: SerializationFormatArg) -> Self {
+        match value {
+            SerializationFormatArg::Json => Self::Json,
+            SerializationFormatArg::Jsonl => Self::Jsonl,
+            SerializationFormatArg::Yaml => Self::Yaml,
+            SerializationFormatArg::Toml => Self::Toml,
+        }
+    }
+}
+
+#[cfg(feature = "cli")]
+impl From<RustDetailArg> for grist::rust::RustDetailMode {
+    fn from(value: RustDetailArg) -> Self {
+        match value {
+            RustDetailArg::Semantic => Self::Semantic,
+            RustDetailArg::SemanticWithSyntax => Self::SemanticWithSyntax,
+            RustDetailArg::SyntaxDebug => Self::SyntaxDebug,
+        }
     }
 }
 

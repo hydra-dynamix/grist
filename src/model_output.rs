@@ -159,6 +159,7 @@ pub fn parse_model_output(
         ));
     } else {
         extract_fenced_blocks(&working, &index, &mut candidates);
+        extract_xml_tool_calls(&working, &index, &mut candidates);
         extract_python_style_commands(&working, &index, options, &mut candidates);
         extract_json_candidates(&working, &index, &mut candidates);
     }
@@ -326,23 +327,140 @@ fn extract_fenced_blocks(
         candidate
             .normalizations
             .push("extracted_markdown_fence".into());
-        if language == "json" || body.starts_with('{') || body.starts_with('[') {
-            match parse_jsonish_value(body) {
-                Ok(value) => candidate.value = Some(value),
+        match language.as_str() {
+            "json" if body.starts_with('{') || body.starts_with('[') || !body.is_empty() => {
+                match parse_jsonish_value(body) {
+                    Ok(value) => candidate.value = Some(value),
+                    Err(err) => {
+                        candidate.status = CandidateStatus::Malformed;
+                        candidate.diagnostics.push(Diagnostic::error(
+                            "grist.model_output.fence",
+                            "fence.json_parse",
+                            format!("fenced JSON parse failed: {err}"),
+                        ));
+                    }
+                }
+            }
+            "yaml" | "yml" => match serde_yaml::from_str::<serde_yaml::Value>(body) {
+                Ok(value) => match serde_json::to_value(value) {
+                    Ok(value) => {
+                        candidate.grammar = CandidateGrammar::YamlBlock;
+                        candidate.value = Some(value);
+                        candidate.normalizations.push("parsed_yaml_block".into());
+                    }
+                    Err(err) => {
+                        candidate.status = CandidateStatus::Malformed;
+                        candidate.diagnostics.push(Diagnostic::error(
+                            "grist.model_output.fence",
+                            "fence.yaml_to_json",
+                            format!("fenced YAML conversion failed: {err}"),
+                        ));
+                    }
+                },
                 Err(err) => {
                     candidate.status = CandidateStatus::Malformed;
                     candidate.diagnostics.push(Diagnostic::error(
                         "grist.model_output.fence",
-                        "fence.json_parse",
-                        format!("fenced JSON parse failed: {err}"),
+                        "fence.yaml_parse",
+                        format!("fenced YAML parse failed: {err}"),
                     ));
                 }
+            },
+            "toml" => match body.parse::<toml::Value>() {
+                Ok(value) => match serde_json::to_value(value) {
+                    Ok(value) => {
+                        candidate.grammar = CandidateGrammar::TomlBlock;
+                        candidate.value = Some(value);
+                        candidate.normalizations.push("parsed_toml_block".into());
+                    }
+                    Err(err) => {
+                        candidate.status = CandidateStatus::Malformed;
+                        candidate.diagnostics.push(Diagnostic::error(
+                            "grist.model_output.fence",
+                            "fence.toml_to_json",
+                            format!("fenced TOML conversion failed: {err}"),
+                        ));
+                    }
+                },
+                Err(err) => {
+                    candidate.status = CandidateStatus::Malformed;
+                    candidate.diagnostics.push(Diagnostic::error(
+                        "grist.model_output.fence",
+                        "fence.toml_parse",
+                        format!("fenced TOML parse failed: {err}"),
+                    ));
+                }
+            },
+            _ if body.starts_with('{') || body.starts_with('[') => {
+                match parse_jsonish_value(body) {
+                    Ok(value) => candidate.value = Some(value),
+                    Err(err) => {
+                        candidate.status = CandidateStatus::Malformed;
+                        candidate.diagnostics.push(Diagnostic::error(
+                            "grist.model_output.fence",
+                            "fence.jsonish_parse",
+                            format!("fenced JSON-like parse failed: {err}"),
+                        ));
+                    }
+                }
             }
-        } else {
-            candidate.value = Some(Value::String(body.to_string()));
+            _ => candidate.value = Some(Value::String(body.to_string())),
         }
         candidates.push(candidate);
         search = end + 3;
+    }
+}
+
+fn extract_xml_tool_calls(
+    text: &str,
+    index: &LineIndex,
+    candidates: &mut Vec<ModelOutputCandidate>,
+) {
+    let mut search = 0;
+    while let Some(start_rel) = text[search..].find("<tool_call>") {
+        let start = search + start_rel;
+        let body_start = start + "<tool_call>".len();
+        let Some(end_rel) = text[body_start..].find("</tool_call>") else {
+            break;
+        };
+        let end = body_start + end_rel;
+        let body = &text[body_start..end];
+        let mut object = serde_json::Map::new();
+        for tag in ["name", "arguments", "method", "params"] {
+            let open = format!("<{tag}>");
+            let close = format!("</{tag}>");
+            if let Some(value_start_rel) = body.find(&open) {
+                let value_start = value_start_rel + open.len();
+                if let Some(value_end_rel) = body[value_start..].find(&close) {
+                    let raw = body[value_start..value_start + value_end_rel].trim();
+                    let value =
+                        parse_jsonish_value(raw).unwrap_or_else(|_| Value::String(raw.to_string()));
+                    object.insert(tag.to_string(), value);
+                }
+            }
+        }
+        let mut candidate = base_candidate(
+            candidates.len(),
+            CandidateGrammar::XmlToolCall,
+            Some(SourceRange::new(start, end + "</tool_call>".len(), index)),
+        );
+        candidate.command_name = object
+            .get("name")
+            .or_else(|| object.get("method"))
+            .and_then(Value::as_str)
+            .map(str::to_string);
+        candidate.argument_name = object
+            .contains_key("arguments")
+            .then_some("arguments".to_string())
+            .or_else(|| {
+                object
+                    .contains_key("params")
+                    .then_some("params".to_string())
+            });
+        candidate.value = Some(Value::Object(object));
+        candidate.normalizations.push("parsed_xml_tool_call".into());
+        candidates.push(candidate);
+        search = end + "</tool_call>".len();
     }
 }
 
@@ -466,8 +584,26 @@ fn classify_json_tool_shape(candidate: &mut ModelOutputCandidate) {
                 }
             }
         }
-    } else if value.get("tool_calls").is_some() {
+    } else if let Some(tool_calls) = value.get("tool_calls").and_then(Value::as_array) {
         candidate.grammar = CandidateGrammar::OpenAiToolCall;
+        if let Some(first_call) = tool_calls.first() {
+            let function = first_call.get("function").unwrap_or(first_call);
+            candidate.command_name = function
+                .get("name")
+                .and_then(Value::as_str)
+                .map(str::to_string);
+            if let Some(arguments) = function.get("arguments") {
+                candidate.argument_name = Some("arguments".into());
+                if let Some(arguments_str) = arguments.as_str() {
+                    if let Ok(parsed) = parse_jsonish_value(arguments_str) {
+                        candidate.value = Some(parsed);
+                        candidate
+                            .normalizations
+                            .push("parsed_first_tool_call_arguments".into());
+                    }
+                }
+            }
+        }
     }
 }
 

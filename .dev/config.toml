@@ -11,19 +11,22 @@ commands = [["cargo", "fmt"]]
 commands = [["cargo", "fmt", "--", "--check"]]
 
 [tasks.rust_lint]
-commands = [["cargo", "clippy", "--", "-D", "warnings"]]
+commands = [["cargo", "clippy", "--all-targets", "--features", "cli", "--", "-D", "warnings"]]
 
 [tasks.rust_type]
-commands = [["cargo", "check"]]
+commands = [["cargo", "check", "--features", "cli"]]
+
+[tasks.rust_type_no_default]
+commands = [["cargo", "check", "--no-default-features"]]
 
 [tasks.rust_test]
-commands = [["cargo", "test"]]
+commands = [["cargo", "test", "--features", "cli"]]
 
 [tasks.rust_fix]
 commands = ["rust_fmt"]
 
 [tasks.rust_check]
-commands = ["rust_fmt_check", "rust_lint", "rust_test"]
+commands = ["rust_fmt_check", "rust_lint", "rust_type_no_default", "rust_test"]
 
 [tasks.rust_ci]
 commands = ["rust_check"]
