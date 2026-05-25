@@ -1,0 +1,75 @@
+# dev configuration file
+
+default_language = "rust"
+
+# ===================== Rust ========================
+
+[tasks.rust_fmt]
+commands = [["cargo", "fmt"]]
+
+[tasks.rust_fmt_check]
+commands = [["cargo", "fmt", "--", "--check"]]
+
+[tasks.rust_lint]
+commands = [["cargo", "clippy", "--", "-D", "warnings"]]
+
+[tasks.rust_type]
+commands = [["cargo", "check"]]
+
+[tasks.rust_test]
+commands = [["cargo", "test"]]
+
+[tasks.rust_fix]
+commands = ["rust_fmt"]
+
+[tasks.rust_check]
+commands = ["rust_fmt_check", "rust_lint", "rust_test"]
+
+[tasks.rust_ci]
+commands = ["rust_check"]
+
+[languages.rust]
+install = []
+
+[languages.rust.pipelines]
+fmt = ["rust_fmt"]
+lint = ["rust_lint"]
+type = ["rust_type"]
+test = ["rust_test"]
+fix = ["rust_fix"]
+check = ["rust_check"]
+ci = ["rust_ci"]
+
+
+[tasks.all_fmt]
+commands = ["rust_fmt"]
+
+[tasks.all_lint]
+commands = ["rust_lint"]
+
+[tasks.all_type]
+commands = ["rust_type"]
+
+[tasks.all_test]
+commands = ["rust_test"]
+
+[tasks.all_fix]
+commands = ["rust_fix"]
+
+[tasks.all_check]
+commands = ["rust_check"]
+
+[tasks.all_ci]
+commands = ["rust_ci"]
+
+# ===================== Git ========================
+
+[git]
+# main_branch = "main"
+# release_branch = "release-candidate"
+
+# ===================== Environment ========================
+
+[env]
+# required = ["DATABASE_URL"]
+# optional = ["LOG_LEVEL"]

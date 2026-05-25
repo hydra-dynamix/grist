@@ -1,0 +1,21 @@
+name: dev ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  dev-ci:
+    runs-on: [self-hosted, linux, arm64]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: Run dev ci
+        run: |
+          chmod +x ./.dev/bin/dev || true
+          if ./.dev/bin/dev --version >/dev/null 2>&1; then
+            ./.dev/bin/dev ci
+          else
+            dev ci
+          fi
