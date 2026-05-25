@@ -37,10 +37,26 @@ enum Command {
 #[cfg(feature = "cli")]
 #[derive(Subcommand)]
 enum ParseCommand {
-    Markdown { input: String },
-    Rust { input: String },
-    Json { input: String },
-    ModelOutput { input: String },
+    Markdown {
+        input: String,
+    },
+    Rust {
+        input: String,
+    },
+    Json {
+        input: String,
+        #[arg(long)]
+        schema: Option<PathBuf>,
+    },
+    ModelOutput {
+        input: String,
+        #[arg(long)]
+        schema: Option<PathBuf>,
+        #[arg(long)]
+        rules: Option<PathBuf>,
+        #[arg(long)]
+        strip_think_blocks: bool,
+    },
 }
 
 #[cfg(feature = "cli")]
@@ -107,13 +123,16 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     "rust feature is disabled",
                 ))?;
             }
-            ParseCommand::Json { input } => {
+            ParseCommand::Json { input, schema } => {
                 let (text, source) = read_text_input(&input, None)?;
                 #[cfg(feature = "serialization")]
-                print_json(&grist::serialization::parse_serialization(
+                print_json(&grist::serialization::parse_serialization_with_options(
                     &text,
                     grist::serialization::SerializationFormat::Json,
                     source,
+                    &grist::serialization::SerializationOptions {
+                        schema: load_json_value_optional(schema.as_ref())?,
+                    },
                 ))?;
                 #[cfg(not(feature = "serialization"))]
                 print_json(&Diagnostic::error(
@@ -122,14 +141,25 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     "serialization feature is disabled",
                 ))?;
             }
-            ParseCommand::ModelOutput { input } => {
+            ParseCommand::ModelOutput {
+                input,
+                schema,
+                rules,
+                strip_think_blocks,
+            } => {
                 let (text, source) = read_text_input(&input, None)?;
                 #[cfg(feature = "model-output")]
-                print_json(&grist::model_output::parse_model_output(
-                    &text,
-                    source,
-                    &grist::model_output::ModelOutputOptions::default(),
-                ))?;
+                {
+                    let mut options = grist::model_output::ModelOutputOptions::default();
+                    options.schema = load_json_value_optional(schema.as_ref())?;
+                    options.strip_think_blocks = strip_think_blocks;
+                    if let Some(rules_path) = rules.as_ref() {
+                        options.aliases = load_alias_rules(rules_path)?;
+                    }
+                    print_json(&grist::model_output::parse_model_output(
+                        &text, source, &options,
+                    ))?;
+                }
                 #[cfg(not(feature = "model-output"))]
                 print_json(&Diagnostic::error(
                     "grist.cli",
@@ -222,6 +252,37 @@ fn read_text_input(
 fn print_json<T: serde::Serialize>(value: &T) -> Result<(), serde_json::Error> {
     println!("{}", serde_json::to_string(value)?);
     Ok(())
+}
+
+#[cfg(feature = "cli")]
+fn load_json_value_optional(
+    path: Option<&PathBuf>,
+) -> Result<Option<serde_json::Value>, Box<dyn std::error::Error>> {
+    path.map(|path| {
+        let text = std::fs::read_to_string(path)?;
+        let value = match path.extension().and_then(|ext| ext.to_str()) {
+            Some("yaml" | "yml") => {
+                serde_json::to_value(serde_yaml::from_str::<serde_yaml::Value>(&text)?)?
+            }
+            Some("toml") => serde_json::to_value(text.parse::<toml::Value>()?)?,
+            _ => serde_json::from_str(&text)?,
+        };
+        Ok(value)
+    })
+    .transpose()
+}
+
+#[cfg(feature = "cli")]
+fn load_alias_rules(
+    path: &PathBuf,
+) -> Result<grist::model_output::AliasRules, Box<dyn std::error::Error>> {
+    let text = std::fs::read_to_string(path)?;
+    let rules = match path.extension().and_then(|ext| ext.to_str()) {
+        Some("toml") => toml::from_str(&text)?,
+        Some("yaml" | "yml") => serde_yaml::from_str(&text)?,
+        _ => serde_json::from_str(&text)?,
+    };
+    Ok(rules)
 }
 
 #[cfg(not(feature = "cli"))]

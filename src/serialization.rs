@@ -15,6 +15,7 @@ pub struct SerializationPayload {
     pub format: SerializationFormat,
     pub value: Option<Value>,
     pub jsonl_records: Vec<JsonlRecord>,
+    pub validation: Option<SchemaValidationResult>,
 }
 
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
@@ -35,6 +36,13 @@ pub struct JsonlRecord {
     pub diagnostic: Option<Diagnostic>,
 }
 
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SchemaValidationResult {
+    pub valid: bool,
+    pub diagnostics: Vec<Diagnostic>,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct SerializationOptions {
     pub schema: Option<Value>,
@@ -47,12 +55,22 @@ pub fn parse_serialization(
     format: SerializationFormat,
     source: SourceInfo,
 ) -> SerializationEnvelope {
+    parse_serialization_with_options(text, format, source, &SerializationOptions::default())
+}
+
+pub fn parse_serialization_with_options(
+    text: &str,
+    format: SerializationFormat,
+    source: SourceInfo,
+    options: &SerializationOptions,
+) -> SerializationEnvelope {
     let mut diagnostics = Vec::new();
     let mut payload = SerializationPayload {
         schema_version: SchemaVersion::SERIALIZATION_V1.to_string(),
         format: format.clone(),
         value: None,
         jsonl_records: Vec::new(),
+        validation: None,
     };
 
     match format {
@@ -129,6 +147,15 @@ pub fn parse_serialization(
         },
     }
 
+    if let (Some(value), Some(schema)) = (payload.value.as_ref(), options.schema.as_ref()) {
+        let validation_diagnostics = validate_json_schema(value, schema);
+        payload.validation = Some(SchemaValidationResult {
+            valid: validation_diagnostics.is_empty(),
+            diagnostics: validation_diagnostics.clone(),
+        });
+        diagnostics.extend(validation_diagnostics);
+    }
+
     Envelope::new(
         ArtifactKind::Serialization,
         source,
@@ -187,5 +214,24 @@ mod tests {
         );
         assert_eq!(report.payload.jsonl_records.len(), 3);
         assert_eq!(report.diagnostics.len(), 1);
+    }
+
+    #[test]
+    fn validates_json_schema_when_supplied() {
+        let schema = serde_json::json!({
+            "type": "object",
+            "required": ["name"],
+            "properties": {"name": {"type": "string"}}
+        });
+        let report = parse_serialization_with_options(
+            "{\"name\": 42}",
+            SerializationFormat::Json,
+            SourceInfo::stdin("input.json"),
+            &SerializationOptions {
+                schema: Some(schema),
+            },
+        );
+        assert!(!report.payload.validation.unwrap().valid);
+        assert!(!report.diagnostics.is_empty());
     }
 }

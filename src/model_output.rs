@@ -2,6 +2,7 @@ use crate::core::{
     ArtifactKind, Diagnostic, Envelope, Hashes, LineIndex, ParserInfo, SchemaVersion, SourceInfo,
     SourceRange,
 };
+use crate::serialization::{SchemaValidationResult, validate_json_schema};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -42,6 +43,7 @@ pub struct ModelOutputCandidate {
     pub confidence: f32,
     pub normalizations: Vec<String>,
     pub diagnostics: Vec<Diagnostic>,
+    pub validation: Option<SchemaValidationResult>,
 }
 
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
@@ -91,6 +93,7 @@ pub struct ModelOutputOptions {
     pub accepted_arguments: Vec<String>,
     pub aliases: AliasRules,
     pub strip_think_blocks: bool,
+    pub schema: Option<Value>,
 }
 
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
@@ -165,6 +168,14 @@ pub fn parse_model_output(
             .normalizations
             .extend(global_normalizations.clone());
         apply_aliases(candidate, &options.aliases);
+        if let (Some(value), Some(schema)) = (candidate.value.as_ref(), options.schema.as_ref()) {
+            let validation_diagnostics = validate_json_schema(value, schema);
+            candidate.validation = Some(SchemaValidationResult {
+                valid: validation_diagnostics.is_empty(),
+                diagnostics: validation_diagnostics.clone(),
+            });
+            candidate.diagnostics.extend(validation_diagnostics);
+        }
     }
 
     let status = if working.trim().is_empty() {
@@ -530,6 +541,7 @@ fn base_candidate(
         confidence: 0.8,
         normalizations: Vec::new(),
         diagnostics: Vec::new(),
+        validation: None,
     }
 }
 
@@ -556,6 +568,7 @@ fn fix_jsonish(input: &str) -> String {
         .replace("True", "true")
         .replace("False", "false");
     out = quote_single_quoted_strings(&out);
+    out = quote_unquoted_object_keys(&out);
     out = remove_trailing_commas(&out);
     out
 }
@@ -567,6 +580,81 @@ fn quote_single_quoted_strings(input: &str) -> String {
         if ch == '\'' {
             in_single = !in_single;
             out.push('"');
+        } else {
+            out.push(ch);
+        }
+    }
+    out
+}
+
+fn quote_unquoted_object_keys(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    let mut chars = input.char_indices().peekable();
+    let mut in_string = false;
+    let mut escape = false;
+    while let Some((_, ch)) = chars.next() {
+        if in_string {
+            if escape {
+                escape = false;
+            } else if ch == '\\' {
+                escape = true;
+            } else if ch == '"' {
+                in_string = false;
+            }
+            out.push(ch);
+            continue;
+        }
+        if ch == '"' {
+            in_string = true;
+            out.push(ch);
+            continue;
+        }
+        if ch == '{' || ch == ',' {
+            out.push(ch);
+            let mut whitespace = String::new();
+            while let Some((_, next)) = chars.peek().copied() {
+                if next.is_whitespace() {
+                    chars.next();
+                    whitespace.push(next);
+                } else {
+                    break;
+                }
+            }
+            let mut key = String::new();
+            while let Some((_, next)) = chars.peek().copied() {
+                if next.is_ascii_alphanumeric() || next == '_' || next == '-' {
+                    chars.next();
+                    key.push(next);
+                } else {
+                    break;
+                }
+            }
+            if !key.is_empty() {
+                let mut post = String::new();
+                while let Some((_, next)) = chars.peek().copied() {
+                    if next.is_whitespace() {
+                        chars.next();
+                        post.push(next);
+                    } else {
+                        break;
+                    }
+                }
+                if matches!(chars.peek(), Some((_, ':'))) {
+                    chars.next();
+                    out.push_str(&whitespace);
+                    out.push('"');
+                    out.push_str(&key);
+                    out.push('"');
+                    out.push_str(&post);
+                    out.push(':');
+                } else {
+                    out.push_str(&whitespace);
+                    out.push_str(&key);
+                    out.push_str(&post);
+                }
+            } else {
+                out.push_str(&whitespace);
+            }
         } else {
             out.push(ch);
         }
@@ -748,6 +836,39 @@ mod tests {
             CandidateGrammar::OpenAiToolCall
         );
         assert_eq!(report.payload.candidates[0].value.as_ref().unwrap()["a"], 1);
+    }
+
+    #[test]
+    fn repairs_aliases_and_validates_schema() {
+        let options = ModelOutputOptions {
+            aliases: AliasRules {
+                field_aliases: vec![AliasRule {
+                    from: "nodes".into(),
+                    to: "leaves".into(),
+                }],
+                command_aliases: vec![AliasRule {
+                    from: "Old.Tool".into(),
+                    to: "New.Tool".into(),
+                }],
+                argument_aliases: Vec::new(),
+            },
+            schema: Some(serde_json::json!({"type":"object", "required":["leaves"]})),
+            ..Default::default()
+        };
+        let report = parse_model_output(
+            "Old.Tool(arg={nodes: [1, 2,], ok: True})",
+            SourceInfo::stdin("model.txt"),
+            &options,
+        );
+        let candidate = report
+            .payload
+            .candidates
+            .iter()
+            .find(|candidate| candidate.grammar == CandidateGrammar::PythonStyleCommand)
+            .unwrap();
+        assert_eq!(candidate.command_name.as_deref(), Some("New.Tool"));
+        assert!(candidate.value.as_ref().unwrap().get("leaves").is_some());
+        assert!(candidate.validation.as_ref().unwrap().valid);
     }
 
     #[test]
