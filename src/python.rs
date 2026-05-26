@@ -14,6 +14,10 @@ pub struct PythonFile {
     pub schema_version: String,
     pub symbols: Vec<PythonSymbol>,
     pub imports: Vec<PythonImport>,
+    pub assignments: Vec<PythonAssignment>,
+    pub returns: Vec<PythonReturn>,
+    pub calls: Vec<PythonCall>,
+    pub branches: Vec<PythonBranch>,
     pub parse_errors: Vec<PythonParseError>,
     pub detail: Option<PythonSyntaxDetail>,
 }
@@ -64,6 +68,46 @@ pub struct PythonImport {
     pub aliases: Vec<String>,
     pub level: usize,
     pub range: SourceRange,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PythonAssignment {
+    pub id: String,
+    pub lhs: String,
+    pub rhs: Option<String>,
+    pub operator: Option<String>,
+    pub range: SourceRange,
+    pub parent: Option<String>,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PythonReturn {
+    pub id: String,
+    pub expression: Option<String>,
+    pub range: SourceRange,
+    pub parent: Option<String>,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PythonCall {
+    pub id: String,
+    pub target: String,
+    pub args: Vec<String>,
+    pub range: SourceRange,
+    pub parent: Option<String>,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PythonBranch {
+    pub id: String,
+    pub kind: String,
+    pub condition: Option<String>,
+    pub range: SourceRange,
+    pub parent: Option<String>,
 }
 
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
@@ -124,6 +168,10 @@ pub fn parse_python(
                 schema_version: SchemaVersion::PYTHON_CODE_V1.to_string(),
                 symbols: Vec::new(),
                 imports: Vec::new(),
+                assignments: Vec::new(),
+                returns: Vec::new(),
+                calls: Vec::new(),
+                branches: Vec::new(),
                 parse_errors: Vec::new(),
                 detail: None,
             },
@@ -146,6 +194,10 @@ pub fn parse_python(
         line_index: &line_index,
         symbols: Vec::new(),
         imports: Vec::new(),
+        assignments: Vec::new(),
+        returns: Vec::new(),
+        calls: Vec::new(),
+        branches: Vec::new(),
         errors: Vec::new(),
         diagnostics: Vec::new(),
         detail: options.detail,
@@ -182,6 +234,10 @@ pub fn parse_python(
             schema_version: SchemaVersion::PYTHON_CODE_V1.to_string(),
             symbols: collector.symbols,
             imports: collector.imports,
+            assignments: collector.assignments,
+            returns: collector.returns,
+            calls: collector.calls,
+            branches: collector.branches,
             parse_errors,
             detail,
         },
@@ -195,6 +251,10 @@ struct PythonCollector<'a, 'b> {
     line_index: &'b LineIndex,
     symbols: Vec<PythonSymbol>,
     imports: Vec<PythonImport>,
+    assignments: Vec<PythonAssignment>,
+    returns: Vec<PythonReturn>,
+    calls: Vec<PythonCall>,
+    branches: Vec<PythonBranch>,
     errors: Vec<PythonParseError>,
     diagnostics: Vec<Diagnostic>,
     detail: PythonDetailMode,
@@ -265,8 +325,20 @@ impl PythonCollector<'_, '_> {
             return;
         }
 
-        if matches!(kind, "import_statement" | "import_from_statement") {
-            self.imports.push(self.import_for(node));
+        match kind {
+            "import_statement" | "import_from_statement" => {
+                self.imports.push(self.import_for(node))
+            }
+            "assignment" | "augmented_assignment" => {
+                self.assignments.push(self.assignment_for(node, &parents));
+            }
+            "return_statement" => self.returns.push(self.return_for(node, &parents)),
+            "call" => self.calls.push(self.call_for(node, &parents)),
+            "if_statement" | "elif_clause" | "else_clause" | "for_statement"
+            | "while_statement" | "match_statement" => {
+                self.branches.push(self.branch_for(node, &parents))
+            }
+            _ => {}
         }
         self.walk_children(node, parents, decorators);
     }
@@ -318,6 +390,60 @@ impl PythonCollector<'_, '_> {
             level,
             range: self.range(node),
         }
+    }
+
+    fn assignment_for(&self, node: Node, parents: &[String]) -> PythonAssignment {
+        PythonAssignment {
+            id: format!("python-assignment-{}", self.assignments.len()),
+            lhs: self
+                .field_source(node, "left")
+                .unwrap_or_else(|| self.source(node).trim().to_string()),
+            rhs: self.field_source(node, "right"),
+            operator: assignment_operator(self.source(node)),
+            range: self.range(node),
+            parent: parents.last().cloned(),
+        }
+    }
+
+    fn return_for(&self, node: Node, parents: &[String]) -> PythonReturn {
+        PythonReturn {
+            id: format!("python-return-{}", self.returns.len()),
+            expression: return_expression(self.source(node)),
+            range: self.range(node),
+            parent: parents.last().cloned(),
+        }
+    }
+
+    fn call_for(&self, node: Node, parents: &[String]) -> PythonCall {
+        PythonCall {
+            id: format!("python-call-{}", self.calls.len()),
+            target: self.field_source(node, "function").unwrap_or_default(),
+            args: self
+                .field_source(node, "arguments")
+                .map(|args| split_args(args.trim_matches(['(', ')'])))
+                .unwrap_or_default(),
+            range: self.range(node),
+            parent: parents.last().cloned(),
+        }
+    }
+
+    fn branch_for(&self, node: Node, parents: &[String]) -> PythonBranch {
+        PythonBranch {
+            id: format!("python-branch-{}", self.branches.len()),
+            kind: node.kind().to_string(),
+            condition: self
+                .field_source(node, "condition")
+                .or_else(|| self.field_source(node, "right"))
+                .or_else(|| self.field_source(node, "subject")),
+            range: self.range(node),
+            parent: parents.last().cloned(),
+        }
+    }
+
+    fn field_source(&self, node: Node, field: &str) -> Option<String> {
+        node.child_by_field_name(field)
+            .map(|child| normalize_ws(self.source(child).trim()))
+            .filter(|value| !value.is_empty())
     }
 }
 
@@ -390,6 +516,48 @@ fn doc_for(src: &str) -> Option<String> {
     None
 }
 
+fn assignment_operator(src: &str) -> Option<String> {
+    [
+        "+=", "-=", "*=", "/=", "//=", "%=", "**=", "@=", "&=", "|=", "^=", ">>=", "<<=", "=",
+    ]
+    .into_iter()
+    .find(|operator| src.contains(operator))
+    .map(str::to_string)
+}
+
+fn return_expression(src: &str) -> Option<String> {
+    src.trim()
+        .strip_prefix("return")
+        .map(str::trim)
+        .filter(|expr| !expr.is_empty())
+        .map(normalize_ws)
+}
+
+fn split_args(src: &str) -> Vec<String> {
+    let mut args = Vec::new();
+    let mut depth = 0_i32;
+    let mut start = 0;
+    for (idx, ch) in src.char_indices() {
+        match ch {
+            '(' | '[' | '{' => depth += 1,
+            ')' | ']' | '}' => depth -= 1,
+            ',' if depth == 0 => {
+                let arg = normalize_ws(src[start..idx].trim());
+                if !arg.is_empty() {
+                    args.push(arg);
+                }
+                start = idx + 1;
+            }
+            _ => {}
+        }
+    }
+    let tail = normalize_ws(src[start..].trim());
+    if !tail.is_empty() {
+        args.push(tail);
+    }
+    args
+}
+
 fn normalize_ws(src: &str) -> String {
     src.split_whitespace().collect::<Vec<_>>().join(" ")
 }
@@ -409,7 +577,7 @@ mod tests {
 
     #[test]
     fn extracts_symbols_imports_and_decorators() {
-        let src = "import os, sys as system\nfrom .helpers import build as make\nclass Form:\n    @classmethod\n    async def create(cls):\n        return cls()\n";
+        let src = "import os, sys as system\nfrom .helpers import build as make\nclass Form:\n    @classmethod\n    async def create(cls):\n        value = cls()\n        if value:\n            return value\n        return cls()\n";
         let report = parse_python(
             src,
             SourceInfo::stdin("forms.py"),
@@ -432,6 +600,22 @@ mod tests {
                 .imports
                 .iter()
                 .any(|import| import.level == 1)
+        );
+        assert!(report.payload.assignments.iter().any(|a| a.lhs == "value"));
+        assert!(
+            report
+                .payload
+                .returns
+                .iter()
+                .any(|r| r.expression.as_deref() == Some("value"))
+        );
+        assert!(report.payload.calls.iter().any(|c| c.target == "cls"));
+        assert!(
+            report
+                .payload
+                .branches
+                .iter()
+                .any(|b| b.kind == "if_statement")
         );
     }
 }

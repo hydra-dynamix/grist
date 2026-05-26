@@ -204,7 +204,7 @@ fn cli_ingests_plain_text_blocks_for_research_chain_documents() {
 fn cli_parses_python_with_schema_validation_end_to_end() {
     let output = run_stdin(
         &["parse", "python", "-", "--detail", "semantic-with-syntax"],
-        "import os\nclass Form:\n    @classmethod\n    def build(cls):\n        return cls()\n",
+        "import os\nclass Form:\n    @classmethod\n    def build(cls):\n        value = cls()\n        return value\n",
     );
     validate_with_schema(&output, "python-code-envelope");
     assert_eq!(output["kind"], "python_code");
@@ -215,6 +215,9 @@ fn cli_parses_python_with_schema_validation_end_to_end() {
             .iter()
             .any(|symbol| symbol["qualified_name"] == "Form.build")
     );
+    assert_eq!(output["payload"]["assignments"][0]["lhs"], "value");
+    assert_eq!(output["payload"]["returns"][0]["expression"], "value");
+    assert_eq!(output["payload"]["calls"][0]["target"], "cls");
 }
 
 #[test]
