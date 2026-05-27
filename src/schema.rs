@@ -40,6 +40,10 @@ pub fn list_schemas() -> Vec<SchemaEntry> {
             schema_version: crate::core::SchemaVersion::PYTHON_CODE_V1.into(),
         },
         SchemaEntry {
+            name: "typescript-code".into(),
+            schema_version: crate::core::SchemaVersion::TYPESCRIPT_CODE_V1.into(),
+        },
+        SchemaEntry {
             name: "text".into(),
             schema_version: "grist/text/v1".into(),
         },
@@ -61,6 +65,10 @@ pub fn list_schemas() -> Vec<SchemaEntry> {
         },
         SchemaEntry {
             name: "python-code-envelope".into(),
+            schema_version: crate::core::SchemaVersion::ENVELOPE_V1.into(),
+        },
+        SchemaEntry {
+            name: "typescript-code-envelope".into(),
             schema_version: crate::core::SchemaVersion::ENVELOPE_V1.into(),
         },
     ]
@@ -89,6 +97,10 @@ pub fn schema_json(name: &str) -> Option<serde_json::Value> {
         "rust-code" => Some(serde_json::to_value(schema_for!(crate::rust::RustFile)).ok()?),
         #[cfg(feature = "python")]
         "python-code" => Some(serde_json::to_value(schema_for!(crate::python::PythonFile)).ok()?),
+        #[cfg(feature = "typescript")]
+        "typescript-code" => {
+            Some(serde_json::to_value(schema_for!(crate::typescript::TypeScriptFile)).ok()?)
+        }
         "text" => Some(serde_json::to_value(schema_for!(crate::text::TextDocument)).ok()?),
         #[cfg(feature = "serialization")]
         "serialization-envelope" => Some(
@@ -119,6 +131,13 @@ pub fn schema_json(name: &str) -> Option<serde_json::Value> {
         "python-code-envelope" => Some(
             serde_json::to_value(schema_for!(
                 crate::core::Envelope<crate::python::PythonFile>
+            ))
+            .ok()?,
+        ),
+        #[cfg(feature = "typescript")]
+        "typescript-code-envelope" => Some(
+            serde_json::to_value(schema_for!(
+                crate::core::Envelope<crate::typescript::TypeScriptFile>
             ))
             .ok()?,
         ),
@@ -191,6 +210,14 @@ mod tests {
             (
                 "python-code-envelope",
                 include_str!("../schemas/grist.python-code-envelope.v1.schema.json"),
+            ),
+            (
+                "typescript-code",
+                include_str!("../schemas/grist.typescript-code.v1.schema.json"),
+            ),
+            (
+                "typescript-code-envelope",
+                include_str!("../schemas/grist.typescript-code-envelope.v1.schema.json"),
             ),
         ];
         for (name, checked_in) in fixtures {

@@ -18,6 +18,8 @@ pub mod rust;
 pub mod schema;
 #[cfg(feature = "serialization")]
 pub mod serialization;
+#[cfg(feature = "typescript")]
+pub mod typescript;
 
 /// Returns the crate version from Cargo metadata.
 pub fn version() -> &'static str {

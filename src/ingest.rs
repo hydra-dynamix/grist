@@ -422,6 +422,22 @@ fn parse_detected_text(text: &str, source: SourceInfo, detection: &Detection) ->
             &crate::python::PythonIngestOptions::default(),
         ))
         .ok(),
+        #[cfg(feature = "typescript")]
+        ContentKind::TypeScript | ContentKind::Tsx | ContentKind::Jsx => {
+            serde_json::to_value(crate::typescript::parse_typescript(
+                text,
+                source,
+                &crate::typescript::TypeScriptIngestOptions {
+                    dialect: match detection.content_kind {
+                        ContentKind::Tsx => crate::typescript::TypeScriptDialect::Tsx,
+                        ContentKind::Jsx => crate::typescript::TypeScriptDialect::Jsx,
+                        _ => crate::typescript::TypeScriptDialect::TypeScript,
+                    },
+                    ..Default::default()
+                },
+            ))
+            .ok()
+        }
         #[cfg(feature = "serialization")]
         ContentKind::Json | ContentKind::Jsonl | ContentKind::Yaml | ContentKind::Toml => {
             crate::serialization::format_from_content_kind(&detection.content_kind).and_then(
@@ -443,6 +459,7 @@ fn kind_from_str(value: &str) -> ArtifactKind {
         "markdown" => ArtifactKind::Markdown,
         "rust_code" => ArtifactKind::RustCode,
         "python_code" => ArtifactKind::PythonCode,
+        "typescript_code" => ArtifactKind::TypeScriptCode,
         "serialization" => ArtifactKind::Serialization,
         "model_output" => ArtifactKind::ModelOutput,
         "repo_ingest" => ArtifactKind::RepoIngest,
@@ -468,15 +485,14 @@ fn collect_artifact_test_hints(
         return;
     };
     let kind = artifact.get("kind").and_then(Value::as_str);
-    if kind != Some("rust_code") && kind != Some("python_code") {
+    if kind != Some("rust_code") && kind != Some("python_code") && kind != Some("typescript_code") {
         return;
     }
-    let Some(symbols) = artifact
+    let symbols = artifact
         .pointer("/payload/symbols")
         .and_then(Value::as_array)
-    else {
-        return;
-    };
+        .into_iter()
+        .flatten();
     for symbol in symbols {
         let attrs = symbol
             .get("attributes")
@@ -496,6 +512,28 @@ fn collect_artifact_test_hints(
                     .and_then(Value::as_str)
                     .map(str::to_string),
             });
+        }
+    }
+    if kind == Some("typescript_code") {
+        let calls = artifact
+            .pointer("/payload/calls")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten();
+        for call in calls {
+            let target = call.get("target").and_then(Value::as_str).unwrap_or("");
+            if matches!(target, "test" | "it" | "describe") || target.ends_with(".test") {
+                test_hints.push(TestHint {
+                    path: path.to_string(),
+                    kind: "test_call".into(),
+                    name: call
+                        .get("args")
+                        .and_then(Value::as_array)
+                        .and_then(|args| args.first())
+                        .and_then(Value::as_str)
+                        .map(|name| name.trim_matches(['"', '\'', '`']).to_string()),
+                });
+            }
         }
     }
 }

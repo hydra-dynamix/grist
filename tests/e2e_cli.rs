@@ -221,6 +221,128 @@ fn cli_parses_python_with_schema_validation_end_to_end() {
 }
 
 #[test]
+fn cli_parses_typescript_with_schema_validation_end_to_end() {
+    let output = run_stdin(
+        &[
+            "parse",
+            "typescript",
+            "-",
+            "--detail",
+            "semantic-with-syntax",
+        ],
+        "import { useMemo } from \"react\";\nexport class Form {\n  build() {\n    const value = useMemo(() => 1, []);\n    return value;\n  }\n}\n",
+    );
+    validate_with_schema(&output, "typescript-code-envelope");
+    assert_eq!(output["kind"], "typescript_code");
+    assert!(
+        output["payload"]["symbols"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|symbol| symbol["qualified_name"] == "Form.build")
+    );
+    assert_eq!(output["payload"]["imports"][0]["module"], "react");
+    assert_eq!(output["payload"]["assignments"][0]["lhs"], "value");
+    assert_eq!(output["payload"]["returns"][0]["expression"], "value");
+    assert_eq!(output["payload"]["calls"][0]["target"], "useMemo");
+}
+
+#[test]
+fn cli_ingests_repo_with_typescript_detection() {
+    let repo = temp_dir("typescript-repo");
+    fs::create_dir_all(repo.join("src")).unwrap();
+    fs::write(
+        repo.join("src/form.test.ts"),
+        "export function testBuild() { return 1; }\n",
+    )
+    .unwrap();
+    let output = run(&["ingest", "repo", repo.to_str().unwrap()]);
+    assert!(
+        output["payload"]["detected_languages"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|language| language == "typescript")
+    );
+    assert!(
+        output["payload"]["artifacts"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|artifact| artifact["kind"] == "typescript_code")
+    );
+    assert!(
+        output["payload"]["test_hints"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|hint| hint["path"] == "src/form.test.ts")
+    );
+}
+
+#[test]
+fn cli_parses_jsx_dialect_with_schema_validation_end_to_end() {
+    let output = run_stdin(
+        &["parse", "typescript", "-", "--dialect", "jsx"],
+        "export function View() { return <section data-id=\"ok\">Hello</section>; }\n",
+    );
+    validate_with_schema(&output, "typescript-code-envelope");
+    assert_eq!(output["payload"]["dialect"], "jsx");
+    assert!(
+        output["payload"]["symbols"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|symbol| symbol["name"] == "View" && symbol["language"] == "jsx")
+    );
+}
+
+#[test]
+fn cli_ingests_repo_with_jsx_detection() {
+    let repo = temp_dir("jsx-repo");
+    fs::create_dir_all(repo.join("src")).unwrap();
+    fs::write(
+        repo.join("src/view.jsx"),
+        "export function View() { return <div>Hello</div>; }\n",
+    )
+    .unwrap();
+    let output = run(&["ingest", "repo", repo.to_str().unwrap()]);
+    assert!(
+        output["payload"]["detected_languages"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|language| language == "jsx")
+    );
+    assert!(
+        output["payload"]["artifacts"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|artifact| artifact["kind"] == "typescript_code")
+    );
+}
+
+#[test]
+fn cli_promotes_typescript_test_calls_to_repo_test_hints() {
+    let repo = temp_dir("typescript-test-calls");
+    fs::create_dir_all(repo.join("src")).unwrap();
+    fs::write(
+        repo.join("src/form.spec.ts"),
+        "import { test } from \"vitest\";\ntest(\"builds form\", () => {});\n",
+    )
+    .unwrap();
+    let output = run(&["ingest", "repo", repo.to_str().unwrap()]);
+    assert!(
+        output["payload"]["test_hints"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|hint| hint["kind"] == "test_call" && hint["name"] == "builds form")
+    );
+}
+
+#[test]
 fn cli_rust_detail_mode_exposes_syntax_debug() {
     let output = run_stdin(
         &["parse", "rust", "-", "--detail", "syntax-debug"],

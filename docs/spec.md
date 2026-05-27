@@ -10,11 +10,11 @@ This spec is grounded in the immediate integration requirements from:
 
 ## Goals
 
-- Provide reusable parsing and ingestion primitives for Markdown documents, Rust code, common serializations, and model outputs.
+- Provide reusable parsing and ingestion primitives for Markdown documents, Rust, Python, TypeScript/TSX/JSX code, common serializations, and model outputs.
 - Expose stable, typed Rust models that serialize to versioned, verifiable JSON.
 - Provide a JSON-only CLI that maps closely to the public library API for agents and end-to-end testing.
 - Preserve provenance, source ranges, hashes, diagnostics, and parser metadata where useful.
-- Be modular enough to add future parsers such as CSV/TSV, Python, TypeScript, notebooks, PDFs, or DOCX without redesigning the core interface.
+- Be modular enough to add future parsers such as CSV/TSV, notebooks, PDFs, or DOCX without redesigning the core interface.
 
 ## Non-goals
 
@@ -40,6 +40,8 @@ Expected modules:
 - `grist::ingest` — file and repo ingestion.
 - `grist::markdown` — Markdown AST-like document parsing.
 - `grist::rust` — tree-sitter-backed Rust parsing.
+- `grist::python` — tree-sitter-backed Python parsing.
+- `grist::typescript` — tree-sitter-backed TypeScript, TSX, and JSX parsing.
 - `grist::serialization` — JSON, JSONL, YAML, and TOML parsing.
 - `grist::model_output` — model-output candidate extraction, normalization, repair, and streaming parsing.
 - `grist::schema` — generated JSON Schema emission and validation helpers.
@@ -53,11 +55,13 @@ Suggested features:
 
 - `markdown`
 - `rust`
+- `python`
+- `typescript`
 - `serialization`
 - `model-output`
 - `schemas`
 - `cli`
-- `default = ["markdown", "rust", "serialization", "model-output", "schemas"]`
+- `default = ["markdown", "rust", "python", "typescript", "serialization", "model-output", "schemas"]`
 
 The CLI binary should be enabled by the package binary target and may require the `cli` feature internally.
 
@@ -74,6 +78,8 @@ All public CLI/library JSON outputs include explicit schema versions, for exampl
 - `grist/envelope/v1`
 - `grist/markdown/v1`
 - `grist/rust-code/v1`
+- `grist/python-code/v1`
+- `grist/typescript-code/v1`
 - `grist/serialization/v1`
 - `grist/model-output/v1`
 - `grist/repo-ingest/v1`
@@ -88,6 +94,8 @@ Suggested layout:
 schemas/grist.envelope.v1.schema.json
 schemas/grist.markdown.v1.schema.json
 schemas/grist.rust-code.v1.schema.json
+schemas/grist.python-code.v1.schema.json
+schemas/grist.typescript-code.v1.schema.json
 schemas/grist.serialization.v1.schema.json
 schemas/grist.model-output.v1.schema.json
 schemas/grist.repo-ingest.v1.schema.json
@@ -104,7 +112,7 @@ Conceptual shape:
 ```json
 {
   "schema_version": "grist/envelope/v1",
-  "kind": "markdown|rust_code|serialization|model_output|repo_ingest",
+  "kind": "markdown|rust_code|python_code|typescript_code|serialization|model_output|repo_ingest",
   "source": {},
   "hashes": {},
   "parser": {},
@@ -343,6 +351,51 @@ Conceptual symbol shape:
 ```
 
 Visibility is a fact for consumers. It is not a public API policy decision.
+
+## TypeScript, TSX, and JSX parsing
+
+TypeScript-family ingestion is backed by real parsing from day one using `tree-sitter` and `tree-sitter-typescript`. Regex or heuristic-only symbol extraction is not acceptable for the TypeScript parser.
+
+For Grist, an operational baseline for any first-class language service means functional parity with the existing language services:
+
+- parser-backed source analysis, not simulated symbol graphs;
+- deterministic Grist-owned public payload types;
+- source ranges and hashes;
+- parse errors represented as partial diagnostics;
+- schema generation and schema drift tests;
+- CLI parse support;
+- file/repo ingest routing;
+- repo-level language detection and test hints where the language has conventional test forms;
+- syntax detail modes for parser investigation.
+
+### Public model
+
+Grist exposes one TypeScript-family payload for TypeScript, TSX, and JSX with an explicit dialect field. Parser-native/syntax detail remains optional and selected through TypeScript-specific detail options.
+
+### Required extraction
+
+The TypeScript-family parser should handle common real-world TypeScript, TSX, and JSX codebases, including:
+
+- classes and methods;
+- constructors where represented by tree-sitter;
+- interfaces and interface methods;
+- type aliases;
+- enums;
+- namespaces/modules where represented by tree-sitter;
+- free functions;
+- function-valued variables such as arrow functions and function expressions;
+- top-level variables;
+- class fields and property signatures;
+- imports including default, namespace, named, side-effect, and type imports;
+- exports and re-exports;
+- visibility/modifier facts such as `public`, `protected`, `private`, `static`, `readonly`, `abstract`, `declare`, `export`, and `default`;
+- decorators attached to symbols;
+- JSDoc-style comments attached to symbols where practical;
+- calls, constructor calls, returns, assignments, and branch/control-flow nodes;
+- test-like calls such as `test(...)`, `it(...)`, and `describe(...)` for repo test hints;
+- parse errors and partial parse diagnostics with ranges.
+
+Missing modern TypeScript/TSX/JSX constructs are parser/spec gaps to fix when encountered, not accepted permanent limitations.
 
 ## Serialization parsing
 

@@ -50,6 +50,14 @@ enum ParseCommand {
         #[arg(long, value_enum, default_value_t = PythonDetailArg::Semantic)]
         detail: PythonDetailArg,
     },
+    #[command(name = "typescript", alias = "ts")]
+    TypeScript {
+        input: String,
+        #[arg(long, value_enum, default_value_t = TypeScriptDialectArg::TypeScript)]
+        dialect: TypeScriptDialectArg,
+        #[arg(long, value_enum, default_value_t = TypeScriptDetailArg::Semantic)]
+        detail: TypeScriptDetailArg,
+    },
     Json {
         input: String,
         #[arg(long, value_enum, default_value_t = SerializationFormatArg::Json)]
@@ -111,6 +119,22 @@ enum RustDetailArg {
 #[cfg(feature = "cli")]
 #[derive(Debug, Clone, Copy, ValueEnum)]
 enum PythonDetailArg {
+    Semantic,
+    SemanticWithSyntax,
+    SyntaxDebug,
+}
+
+#[cfg(feature = "cli")]
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum TypeScriptDialectArg {
+    TypeScript,
+    Tsx,
+    Jsx,
+}
+
+#[cfg(feature = "cli")]
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum TypeScriptDetailArg {
     Semantic,
     SemanticWithSyntax,
     SyntaxDebug,
@@ -180,6 +204,28 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     "grist.cli",
                     "feature.disabled",
                     "python feature is disabled",
+                ))?;
+            }
+            ParseCommand::TypeScript {
+                input,
+                dialect,
+                detail,
+            } => {
+                let (text, source) = read_text_input(&input, None)?;
+                #[cfg(feature = "typescript")]
+                print_json(&grist::typescript::parse_typescript(
+                    &text,
+                    source,
+                    &grist::typescript::TypeScriptIngestOptions {
+                        dialect: dialect.into(),
+                        detail: detail.into(),
+                    },
+                ))?;
+                #[cfg(not(feature = "typescript"))]
+                print_json(&Diagnostic::error(
+                    "grist.cli",
+                    "feature.disabled",
+                    "typescript feature is disabled",
                 ))?;
             }
             ParseCommand::Json {
@@ -351,6 +397,28 @@ impl From<RustDetailArg> for grist::rust::RustDetailMode {
             RustDetailArg::Semantic => Self::Semantic,
             RustDetailArg::SemanticWithSyntax => Self::SemanticWithSyntax,
             RustDetailArg::SyntaxDebug => Self::SyntaxDebug,
+        }
+    }
+}
+
+#[cfg(feature = "cli")]
+impl From<TypeScriptDialectArg> for grist::typescript::TypeScriptDialect {
+    fn from(value: TypeScriptDialectArg) -> Self {
+        match value {
+            TypeScriptDialectArg::TypeScript => Self::TypeScript,
+            TypeScriptDialectArg::Tsx => Self::Tsx,
+            TypeScriptDialectArg::Jsx => Self::Jsx,
+        }
+    }
+}
+
+#[cfg(feature = "cli")]
+impl From<TypeScriptDetailArg> for grist::typescript::TypeScriptDetailMode {
+    fn from(value: TypeScriptDetailArg) -> Self {
+        match value {
+            TypeScriptDetailArg::Semantic => Self::Semantic,
+            TypeScriptDetailArg::SemanticWithSyntax => Self::SemanticWithSyntax,
+            TypeScriptDetailArg::SyntaxDebug => Self::SyntaxDebug,
         }
     }
 }

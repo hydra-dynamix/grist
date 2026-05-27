@@ -9,10 +9,11 @@ default = ["markdown", "rust", "python", "serialization", "model-output", "schem
 markdown = ["dep:pulldown-cmark", "dep:serde_yaml"]
 rust = ["dep:tree-sitter", "dep:tree-sitter-rust"]
 python = ["dep:tree-sitter", "dep:tree-sitter-python"]
+typescript = ["dep:tree-sitter", "dep:tree-sitter-typescript"]
 serialization = ["dep:serde_yaml", "dep:toml", "dep:jsonschema"]
 model-output = ["serialization"]
 schemas = ["dep:schemars"]
-cli = ["dep:clap", "markdown", "rust", "python", "serialization", "model-output", "schemas"]
+cli = ["dep:clap", "markdown", "rust", "python", "typescript", "serialization", "model-output", "schemas"]
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"], optional = true }
@@ -30,6 +31,7 @@ toml = { version = "0.8", optional = true }
 tree-sitter = { version = "0.24", optional = true }
 tree-sitter-rust = { version = "0.23", optional = true }
 tree-sitter-python = { version = "0.23", optional = true }
+tree-sitter-typescript = { version = "0.23", optional = true }
 
 [[bin]]
 name = "grist"

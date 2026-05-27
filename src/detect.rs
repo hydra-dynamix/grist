@@ -26,6 +26,10 @@ pub enum ContentKind {
     Markdown,
     Rust,
     Python,
+    #[serde(rename = "typescript")]
+    TypeScript,
+    Tsx,
+    Jsx,
     Json,
     Jsonl,
     Yaml,
@@ -139,6 +143,24 @@ pub fn detect_path(path: &Path, bytes: &[u8], limits: &Limits) -> Detection {
                 confidence = 0.98;
                 reasons.push("Python extension".to_string());
             }
+            "ts" | "mts" | "cts" => {
+                content_kind = ContentKind::TypeScript;
+                language = Some("typescript".to_string());
+                confidence = 0.98;
+                reasons.push("TypeScript extension".to_string());
+            }
+            "tsx" => {
+                content_kind = ContentKind::Tsx;
+                language = Some("typescript".to_string());
+                confidence = 0.98;
+                reasons.push("TSX extension".to_string());
+            }
+            "jsx" => {
+                content_kind = ContentKind::Jsx;
+                language = Some("jsx".to_string());
+                confidence = 0.98;
+                reasons.push("JSX extension".to_string());
+            }
             "md" | "markdown" => {
                 content_kind = ContentKind::Markdown;
                 confidence = 0.98;
@@ -222,7 +244,16 @@ fn classify_file_kind(filename: &str, extension: &str, path: &Path) -> FileKind 
     if filename.ends_with(".lock") || matches!(filename, "cargo.lock" | "pnpm-lock.yaml") {
         return FileKind::Lockfile;
     }
-    if extension == "py" && (path_string.contains("/tests/") || filename.starts_with("test_")) {
+    if (extension == "py" || extension == "ts" || extension == "tsx" || extension == "jsx")
+        && (path_string.contains("/tests/")
+            || filename.starts_with("test_")
+            || filename.ends_with(".test.ts")
+            || filename.ends_with(".spec.ts")
+            || filename.ends_with(".test.tsx")
+            || filename.ends_with(".spec.tsx")
+            || filename.ends_with(".test.jsx")
+            || filename.ends_with(".spec.jsx"))
+    {
         return FileKind::Test;
     }
     if extension == "md" || extension == "markdown" {
@@ -232,6 +263,9 @@ fn classify_file_kind(filename: &str, extension: &str, path: &Path) -> FileKind 
         || path_string.contains("/dist/")
         || path_string.contains("/generated/")
         || filename.ends_with(".generated.rs")
+        || filename.ends_with(".generated.ts")
+        || filename.ends_with(".generated.tsx")
+        || filename.ends_with(".generated.jsx")
     {
         return FileKind::Generated;
     }
@@ -241,7 +275,10 @@ fn classify_file_kind(filename: &str, extension: &str, path: &Path) -> FileKind 
     {
         return FileKind::Test;
     }
-    if extension == "rs" || extension == "py" || extension == "pyi" {
+    if matches!(
+        extension,
+        "rs" | "py" | "pyi" | "ts" | "tsx" | "mts" | "cts" | "jsx"
+    ) {
         return FileKind::Source;
     }
     FileKind::Unknown
