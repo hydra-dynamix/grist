@@ -3,10 +3,14 @@
 #[cfg(all(feature = "model-output", feature = "rust"))]
 pub mod compatibility;
 pub mod core;
+#[cfg(feature = "csv")]
+pub mod csv;
 pub mod detect;
 pub mod ingest;
 pub mod text;
 
+#[cfg(feature = "html")]
+pub mod html;
 #[cfg(feature = "markdown")]
 pub mod markdown;
 #[cfg(feature = "model-output")]

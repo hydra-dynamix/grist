@@ -14,6 +14,8 @@ pub struct SchemaVersion(pub String);
 impl SchemaVersion {
     pub const ENVELOPE_V1: &'static str = "grist/envelope/v1";
     pub const MARKDOWN_V1: &'static str = "grist/markdown/v1";
+    pub const HTML_V1: &'static str = "grist/html/v1";
+    pub const CSV_V1: &'static str = "grist/csv/v1";
     pub const RUST_CODE_V1: &'static str = "grist/rust-code/v1";
     pub const PYTHON_CODE_V1: &'static str = "grist/python-code/v1";
     pub const TYPESCRIPT_CODE_V1: &'static str = "grist/typescript-code/v1";
@@ -33,6 +35,8 @@ impl From<&str> for SchemaVersion {
 #[serde(rename_all = "snake_case")]
 pub enum ArtifactKind {
     Markdown,
+    Html,
+    Csv,
     RustCode,
     PythonCode,
     #[serde(rename = "typescript_code")]

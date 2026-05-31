@@ -408,6 +408,20 @@ fn parse_detected_text(text: &str, source: SourceInfo, detection: &Detection) ->
         ContentKind::Markdown => {
             serde_json::to_value(crate::markdown::parse_markdown(text, source)).ok()
         }
+        #[cfg(feature = "html")]
+        ContentKind::Html => serde_json::to_value(crate::html::parse_html(
+            text,
+            source,
+            &crate::html::HtmlOptions::default(),
+        ))
+        .ok(),
+        #[cfg(feature = "csv")]
+        ContentKind::Csv => serde_json::to_value(crate::csv::parse_csv(
+            text,
+            source,
+            &crate::csv::CsvOptions::default(),
+        ))
+        .ok(),
         #[cfg(feature = "rust")]
         ContentKind::Rust => serde_json::to_value(crate::rust::parse_rust(
             text,
@@ -457,6 +471,8 @@ fn parse_detected_text(text: &str, source: SourceInfo, detection: &Detection) ->
 fn kind_from_str(value: &str) -> ArtifactKind {
     match value {
         "markdown" => ArtifactKind::Markdown,
+        "html" => ArtifactKind::Html,
+        "csv" => ArtifactKind::Csv,
         "rust_code" => ArtifactKind::RustCode,
         "python_code" => ArtifactKind::PythonCode,
         "typescript_code" => ArtifactKind::TypeScriptCode,

@@ -201,6 +201,74 @@ fn cli_ingests_plain_text_blocks_for_research_chain_documents() {
 }
 
 #[test]
+fn cli_parses_html_fragment_with_htmx_attributes() {
+    let output = run_stdin(
+        &["parse", "html", "-", "--mode", "fragment"],
+        r##"<button hx-post="/save" data-hx-target="#result">Save</button><div id="result"></div>"##,
+    );
+    validate_with_schema(&output, "html-envelope");
+    assert_eq!(output["kind"], "html");
+    assert_eq!(output["payload"]["mode"], "fragment");
+    let htmx_attributes = output["payload"]["htmx_attributes"].as_array().unwrap();
+    assert!(
+        htmx_attributes
+            .iter()
+            .any(|attribute| attribute["normalized_name"] == "hx-post")
+    );
+    assert!(
+        htmx_attributes
+            .iter()
+            .any(|attribute| attribute["normalized_name"] == "hx-target")
+    );
+}
+
+#[test]
+fn cli_parses_csv_with_headers_end_to_end() {
+    let output = run_stdin(
+        &["parse", "csv", "-"],
+        "name,score,ok\nalpha,1,true\nbeta,,false\n",
+    );
+    validate_with_schema(&output, "csv-envelope");
+    assert_eq!(output["kind"], "csv");
+    assert_eq!(output["payload"]["record_count"], 2);
+    assert_eq!(output["payload"]["headers"][0]["name"], "name");
+    assert_eq!(output["payload"]["rows"][0]["cells"][1]["value"], 1);
+    assert_eq!(
+        output["payload"]["rows"][1]["cells"][1]["value"],
+        serde_json::Value::Null
+    );
+}
+
+#[test]
+fn cli_ingests_csv_files_as_first_class_artifacts() {
+    let output = run_stdin(
+        &["ingest", "file", "-", "--filename", "metrics.csv"],
+        "name,score\nalpha,1\n",
+    );
+    assert_eq!(output["kind"], "file_ingest");
+    assert_eq!(output["payload"]["detection"]["content_kind"], "csv");
+    let artifact = &output["payload"]["artifact"];
+    assert_eq!(artifact["kind"], "csv");
+    assert_eq!(artifact["payload"]["rows"][0]["cells"][0]["raw"], "alpha");
+}
+
+#[test]
+fn cli_ingests_html_files_as_first_class_artifacts() {
+    let output = run_stdin(
+        &["ingest", "file", "-", "--filename", "template.htm"],
+        r#"<section hx-get="/partial">Load</section>"#,
+    );
+    assert_eq!(output["kind"], "file_ingest");
+    assert_eq!(output["payload"]["detection"]["content_kind"], "html");
+    let artifact = &output["payload"]["artifact"];
+    assert_eq!(artifact["kind"], "html");
+    assert_eq!(
+        artifact["payload"]["htmx_attributes"][0]["normalized_name"],
+        "hx-get"
+    );
+}
+
+#[test]
 fn cli_parses_python_with_schema_validation_end_to_end() {
     let output = run_stdin(
         &["parse", "python", "-", "--detail", "semantic-with-syntax"],

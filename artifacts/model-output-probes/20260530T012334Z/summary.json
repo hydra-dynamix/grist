@@ -1,0 +1,67 @@
+{
+  "by_parser_type": {
+    "fenced_json": {
+      "ok": 3,
+      "parse_failures": 0,
+      "total": 3,
+      "unparsed": 0
+    },
+    "fenced_yaml": {
+      "ok": 3,
+      "parse_failures": 0,
+      "total": 3,
+      "unparsed": 0
+    },
+    "mcp_json_rpc": {
+      "ok": 3,
+      "parse_failures": 0,
+      "total": 3,
+      "unparsed": 0
+    },
+    "openai_chat_envelope": {
+      "ok": 3,
+      "parse_failures": 0,
+      "total": 3,
+      "unparsed": 0
+    },
+    "openai_tool_call": {
+      "ok": 3,
+      "parse_failures": 0,
+      "total": 3,
+      "unparsed": 0
+    },
+    "prose_wrapped_json": {
+      "ok": 3,
+      "parse_failures": 0,
+      "total": 3,
+      "unparsed": 0
+    },
+    "python_style_command": {
+      "ok": 3,
+      "parse_failures": 0,
+      "total": 3,
+      "unparsed": 0
+    },
+    "python_style_positional": {
+      "ok": 3,
+      "parse_failures": 0,
+      "total": 3,
+      "unparsed": 0
+    },
+    "raw_json": {
+      "ok": 3,
+      "parse_failures": 0,
+      "total": 3,
+      "unparsed": 0
+    },
+    "xml_tool_call": {
+      "ok": 3,
+      "parse_failures": 0,
+      "total": 3,
+      "unparsed": 0
+    }
+  },
+  "failures": 0,
+  "ok": 30,
+  "total": 30
+}

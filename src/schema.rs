@@ -32,6 +32,14 @@ pub fn list_schemas() -> Vec<SchemaEntry> {
             schema_version: crate::core::SchemaVersion::MARKDOWN_V1.into(),
         },
         SchemaEntry {
+            name: "html".into(),
+            schema_version: crate::core::SchemaVersion::HTML_V1.into(),
+        },
+        SchemaEntry {
+            name: "csv".into(),
+            schema_version: crate::core::SchemaVersion::CSV_V1.into(),
+        },
+        SchemaEntry {
             name: "rust-code".into(),
             schema_version: crate::core::SchemaVersion::RUST_CODE_V1.into(),
         },
@@ -57,6 +65,14 @@ pub fn list_schemas() -> Vec<SchemaEntry> {
         },
         SchemaEntry {
             name: "markdown-envelope".into(),
+            schema_version: crate::core::SchemaVersion::ENVELOPE_V1.into(),
+        },
+        SchemaEntry {
+            name: "html-envelope".into(),
+            schema_version: crate::core::SchemaVersion::ENVELOPE_V1.into(),
+        },
+        SchemaEntry {
+            name: "csv-envelope".into(),
             schema_version: crate::core::SchemaVersion::ENVELOPE_V1.into(),
         },
         SchemaEntry {
@@ -93,6 +109,10 @@ pub fn schema_json(name: &str) -> Option<serde_json::Value> {
         "markdown" => {
             Some(serde_json::to_value(schema_for!(crate::markdown::MarkdownDocument)).ok()?)
         }
+        #[cfg(feature = "html")]
+        "html" => Some(serde_json::to_value(schema_for!(crate::html::HtmlDocument)).ok()?),
+        #[cfg(feature = "csv")]
+        "csv" => Some(serde_json::to_value(schema_for!(crate::csv::CsvDocument)).ok()?),
         #[cfg(feature = "rust")]
         "rust-code" => Some(serde_json::to_value(schema_for!(crate::rust::RustFile)).ok()?),
         #[cfg(feature = "python")]
@@ -122,6 +142,18 @@ pub fn schema_json(name: &str) -> Option<serde_json::Value> {
                 crate::core::Envelope<crate::markdown::MarkdownDocument>
             ))
             .ok()?,
+        ),
+        #[cfg(feature = "html")]
+        "html-envelope" => Some(
+            serde_json::to_value(schema_for!(
+                crate::core::Envelope<crate::html::HtmlDocument>
+            ))
+            .ok()?,
+        ),
+        #[cfg(feature = "csv")]
+        "csv-envelope" => Some(
+            serde_json::to_value(schema_for!(crate::core::Envelope<crate::csv::CsvDocument>))
+                .ok()?,
         ),
         #[cfg(feature = "rust")]
         "rust-code-envelope" => Some(
@@ -182,6 +214,8 @@ mod tests {
                 "markdown",
                 include_str!("../schemas/grist.markdown.v1.schema.json"),
             ),
+            ("html", include_str!("../schemas/grist.html.v1.schema.json")),
+            ("csv", include_str!("../schemas/grist.csv.v1.schema.json")),
             (
                 "rust-code",
                 include_str!("../schemas/grist.rust-code.v1.schema.json"),
@@ -198,6 +232,14 @@ mod tests {
             (
                 "markdown-envelope",
                 include_str!("../schemas/grist.markdown-envelope.v1.schema.json"),
+            ),
+            (
+                "html-envelope",
+                include_str!("../schemas/grist.html-envelope.v1.schema.json"),
+            ),
+            (
+                "csv-envelope",
+                include_str!("../schemas/grist.csv-envelope.v1.schema.json"),
             ),
             (
                 "rust-code-envelope",

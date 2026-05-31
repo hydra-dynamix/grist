@@ -1,0 +1,101 @@
+{
+  "ambiguous": 2,
+  "by_parser_type": {
+    "fenced_json": {
+      "ambiguous": 0,
+      "empty": 1,
+      "incomplete": 0,
+      "parsed": 50,
+      "request_failures": 9,
+      "total": 60,
+      "unparsed": 0
+    },
+    "fenced_yaml": {
+      "ambiguous": 0,
+      "empty": 0,
+      "incomplete": 0,
+      "parsed": 49,
+      "request_failures": 11,
+      "total": 60,
+      "unparsed": 0
+    },
+    "mcp_json_rpc": {
+      "ambiguous": 0,
+      "empty": 0,
+      "incomplete": 0,
+      "parsed": 48,
+      "request_failures": 12,
+      "total": 60,
+      "unparsed": 0
+    },
+    "openai_chat_envelope": {
+      "ambiguous": 0,
+      "empty": 1,
+      "incomplete": 0,
+      "parsed": 59,
+      "request_failures": 0,
+      "total": 60,
+      "unparsed": 0
+    },
+    "openai_tool_call": {
+      "ambiguous": 0,
+      "empty": 0,
+      "incomplete": 0,
+      "parsed": 40,
+      "request_failures": 20,
+      "total": 60,
+      "unparsed": 0
+    },
+    "prose_wrapped_json": {
+      "ambiguous": 0,
+      "empty": 0,
+      "incomplete": 0,
+      "parsed": 53,
+      "request_failures": 4,
+      "total": 60,
+      "unparsed": 3
+    },
+    "python_style_command": {
+      "ambiguous": 2,
+      "empty": 0,
+      "incomplete": 2,
+      "parsed": 41,
+      "request_failures": 15,
+      "total": 60,
+      "unparsed": 0
+    },
+    "python_style_positional": {
+      "ambiguous": 0,
+      "empty": 0,
+      "incomplete": 1,
+      "parsed": 47,
+      "request_failures": 12,
+      "total": 60,
+      "unparsed": 0
+    },
+    "raw_json": {
+      "ambiguous": 0,
+      "empty": 1,
+      "incomplete": 0,
+      "parsed": 52,
+      "request_failures": 7,
+      "total": 60,
+      "unparsed": 0
+    },
+    "xml_tool_call": {
+      "ambiguous": 0,
+      "empty": 1,
+      "incomplete": 0,
+      "parsed": 51,
+      "request_failures": 8,
+      "total": 60,
+      "unparsed": 0
+    }
+  },
+  "empty": 4,
+  "incomplete": 3,
+  "parsed": 490,
+  "request_failures": 98,
+  "total": 600,
+  "unparsed": 3
+}

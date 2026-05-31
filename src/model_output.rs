@@ -17,6 +17,7 @@ pub struct ModelOutputReport {
     pub selected_candidate_id: Option<String>,
     pub raw_text_sha256: String,
     pub status: ModelOutputStatus,
+    pub failures: Vec<ModelOutputFailure>,
 }
 
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
@@ -47,11 +48,25 @@ pub struct ModelOutputCandidate {
 }
 
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ModelOutputFailure {
+    pub id: String,
+    pub failure_mode: String,
+    pub grammar: Option<CandidateGrammar>,
+    pub raw_text: String,
+    pub raw_text_sha256: String,
+    pub raw_range: Option<SourceRange>,
+    pub diagnostics: Vec<Diagnostic>,
+    pub recoverable: bool,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum CandidateGrammar {
     PythonStyleCommand,
     OpenAiToolCall,
+    OpenAiChatContent,
     McpJsonRpc,
     FencedJson,
     FencedCode,
@@ -150,6 +165,7 @@ pub fn parse_model_output(
     let index = LineIndex::new(&working);
     let mut candidates = Vec::new();
     let mut diagnostics = Vec::new();
+    let mut failures = Vec::new();
 
     if working.trim().is_empty() {
         diagnostics.push(Diagnostic::error(
@@ -158,7 +174,7 @@ pub fn parse_model_output(
             "empty model output",
         ));
     } else {
-        extract_fenced_blocks(&working, &index, &mut candidates);
+        extract_fenced_blocks(&working, &index, &mut candidates, &mut failures);
         extract_xml_tool_calls(&working, &index, &mut candidates);
         extract_python_style_commands(&working, &index, options, &mut candidates);
         extract_json_candidates(&working, &index, &mut candidates);
@@ -177,6 +193,10 @@ pub fn parse_model_output(
             });
             candidate.diagnostics.extend(validation_diagnostics);
         }
+        for mut failure in failures_from_candidate(candidate, &working) {
+            failure.id = format!("failure-{}", failures.len());
+            failures.push(failure);
+        }
     }
 
     let status = if working.trim().is_empty() {
@@ -187,7 +207,21 @@ pub fn parse_model_output(
             "model_output.unparsed",
             "no supported model-output candidate was detected",
         ));
+        failures.push(failure_record(
+            failures.len(),
+            "unparsed_model_output",
+            None,
+            working.trim(),
+            None,
+            diagnostics.clone(),
+            true,
+        ));
         ModelOutputStatus::Unparsed
+    } else if candidates
+        .iter()
+        .all(|candidate| candidate.status == CandidateStatus::Incomplete)
+    {
+        ModelOutputStatus::Incomplete
     } else if candidates.len() == 1 {
         ModelOutputStatus::Parsed
     } else {
@@ -207,6 +241,7 @@ pub fn parse_model_output(
             selected_candidate_id,
             raw_text_sha256,
             status,
+            failures,
         },
     )
     .with_hashes(Hashes::for_bytes(text.as_bytes(), Some(text)))
@@ -294,6 +329,7 @@ fn extract_fenced_blocks(
     text: &str,
     index: &LineIndex,
     candidates: &mut Vec<ModelOutputCandidate>,
+    failures: &mut Vec<ModelOutputFailure>,
 ) {
     let mut search = 0;
     while let Some(start_rel) = text[search..].find("```") {
@@ -305,16 +341,59 @@ fn extract_fenced_blocks(
         let line_end = info_start + line_end_rel;
         let info = text[info_start..line_end].trim().to_string();
         let body_start = line_end + 1;
-        let Some(end_rel) = text[body_start..].find("```") else {
-            break;
-        };
-        let end = body_start + end_rel;
-        let body = text[body_start..end].trim();
         let language = info
             .split_whitespace()
             .next()
             .unwrap_or("")
             .to_ascii_lowercase();
+        let Some(end_rel) = text[body_start..].find("```") else {
+            let body = text[body_start..].trim();
+            let mut candidate = base_candidate(
+                candidates.len(),
+                if language == "json" {
+                    CandidateGrammar::FencedJson
+                } else {
+                    CandidateGrammar::FencedCode
+                },
+                Some(SourceRange::new(start, text.len(), index)),
+            );
+            candidate.status = CandidateStatus::Incomplete;
+            candidate
+                .normalizations
+                .push("extracted_incomplete_markdown_fence".into());
+            if language == "json" || body.starts_with('{') || body.starts_with('[') {
+                if let Ok(value) = parse_jsonish_value(body) {
+                    candidate.value = Some(value);
+                    classify_json_tool_shape(&mut candidate);
+                    candidate.status = CandidateStatus::Recovered;
+                    candidate
+                        .normalizations
+                        .push("parsed_unclosed_fence_body".into());
+                }
+            } else if !body.is_empty() {
+                candidate.value = Some(Value::String(body.to_string()));
+            }
+            let diagnostic = Diagnostic::warning(
+                "grist.model_output.fence",
+                "fence.unclosed",
+                "markdown fence was opened but not closed",
+            )
+            .partial();
+            failures.push(failure_record(
+                failures.len(),
+                "unclosed_markdown_fence",
+                Some(candidate.grammar.clone()),
+                body,
+                Some(SourceRange::new(body_start, text.len(), index)),
+                vec![diagnostic.clone()],
+                true,
+            ));
+            candidate.diagnostics.push(diagnostic);
+            candidates.push(candidate);
+            break;
+        };
+        let end = body_start + end_rel;
+        let body = text[body_start..end].trim();
         let mut candidate = base_candidate(
             candidates.len(),
             if language == "json" {
@@ -330,14 +409,27 @@ fn extract_fenced_blocks(
         match language.as_str() {
             "json" if body.starts_with('{') || body.starts_with('[') || !body.is_empty() => {
                 match parse_jsonish_value(body) {
-                    Ok(value) => candidate.value = Some(value),
+                    Ok(value) => {
+                        candidate.value = Some(value);
+                        classify_json_tool_shape(&mut candidate);
+                    }
                     Err(err) => {
                         candidate.status = CandidateStatus::Malformed;
-                        candidate.diagnostics.push(Diagnostic::error(
+                        let diagnostic = Diagnostic::error(
                             "grist.model_output.fence",
                             "fence.json_parse",
                             format!("fenced JSON parse failed: {err}"),
+                        );
+                        failures.push(failure_record(
+                            failures.len(),
+                            "fenced_json_parse_failed",
+                            Some(CandidateGrammar::FencedJson),
+                            body,
+                            Some(SourceRange::new(body_start, end, index)),
+                            vec![diagnostic.clone()],
+                            true,
                         ));
+                        candidate.diagnostics.push(diagnostic);
                     }
                 }
             }
@@ -350,20 +442,40 @@ fn extract_fenced_blocks(
                     }
                     Err(err) => {
                         candidate.status = CandidateStatus::Malformed;
-                        candidate.diagnostics.push(Diagnostic::error(
+                        let diagnostic = Diagnostic::error(
                             "grist.model_output.fence",
                             "fence.yaml_to_json",
                             format!("fenced YAML conversion failed: {err}"),
+                        );
+                        failures.push(failure_record(
+                            failures.len(),
+                            "fenced_yaml_conversion_failed",
+                            Some(CandidateGrammar::YamlBlock),
+                            body,
+                            Some(SourceRange::new(body_start, end, index)),
+                            vec![diagnostic.clone()],
+                            true,
                         ));
+                        candidate.diagnostics.push(diagnostic);
                     }
                 },
                 Err(err) => {
                     candidate.status = CandidateStatus::Malformed;
-                    candidate.diagnostics.push(Diagnostic::error(
+                    let diagnostic = Diagnostic::error(
                         "grist.model_output.fence",
                         "fence.yaml_parse",
                         format!("fenced YAML parse failed: {err}"),
+                    );
+                    failures.push(failure_record(
+                        failures.len(),
+                        "fenced_yaml_parse_failed",
+                        Some(CandidateGrammar::YamlBlock),
+                        body,
+                        Some(SourceRange::new(body_start, end, index)),
+                        vec![diagnostic.clone()],
+                        true,
                     ));
+                    candidate.diagnostics.push(diagnostic);
                 }
             },
             "toml" => match body.parse::<toml::Value>() {
@@ -375,32 +487,65 @@ fn extract_fenced_blocks(
                     }
                     Err(err) => {
                         candidate.status = CandidateStatus::Malformed;
-                        candidate.diagnostics.push(Diagnostic::error(
+                        let diagnostic = Diagnostic::error(
                             "grist.model_output.fence",
                             "fence.toml_to_json",
                             format!("fenced TOML conversion failed: {err}"),
+                        );
+                        failures.push(failure_record(
+                            failures.len(),
+                            "fenced_toml_conversion_failed",
+                            Some(CandidateGrammar::TomlBlock),
+                            body,
+                            Some(SourceRange::new(body_start, end, index)),
+                            vec![diagnostic.clone()],
+                            true,
                         ));
+                        candidate.diagnostics.push(diagnostic);
                     }
                 },
                 Err(err) => {
                     candidate.status = CandidateStatus::Malformed;
-                    candidate.diagnostics.push(Diagnostic::error(
+                    let diagnostic = Diagnostic::error(
                         "grist.model_output.fence",
                         "fence.toml_parse",
                         format!("fenced TOML parse failed: {err}"),
+                    );
+                    failures.push(failure_record(
+                        failures.len(),
+                        "fenced_toml_parse_failed",
+                        Some(CandidateGrammar::TomlBlock),
+                        body,
+                        Some(SourceRange::new(body_start, end, index)),
+                        vec![diagnostic.clone()],
+                        true,
                     ));
+                    candidate.diagnostics.push(diagnostic);
                 }
             },
             _ if body.starts_with('{') || body.starts_with('[') => {
                 match parse_jsonish_value(body) {
-                    Ok(value) => candidate.value = Some(value),
+                    Ok(value) => {
+                        candidate.value = Some(value);
+                        classify_json_tool_shape(&mut candidate);
+                    }
                     Err(err) => {
                         candidate.status = CandidateStatus::Malformed;
-                        candidate.diagnostics.push(Diagnostic::error(
+                        let diagnostic = Diagnostic::error(
                             "grist.model_output.fence",
                             "fence.jsonish_parse",
                             format!("fenced JSON-like parse failed: {err}"),
+                        );
+                        failures.push(failure_record(
+                            failures.len(),
+                            "fenced_jsonish_parse_failed",
+                            Some(candidate.grammar.clone()),
+                            body,
+                            Some(SourceRange::new(body_start, end, index)),
+                            vec![diagnostic.clone()],
+                            true,
                         ));
+                        candidate.diagnostics.push(diagnostic);
                     }
                 }
             }
@@ -509,6 +654,26 @@ fn extract_python_style_commands(
                         break;
                     }
                 }
+                if !candidates.iter().any(|candidate| {
+                    candidate.raw_range.as_ref().is_some_and(|range| {
+                        range.byte_start == start && range.byte_end == close + 1
+                    })
+                }) {
+                    if let Ok((value, arg_name, normalizations)) =
+                        parse_positional_command_arg(call)
+                    {
+                        let mut candidate = base_candidate(
+                            candidates.len(),
+                            CandidateGrammar::PythonStyleCommand,
+                            Some(SourceRange::new(start, close + 1, index)),
+                        );
+                        candidate.command_name = Some(command.clone());
+                        candidate.argument_name = Some(arg_name);
+                        candidate.value = Some(value);
+                        candidate.normalizations = normalizations;
+                        candidates.push(candidate);
+                    }
+                }
                 search = close + 1;
             } else {
                 break;
@@ -535,10 +700,37 @@ fn extract_json_candidates(
         candidates.push(candidate);
         return;
     }
+    if trimmed.starts_with('{') || trimmed.starts_with('[') {
+        let start = text.find(trimmed).unwrap_or(0);
+        let mut candidate = base_candidate(
+            candidates.len(),
+            CandidateGrammar::RawJson,
+            Some(SourceRange::new(start, start + trimmed.len(), index)),
+        );
+        candidate.status = CandidateStatus::Incomplete;
+        candidate.confidence = 0.4;
+        candidate
+            .normalizations
+            .push("preserved_incomplete_raw_json".into());
+        candidate.diagnostics.push(
+            Diagnostic::warning(
+                "grist.model_output.json",
+                "json.incomplete",
+                "raw JSON-like output started but did not parse as a complete value",
+            )
+            .partial(),
+        );
+        candidates.push(candidate);
+        return;
+    }
     let mut search = 0;
     while let Some((start, end)) = first_balanced_json_value(&text[search..]) {
         let absolute_start = search + start;
         let absolute_end = search + end;
+        if is_contained_in_existing_candidate(absolute_start, absolute_end, candidates) {
+            search = absolute_end;
+            continue;
+        }
         let slice = &text[absolute_start..absolute_end];
         if let Ok(value) = parse_jsonish_value(slice) {
             let mut candidate = json_candidate(
@@ -555,6 +747,20 @@ fn extract_json_candidates(
         }
         search = absolute_end;
     }
+}
+
+fn is_contained_in_existing_candidate(
+    start: usize,
+    end: usize,
+    candidates: &[ModelOutputCandidate],
+) -> bool {
+    candidates.iter().any(|candidate| {
+        candidate.raw_range.as_ref().is_some_and(|range| {
+            range.byte_start <= start
+                && end <= range.byte_end
+                && (range.byte_start != start || range.byte_end != end)
+        })
+    })
 }
 
 fn classify_json_tool_shape(candidate: &mut ModelOutputCandidate) {
@@ -604,6 +810,39 @@ fn classify_json_tool_shape(candidate: &mut ModelOutputCandidate) {
                 }
             }
         }
+    } else if let Some(content) = openai_chat_content(value).map(str::to_string) {
+        candidate.grammar = CandidateGrammar::OpenAiChatContent;
+        candidate.argument_name = Some("content".into());
+        if let Ok(parsed) = parse_jsonish_value(&content) {
+            candidate.value = Some(parsed);
+            candidate
+                .normalizations
+                .push("parsed_openai_chat_message_content".into());
+        } else if let Some((start, end)) = first_balanced_json_value(&content) {
+            if let Ok(parsed) = parse_jsonish_value(&content[start..end]) {
+                candidate.value = Some(parsed);
+                candidate
+                    .normalizations
+                    .push("extracted_json_from_openai_chat_message_content".into());
+            }
+        }
+    } else if value.get("name").is_some() && value.get("arguments").is_some() {
+        candidate.grammar = CandidateGrammar::OpenAiToolCall;
+        candidate.command_name = value
+            .get("name")
+            .and_then(Value::as_str)
+            .map(str::to_string);
+        candidate.argument_name = Some("arguments".into());
+        if let Some(arguments) = value.get("arguments") {
+            if let Some(arguments_str) = arguments.as_str() {
+                if let Ok(parsed) = parse_jsonish_value(arguments_str) {
+                    candidate.value = Some(parsed);
+                    candidate
+                        .normalizations
+                        .push("parsed_root_stringified_arguments".into());
+                }
+            }
+        }
     }
 }
 
@@ -622,6 +861,43 @@ fn parse_command_arg(call: &str, arg_name: &str) -> Result<(Value, String, Vec<S
         arg_name.to_string(),
         vec!["parsed_python_style_command".into()],
     ))
+}
+
+fn parse_positional_command_arg(call: &str) -> Result<(Value, String, Vec<String>), String> {
+    let Some(open) = call.find('(') else {
+        return Err("missing open paren".into());
+    };
+    let Some(close) = call.rfind(')') else {
+        return Err("missing close paren".into());
+    };
+    if close <= open {
+        return Err("empty call".into());
+    }
+    let args = &call[open + 1..close];
+    let Some((object_start, object_end)) = first_balanced_json_value(args) else {
+        return Err("missing balanced positional JSON argument".into());
+    };
+    let value =
+        parse_jsonish_value(&args[object_start..object_end]).map_err(|err| err.to_string())?;
+    Ok((
+        value,
+        "positional".to_string(),
+        vec!["parsed_python_style_positional_command".into()],
+    ))
+}
+
+fn openai_chat_content(value: &Value) -> Option<&str> {
+    let choices = value.get("choices")?.as_array()?;
+    let first_choice = choices.first()?;
+    first_choice
+        .get("message")
+        .and_then(|message| message.get("content"))
+        .or_else(|| {
+            first_choice
+                .get("delta")
+                .and_then(|delta| delta.get("content"))
+        })?
+        .as_str()
 }
 
 fn apply_aliases(candidate: &mut ModelOutputCandidate, aliases: &AliasRules) {
@@ -691,6 +967,61 @@ fn json_candidate(
     candidate.value = Some(value);
     candidate.confidence = 0.9;
     candidate
+}
+
+fn failures_from_candidate(
+    candidate: &ModelOutputCandidate,
+    source_text: &str,
+) -> Vec<ModelOutputFailure> {
+    let error_diagnostics: Vec<Diagnostic> = candidate
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.severity == crate::core::Severity::Error)
+        .cloned()
+        .collect();
+    if error_diagnostics.is_empty() && candidate.status != CandidateStatus::Malformed {
+        return Vec::new();
+    }
+    let raw_text = candidate
+        .raw_range
+        .as_ref()
+        .and_then(|range| source_text.get(range.byte_start..range.byte_end))
+        .unwrap_or("")
+        .to_string();
+    vec![failure_record(
+        0,
+        if candidate.status == CandidateStatus::Malformed {
+            "malformed_candidate"
+        } else {
+            "candidate_error"
+        },
+        Some(candidate.grammar.clone()),
+        &raw_text,
+        candidate.raw_range.clone(),
+        error_diagnostics,
+        true,
+    )]
+}
+
+fn failure_record(
+    id: usize,
+    failure_mode: impl Into<String>,
+    grammar: Option<CandidateGrammar>,
+    raw_text: &str,
+    raw_range: Option<SourceRange>,
+    diagnostics: Vec<Diagnostic>,
+    recoverable: bool,
+) -> ModelOutputFailure {
+    ModelOutputFailure {
+        id: format!("failure-{id}"),
+        failure_mode: failure_mode.into(),
+        grammar,
+        raw_text: raw_text.to_string(),
+        raw_text_sha256: crate::core::sha256_hex(raw_text.as_bytes()),
+        raw_range,
+        diagnostics,
+        recoverable,
+    }
 }
 
 fn parse_jsonish_value(text: &str) -> Result<Value, serde_json::Error> {
@@ -877,21 +1208,47 @@ fn find_argument_value_start(args: &str, arg_name: &str) -> Option<usize> {
 
 fn discover_command_names(text: &str) -> Vec<String> {
     let mut names = Vec::new();
-    for token in text.split(|ch: char| ch.is_whitespace() || ch == '\n') {
-        if let Some(open) = token.find('(') {
-            let name = &token[..open];
-            if name.chars().any(|ch| ch == '.')
-                && name
-                    .chars()
-                    .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '_' | '.'))
-            {
-                names.push(name.to_string());
-            }
+    for (idx, ch) in text.char_indices() {
+        if ch != '(' {
+            continue;
+        }
+        let name_end = idx;
+        let name_start = text[..name_end]
+            .char_indices()
+            .rev()
+            .find_map(|(pos, candidate)| {
+                (!is_command_name_char(candidate)).then_some(pos + candidate.len_utf8())
+            })
+            .unwrap_or(0);
+        let name = text[name_start..name_end].trim();
+        if is_plausible_command_name(name)
+            && find_matching(text, idx, '(', ')')
+                .map(|close| {
+                    text[idx + 1..close].contains('{') || text[idx + 1..close].contains('[')
+                })
+                .unwrap_or(false)
+        {
+            names.push(name.to_string());
         }
     }
     names.sort();
     names.dedup();
     names
+}
+
+fn is_command_name_char(ch: char) -> bool {
+    ch.is_ascii_alphanumeric() || matches!(ch, '_' | '.')
+}
+
+fn is_plausible_command_name(name: &str) -> bool {
+    if name.is_empty() {
+        return false;
+    }
+    let mut chars = name.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+    (first.is_ascii_alphabetic() || first == '_') && chars.all(is_command_name_char)
 }
 
 fn strip_think_blocks(text: &str) -> String {
@@ -975,6 +1332,100 @@ mod tests {
     }
 
     #[test]
+    fn parses_openai_chat_completion_content() {
+        let report = parse_model_output(
+            "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"a\\\":1}\"}}]}",
+            SourceInfo::stdin("model.txt"),
+            &ModelOutputOptions::default(),
+        );
+        assert_eq!(
+            report.payload.candidates[0].grammar,
+            CandidateGrammar::OpenAiChatContent
+        );
+        assert_eq!(report.payload.candidates[0].value.as_ref().unwrap()["a"], 1);
+    }
+
+    #[test]
+    fn parses_root_name_arguments_tool_call() {
+        let report = parse_model_output(
+            "{\"name\":\"Submit.Result\",\"arguments\":\"{\\\"a\\\":1}\"}",
+            SourceInfo::stdin("model.txt"),
+            &ModelOutputOptions::default(),
+        );
+        assert_eq!(
+            report.payload.candidates[0].grammar,
+            CandidateGrammar::OpenAiToolCall
+        );
+        assert_eq!(
+            report.payload.candidates[0].command_name.as_deref(),
+            Some("Submit.Result")
+        );
+        assert_eq!(report.payload.candidates[0].value.as_ref().unwrap()["a"], 1);
+    }
+
+    #[test]
+    fn parses_plain_identifier_positional_command() {
+        let report = parse_model_output(
+            "submit({\"a\":1})",
+            SourceInfo::stdin("model.txt"),
+            &ModelOutputOptions::default(),
+        );
+        assert_eq!(
+            report.payload.candidates[0].grammar,
+            CandidateGrammar::PythonStyleCommand
+        );
+        assert_eq!(
+            report.payload.candidates[0].command_name.as_deref(),
+            Some("submit")
+        );
+        assert_eq!(
+            report.payload.candidates[0].argument_name.as_deref(),
+            Some("positional")
+        );
+    }
+
+    #[test]
+    fn records_unparsed_failure_with_raw_text() {
+        let report = parse_model_output(
+            "there is no structured output here",
+            SourceInfo::stdin("model.txt"),
+            &ModelOutputOptions::default(),
+        );
+        assert_eq!(report.payload.status, ModelOutputStatus::Unparsed);
+        assert_eq!(report.payload.failures.len(), 1);
+        assert_eq!(
+            report.payload.failures[0].failure_mode,
+            "unparsed_model_output"
+        );
+        assert_eq!(
+            report.payload.failures[0].raw_text,
+            "there is no structured output here"
+        );
+    }
+
+    #[test]
+    fn records_incomplete_unclosed_fence_as_candidate() {
+        let report = parse_model_output(
+            "```json\n{\"a\":",
+            SourceInfo::stdin("model.txt"),
+            &ModelOutputOptions::default(),
+        );
+        assert_eq!(report.payload.status, ModelOutputStatus::Incomplete);
+        assert_eq!(
+            report.payload.candidates[0].grammar,
+            CandidateGrammar::FencedJson
+        );
+        assert_eq!(
+            report.payload.candidates[0].status,
+            CandidateStatus::Incomplete
+        );
+        assert_eq!(
+            report.payload.failures[0].failure_mode,
+            "unclosed_markdown_fence"
+        );
+    }
+
+    #[test]
     fn repairs_aliases_and_validates_schema() {
         let options = ModelOutputOptions {
             aliases: AliasRules {
@@ -1018,7 +1469,10 @@ mod tests {
         let (_events, report) = parser.finish();
         assert!(matches!(
             report.payload.status,
-            ModelOutputStatus::Parsed | ModelOutputStatus::Ambiguous | ModelOutputStatus::Unparsed
+            ModelOutputStatus::Parsed
+                | ModelOutputStatus::Ambiguous
+                | ModelOutputStatus::Incomplete
+                | ModelOutputStatus::Unparsed
         ));
     }
 }

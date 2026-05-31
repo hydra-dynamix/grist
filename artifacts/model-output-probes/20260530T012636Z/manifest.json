@@ -1,0 +1,28 @@
+{
+  "count": 20,
+  "endpoint": "https://text-erasmus.ngrok.dev/v1",
+  "models": [
+    "qwen2.5:7b-instruct",
+    "gemma4:latest",
+    "qwen3:latest"
+  ],
+  "parser_types": [
+    "raw_json",
+    "fenced_json",
+    "fenced_yaml",
+    "python_style_command",
+    "python_style_positional",
+    "openai_tool_call",
+    "mcp_json_rpc",
+    "xml_tool_call",
+    "prose_wrapped_json",
+    "openai_chat_envelope"
+  ],
+  "response_ws_status": {
+    "error": "URLError",
+    "message": "<urlopen error [Errno 111] Connection refused>",
+    "ok": false
+  },
+  "response_ws_url": "http://localhost:8080",
+  "started_at": "2026-05-30T01:26:36.405298+00:00"
+}

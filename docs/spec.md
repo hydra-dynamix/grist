@@ -10,11 +10,11 @@ This spec is grounded in the immediate integration requirements from:
 
 ## Goals
 
-- Provide reusable parsing and ingestion primitives for Markdown documents, Rust, Python, TypeScript/TSX/JSX code, common serializations, and model outputs.
+- Provide reusable parsing and ingestion primitives for Markdown documents, HTML/HTMX documents and fragments, CSV datasets, Rust, Python, TypeScript/TSX/JSX code, common serializations, and model outputs.
 - Expose stable, typed Rust models that serialize to versioned, verifiable JSON.
 - Provide a JSON-only CLI that maps closely to the public library API for agents and end-to-end testing.
 - Preserve provenance, source ranges, hashes, diagnostics, and parser metadata where useful.
-- Be modular enough to add future parsers such as CSV/TSV, notebooks, PDFs, or DOCX without redesigning the core interface.
+- Be modular enough to add future parsers such as TSV, notebooks, PDFs, or DOCX without redesigning the core interface.
 
 ## Non-goals
 
@@ -39,10 +39,12 @@ Expected modules:
 - `grist::detect` — file kind, content type, language, and parser selection.
 - `grist::ingest` — file and repo ingestion.
 - `grist::markdown` — Markdown AST-like document parsing.
+- `grist::html` — HTML document/fragment parsing with structured element, attribute, and HTMX attribute facts.
 - `grist::rust` — tree-sitter-backed Rust parsing.
 - `grist::python` — tree-sitter-backed Python parsing.
 - `grist::typescript` — tree-sitter-backed TypeScript, TSX, and JSX parsing.
 - `grist::serialization` — JSON, JSONL, YAML, and TOML parsing.
+- `grist::csv` — CSV row/cell parsing with headers, typed scalar inference, source metadata, and diagnostics.
 - `grist::model_output` — model-output candidate extraction, normalization, repair, and streaming parsing.
 - `grist::schema` — generated JSON Schema emission and validation helpers.
 - `grist::cli` / binary `grist` — thin JSON-only CLI over the library API.
@@ -54,14 +56,16 @@ Major functionality should be feature-gated while default features enable the in
 Suggested features:
 
 - `markdown`
+- `html`
 - `rust`
 - `python`
 - `typescript`
 - `serialization`
+- `csv`
 - `model-output`
 - `schemas`
 - `cli`
-- `default = ["markdown", "rust", "python", "typescript", "serialization", "model-output", "schemas"]`
+- `default = ["markdown", "html", "csv", "rust", "python", "typescript", "serialization", "model-output", "schemas"]`
 
 The CLI binary should be enabled by the package binary target and may require the `cli` feature internally.
 
@@ -77,10 +81,12 @@ All public CLI/library JSON outputs include explicit schema versions, for exampl
 
 - `grist/envelope/v1`
 - `grist/markdown/v1`
+- `grist/html/v1`
 - `grist/rust-code/v1`
 - `grist/python-code/v1`
 - `grist/typescript-code/v1`
 - `grist/serialization/v1`
+- `grist/csv/v1`
 - `grist/model-output/v1`
 - `grist/repo-ingest/v1`
 
@@ -93,6 +99,7 @@ Suggested layout:
 ```text
 schemas/grist.envelope.v1.schema.json
 schemas/grist.markdown.v1.schema.json
+schemas/grist.html.v1.schema.json
 schemas/grist.rust-code.v1.schema.json
 schemas/grist.python-code.v1.schema.json
 schemas/grist.typescript-code.v1.schema.json
@@ -112,7 +119,7 @@ Conceptual shape:
 ```json
 {
   "schema_version": "grist/envelope/v1",
-  "kind": "markdown|rust_code|python_code|typescript_code|serialization|model_output|repo_ingest",
+  "kind": "markdown|html|csv|rust_code|python_code|typescript_code|serialization|model_output|repo_ingest",
   "source": {},
   "hashes": {},
   "parser": {},
@@ -406,7 +413,7 @@ Initial common serialization support includes:
 - YAML;
 - TOML.
 
-CSV/TSV are deferred until a concrete use case appears, though Markdown tables should still normalize to structured rows/cells.
+CSV is a first-class parser and ingestion artifact. It preserves headers, rows, cells, raw cell text, inferred scalar JSON values, source metadata where available, and parser diagnostics. TSV remains deferred until a concrete use case appears, though the CSV parser is delimiter-configurable enough to support tab-delimited input through explicit options.
 
 Parsing should be modular so additional serialization parsers can be dropped in later.
 
@@ -559,6 +566,7 @@ Grist should include:
 - Rust fixtures for functions, traits, impls, macros, modules, visibility, tests, attributes, doc comments, syntax errors, and modern language constructs;
 - Markdown fixtures for headings, nested sections, fences, malformed fences, links, tables, and frontmatter;
 - serialization fixtures for JSON, JSONL, YAML, TOML, malformed inputs, and schema validation;
+- CSV fixtures for header/no-header inputs, typed scalar inference, file ingest, and schema validation;
 - model-output fixtures for Python-style calls, OpenAI calls, MCP JSON-RPC, fenced JSON, prose wrappers, multiple candidates, malformed JSON, nested stringified arguments, and streaming partials;
 - fuzz/property tests for model-output parsing and JSON-ish repair where practical.
 
@@ -574,6 +582,7 @@ Grist is ready for initial integration when:
 - Markdown parser emits AST-like nodes with source ranges;
 - Rust parser uses tree-sitter and emits comprehensive symbols/imports/diagnostics with ranges;
 - serialization parser supports JSON, JSONL, YAML, and TOML;
+- CSV parser supports header-aware rows/cells with raw values, inferred scalar values, hashes, ranges where available, and diagnostics;
 - model-output parser supports batch and streaming parsing with candidates, repairs, aliases, diagnostics, and raw provenance;
 - malformed/unsupported inputs produce explicit diagnostics rather than silent success;
 - no network access or code execution occurs by default;

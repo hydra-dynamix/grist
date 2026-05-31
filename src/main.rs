@@ -40,6 +40,18 @@ enum ParseCommand {
     Markdown {
         input: String,
     },
+    Html {
+        input: String,
+        #[arg(long, value_enum, default_value_t = HtmlModeArg::Auto)]
+        mode: HtmlModeArg,
+    },
+    Csv {
+        input: String,
+        #[arg(long, value_enum, default_value_t = CsvDelimiterArg::Comma)]
+        delimiter: CsvDelimiterArg,
+        #[arg(long)]
+        no_headers: bool,
+    },
     Rust {
         input: String,
         #[arg(long, value_enum, default_value_t = RustDetailArg::Semantic)]
@@ -110,6 +122,23 @@ enum SerializationFormatArg {
 
 #[cfg(feature = "cli")]
 #[derive(Debug, Clone, Copy, ValueEnum)]
+enum HtmlModeArg {
+    Auto,
+    Document,
+    Fragment,
+}
+
+#[cfg(feature = "cli")]
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum CsvDelimiterArg {
+    Comma,
+    Tab,
+    Semicolon,
+    Pipe,
+}
+
+#[cfg(feature = "cli")]
+#[derive(Debug, Clone, Copy, ValueEnum)]
 enum RustDetailArg {
     Semantic,
     SemanticWithSyntax,
@@ -170,6 +199,43 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     "grist.cli",
                     "feature.disabled",
                     "markdown feature is disabled",
+                ))?;
+            }
+            ParseCommand::Html { input, mode } => {
+                let (text, source) = read_text_input(&input, None)?;
+                #[cfg(feature = "html")]
+                print_json(&grist::html::parse_html(
+                    &text,
+                    source,
+                    &grist::html::HtmlOptions { mode: mode.into() },
+                ))?;
+                #[cfg(not(feature = "html"))]
+                print_json(&Diagnostic::error(
+                    "grist.cli",
+                    "feature.disabled",
+                    "html feature is disabled",
+                ))?;
+            }
+            ParseCommand::Csv {
+                input,
+                delimiter,
+                no_headers,
+            } => {
+                let (text, source) = read_text_input(&input, None)?;
+                #[cfg(feature = "csv")]
+                print_json(&grist::csv::parse_csv(
+                    &text,
+                    source,
+                    &grist::csv::CsvOptions {
+                        delimiter: delimiter.into(),
+                        has_headers: !no_headers,
+                    },
+                ))?;
+                #[cfg(not(feature = "csv"))]
+                print_json(&Diagnostic::error(
+                    "grist.cli",
+                    "feature.disabled",
+                    "csv feature is disabled",
                 ))?;
             }
             ParseCommand::Rust { input, detail } => {
@@ -376,6 +442,29 @@ impl From<SerializationFormatArg> for grist::serialization::SerializationFormat 
             SerializationFormatArg::Jsonl => Self::Jsonl,
             SerializationFormatArg::Yaml => Self::Yaml,
             SerializationFormatArg::Toml => Self::Toml,
+        }
+    }
+}
+
+#[cfg(feature = "cli")]
+impl From<HtmlModeArg> for grist::html::HtmlParseMode {
+    fn from(value: HtmlModeArg) -> Self {
+        match value {
+            HtmlModeArg::Auto => Self::Auto,
+            HtmlModeArg::Document => Self::Document,
+            HtmlModeArg::Fragment => Self::Fragment,
+        }
+    }
+}
+
+#[cfg(feature = "cli")]
+impl From<CsvDelimiterArg> for grist::csv::CsvDelimiter {
+    fn from(value: CsvDelimiterArg) -> Self {
+        match value {
+            CsvDelimiterArg::Comma => Self::Comma,
+            CsvDelimiterArg::Tab => Self::Tab,
+            CsvDelimiterArg::Semicolon => Self::Semicolon,
+            CsvDelimiterArg::Pipe => Self::Pipe,
         }
     }
 }

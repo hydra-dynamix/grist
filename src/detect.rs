@@ -24,12 +24,14 @@ pub enum FileKind {
 #[serde(rename_all = "snake_case")]
 pub enum ContentKind {
     Markdown,
+    Html,
     Rust,
     Python,
     #[serde(rename = "typescript")]
     TypeScript,
     Tsx,
     Jsx,
+    Csv,
     Json,
     Jsonl,
     Yaml,
@@ -166,6 +168,17 @@ pub fn detect_path(path: &Path, bytes: &[u8], limits: &Limits) -> Detection {
                 confidence = 0.98;
                 reasons.push("markdown extension".to_string());
             }
+            "html" | "htm" => {
+                content_kind = ContentKind::Html;
+                language = Some("html".to_string());
+                confidence = 0.98;
+                reasons.push("HTML extension".to_string());
+            }
+            "csv" => {
+                content_kind = ContentKind::Csv;
+                confidence = 0.98;
+                reasons.push("CSV extension".to_string());
+            }
             "json" => {
                 content_kind = ContentKind::Json;
                 confidence = 0.98;
@@ -201,6 +214,15 @@ pub fn detect_path(path: &Path, bytes: &[u8], limits: &Limits) -> Detection {
             content_kind = ContentKind::Json;
             confidence = 0.7;
             reasons.push("content looks like JSON".to_string());
+        } else if looks_like_html(trimmed) {
+            content_kind = ContentKind::Html;
+            language = Some("html".to_string());
+            confidence = 0.7;
+            reasons.push("content looks like HTML".to_string());
+        } else if looks_like_csv(&text_prefix) {
+            content_kind = ContentKind::Csv;
+            confidence = 0.62;
+            reasons.push("content looks like CSV".to_string());
         } else if trimmed.starts_with("---") {
             content_kind = ContentKind::Yaml;
             confidence = 0.65;
@@ -256,7 +278,7 @@ fn classify_file_kind(filename: &str, extension: &str, path: &Path) -> FileKind 
     {
         return FileKind::Test;
     }
-    if extension == "md" || extension == "markdown" {
+    if matches!(extension, "md" | "markdown" | "html" | "htm") {
         return FileKind::Documentation;
     }
     if path_string.contains("/target/")
@@ -282,6 +304,47 @@ fn classify_file_kind(filename: &str, extension: &str, path: &Path) -> FileKind 
         return FileKind::Source;
     }
     FileKind::Unknown
+}
+
+fn looks_like_html(trimmed: &str) -> bool {
+    let prefix = trimmed
+        .chars()
+        .take(128)
+        .collect::<String>()
+        .to_ascii_lowercase();
+    prefix.starts_with("<!doctype html")
+        || prefix.starts_with("<html")
+        || prefix.starts_with("<div")
+        || prefix.starts_with("<section")
+        || prefix.starts_with("<template")
+        || prefix.starts_with("<form")
+        || prefix.starts_with("<button")
+        || prefix.starts_with("<input")
+}
+
+fn looks_like_csv(text: &str) -> bool {
+    let mut non_empty_lines = text
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .take(6);
+    let Some(first_line) = non_empty_lines.next() else {
+        return false;
+    };
+    let delimiter_count = first_line.matches(',').count();
+    if delimiter_count == 0 {
+        return false;
+    }
+    let expected_columns = delimiter_count + 1;
+    let mut matching_lines = 1usize;
+    let mut observed_lines = 1usize;
+    for line in non_empty_lines {
+        observed_lines += 1;
+        if line.matches(',').count() + 1 == expected_columns {
+            matching_lines += 1;
+        }
+    }
+    observed_lines >= 2 && matching_lines >= 2
 }
 
 fn is_binary(bytes: &[u8]) -> bool {
@@ -318,5 +381,26 @@ mod tests {
     fn detects_binary() {
         let detection = detect_path(Path::new("blob.bin"), b"abc\0def", &Limits::default());
         assert_eq!(detection.content_kind, ContentKind::Binary);
+    }
+
+    #[test]
+    fn detects_html_source() {
+        let detection = detect_path(
+            Path::new("templates/form.htm"),
+            br#"<button hx-post="/save">Save</button>"#,
+            &Limits::default(),
+        );
+        assert_eq!(detection.content_kind, ContentKind::Html);
+        assert_eq!(detection.language.as_deref(), Some("html"));
+    }
+
+    #[test]
+    fn detects_csv_source() {
+        let detection = detect_path(
+            Path::new("data.csv"),
+            b"name,score\nalpha,1\n",
+            &Limits::default(),
+        );
+        assert_eq!(detection.content_kind, ContentKind::Csv);
     }
 }

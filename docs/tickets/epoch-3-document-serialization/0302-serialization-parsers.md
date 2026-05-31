@@ -10,7 +10,7 @@ Add initial common serialization support.
 - Parse JSON, JSONL, YAML, and TOML into typed Grist serialization payloads.
 - Preserve raw source metadata and parser diagnostics.
 - Report partial/malformed inputs clearly.
-- Keep CSV/TSV out of scope.
+- Keep TSV out of scope. CSV is now a first-class parser/ingestion artifact with its own payload schema.
 
 ## Acceptance criteria
 - Each supported format has valid and malformed fixtures.
