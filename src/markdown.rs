@@ -2,7 +2,7 @@ use crate::core::{
     ArtifactKind, Diagnostic, Envelope, Hashes, LineIndex, ParserInfo, SchemaVersion, SourceInfo,
     SourceRange,
 };
-use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
+use pulldown_cmark::{Alignment, CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -47,7 +47,37 @@ pub enum MarkdownNodeKind {
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct MarkdownTable {
+    /// Backward-compatible plain text projection of every parsed row.
     pub rows: Vec<Vec<String>>,
+    /// Alignment metadata from the delimiter row, one entry per column where available.
+    pub alignments: Vec<MarkdownTableAlignment>,
+    /// Structured row/cell representation with source ranges where pulldown-cmark exposes them.
+    pub row_details: Vec<MarkdownTableRow>,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum MarkdownTableAlignment {
+    None,
+    Left,
+    Center,
+    Right,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct MarkdownTableRow {
+    pub range: Option<SourceRange>,
+    pub header: bool,
+    pub cells: Vec<MarkdownTableCell>,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct MarkdownTableCell {
+    pub range: Option<SourceRange>,
+    pub text: String,
 }
 
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
@@ -63,9 +93,16 @@ pub struct MarkdownOptions;
 
 pub type MarkdownEnvelope = Envelope<MarkdownDocument>;
 
+type TextBlock = (std::ops::Range<usize>, String);
+type HeadingBlock = (u8, std::ops::Range<usize>, String);
+type CodeBlock = (String, String, std::ops::Range<usize>);
+type LinkBlock = (String, String, String, std::ops::Range<usize>);
+
 pub fn parse_markdown(text: &str, source: SourceInfo) -> MarkdownEnvelope {
     let line_index = LineIndex::new(text);
-    let (frontmatter, diagnostics, body_start) = parse_frontmatter(text, &line_index);
+    let (frontmatter, mut diagnostics, body_start) = parse_frontmatter(text, &line_index);
+    diagnostics.extend(scan_unclosed_fences(text, body_start, &line_index));
+
     let mut nodes = Vec::new();
     let mut options = Options::empty();
     options.insert(Options::ENABLE_TABLES);
@@ -74,14 +111,18 @@ pub fn parse_markdown(text: &str, source: SourceInfo) -> MarkdownEnvelope {
     options.insert(Options::ENABLE_TASKLISTS);
 
     let parser = Parser::new_ext(&text[body_start..], options).into_offset_iter();
-    let mut heading: Option<(u8, std::ops::Range<usize>, String)> = None;
-    let mut paragraph: Option<(std::ops::Range<usize>, String)> = None;
-    let mut code: Option<(String, String, std::ops::Range<usize>)> = None;
-    let mut link: Option<(String, String, String, std::ops::Range<usize>)> = None;
+    let mut heading: Option<HeadingBlock> = None;
+    let mut paragraph: Option<TextBlock> = None;
+    let mut code: Option<CodeBlock> = None;
+    let mut link_stack: Vec<LinkBlock> = Vec::new();
     let mut table_rows: Vec<Vec<String>> = Vec::new();
-    let mut current_row: Vec<String> = Vec::new();
-    let mut current_cell = String::new();
+    let mut table_row_details: Vec<MarkdownTableRow> = Vec::new();
+    let mut table_alignments: Vec<MarkdownTableAlignment> = Vec::new();
+    let mut current_row: Vec<MarkdownTableCell> = Vec::new();
+    let mut current_row_range: Option<std::ops::Range<usize>> = None;
+    let mut current_cell: Option<TextBlock> = None;
     let mut table_range: Option<std::ops::Range<usize>> = None;
+    let mut in_table_head = false;
 
     for (event, range) in parser {
         let absolute = (range.start + body_start)..(range.end + body_start);
@@ -144,7 +185,7 @@ pub fn parse_markdown(text: &str, source: SourceInfo) -> MarkdownEnvelope {
             Event::Start(Tag::Link {
                 dest_url, title, ..
             }) => {
-                link = Some((
+                link_stack.push((
                     dest_url.to_string(),
                     title.to_string(),
                     String::new(),
@@ -152,21 +193,26 @@ pub fn parse_markdown(text: &str, source: SourceInfo) -> MarkdownEnvelope {
                 ));
             }
             Event::End(TagEnd::Link) => {
-                if let Some((dest, title, text_value, range)) = link.take() {
+                if let Some((dest, title, text_value, range)) = link_stack.pop() {
                     nodes.push(
                         node(
                             nodes.len(),
                             MarkdownNodeKind::Link,
                             Some(SourceRange::new(range.start, range.end, &line_index)),
                         )
-                        .with_text(text_value)
+                        .with_text(text_value.clone())
                         .with_destination(dest)
                         .with_title(title),
                     );
+                    if let Some((_, _, parent_text, _)) = link_stack.last_mut() {
+                        parent_text.push_str(&text_value);
+                    }
                 }
             }
-            Event::Start(Tag::Table(_)) => {
+            Event::Start(Tag::Table(alignments)) => {
                 table_rows.clear();
+                table_row_details.clear();
+                table_alignments = alignments.into_iter().map(markdown_alignment).collect();
                 table_range = Some(absolute);
             }
             Event::End(TagEnd::Table) => {
@@ -179,36 +225,71 @@ pub fn parse_markdown(text: &str, source: SourceInfo) -> MarkdownEnvelope {
                     )
                     .with_table(MarkdownTable {
                         rows: table_rows.clone(),
+                        alignments: table_alignments.clone(),
+                        row_details: table_row_details.clone(),
                     }),
                 );
             }
-            Event::Start(Tag::TableRow) => current_row.clear(),
-            Event::End(TagEnd::TableRow) => table_rows.push(current_row.clone()),
-            Event::Start(Tag::TableCell) => current_cell.clear(),
-            Event::End(TagEnd::TableCell) => current_row.push(current_cell.clone()),
-            Event::Text(value) | Event::Code(value) => {
-                let value = value.to_string();
-                if let Some((_, _, text_value)) = heading.as_mut() {
-                    text_value.push_str(&value);
-                } else if let Some((_, text_value)) = paragraph.as_mut() {
-                    text_value.push_str(&value);
-                } else if let Some((_, text_value, _)) = code.as_mut() {
-                    text_value.push_str(&value);
-                } else if let Some((_, _, text_value, _)) = link.as_mut() {
-                    text_value.push_str(&value);
+            Event::Start(Tag::TableHead) => {
+                in_table_head = true;
+                current_row.clear();
+                current_row_range = Some(absolute);
+            }
+            Event::End(TagEnd::TableHead) => {
+                if !current_row.is_empty() {
+                    table_rows.push(current_row.iter().map(|cell| cell.text.clone()).collect());
+                    let range = current_row_range
+                        .take()
+                        .map(|range| SourceRange::new(range.start, range.end, &line_index));
+                    table_row_details.push(MarkdownTableRow {
+                        range,
+                        header: true,
+                        cells: current_row.clone(),
+                    });
+                    current_row.clear();
                 }
-                if table_range.is_some() {
-                    current_cell.push_str(&value);
+                in_table_head = false;
+            }
+            Event::Start(Tag::TableRow) => {
+                current_row.clear();
+                current_row_range = Some(absolute);
+            }
+            Event::End(TagEnd::TableRow) => {
+                table_rows.push(current_row.iter().map(|cell| cell.text.clone()).collect());
+                let range = current_row_range
+                    .take()
+                    .map(|range| SourceRange::new(range.start, range.end, &line_index));
+                table_row_details.push(MarkdownTableRow {
+                    range,
+                    header: in_table_head,
+                    cells: current_row.clone(),
+                });
+            }
+            Event::Start(Tag::TableCell) => current_cell = Some((absolute, String::new())),
+            Event::End(TagEnd::TableCell) => {
+                if let Some((range, text_value)) = current_cell.take() {
+                    current_row.push(MarkdownTableCell {
+                        range: Some(SourceRange::new(range.start, range.end, &line_index)),
+                        text: text_value,
+                    });
                 }
             }
-            Event::SoftBreak | Event::HardBreak => {
-                if let Some((_, text_value)) = paragraph.as_mut() {
-                    text_value.push('\n');
-                }
-                if let Some((_, _, text_value)) = heading.as_mut() {
-                    text_value.push('\n');
-                }
-            }
+            Event::Text(value) | Event::Code(value) => append_text(
+                &value,
+                &mut heading,
+                &mut paragraph,
+                &mut code,
+                &mut link_stack,
+                &mut current_cell,
+            ),
+            Event::SoftBreak | Event::HardBreak => append_text(
+                "\n",
+                &mut heading,
+                &mut paragraph,
+                &mut code,
+                &mut link_stack,
+                &mut current_cell,
+            ),
             _ => {}
         }
     }
@@ -228,50 +309,157 @@ pub fn parse_markdown(text: &str, source: SourceInfo) -> MarkdownEnvelope {
     .with_diagnostics(diagnostics)
 }
 
+fn append_text(
+    value: &str,
+    heading: &mut Option<HeadingBlock>,
+    paragraph: &mut Option<TextBlock>,
+    code: &mut Option<CodeBlock>,
+    link_stack: &mut [LinkBlock],
+    current_cell: &mut Option<TextBlock>,
+) {
+    if let Some((_, _, text_value)) = heading.as_mut() {
+        text_value.push_str(value);
+    }
+    if let Some((_, text_value)) = paragraph.as_mut() {
+        text_value.push_str(value);
+    }
+    if let Some((_, text_value, _)) = code.as_mut() {
+        text_value.push_str(value);
+    }
+    if let Some((_, _, text_value, _)) = link_stack.last_mut() {
+        text_value.push_str(value);
+    }
+    if let Some((_, text_value)) = current_cell.as_mut() {
+        text_value.push_str(value);
+    }
+}
+
 fn parse_frontmatter(
     text: &str,
     index: &LineIndex,
 ) -> (Option<Frontmatter>, Vec<Diagnostic>, usize) {
     let mut diagnostics = Vec::new();
-    if !text.starts_with("---\n") {
+    let Some(opening_len) = frontmatter_marker_len_at_start(text) else {
         return (None, diagnostics, 0);
+    };
+
+    let mut offset = opening_len;
+    while offset < text.len() {
+        let line_end = text[offset..]
+            .find('\n')
+            .map(|relative| offset + relative + 1)
+            .unwrap_or(text.len());
+        let line = &text[offset..line_end];
+        if line.trim_end_matches(['\r', '\n']) == "---" {
+            let raw = text[opening_len..offset].to_string();
+            let value = match serde_yaml::from_str::<serde_yaml::Value>(&raw) {
+                Ok(value) => serde_json::to_value(value).ok(),
+                Err(err) => {
+                    diagnostics.push(
+                        Diagnostic::error(
+                            "grist.markdown.frontmatter",
+                            "frontmatter.yaml_parse",
+                            format!("frontmatter YAML parse failed: {err}"),
+                        )
+                        .with_range(SourceRange::new(
+                            opening_len,
+                            offset,
+                            index,
+                        )),
+                    );
+                    None
+                }
+            };
+            return (
+                Some(Frontmatter {
+                    range: SourceRange::new(0, line_end, index),
+                    raw,
+                    value,
+                }),
+                diagnostics,
+                line_end,
+            );
+        }
+        offset = line_end;
     }
-    if let Some(end_relative) = text[4..].find("\n---") {
-        let raw_start = 4;
-        let raw_end = 4 + end_relative;
-        let marker_end = raw_end + 4;
-        let raw = text[raw_start..raw_end].to_string();
-        let value = match serde_yaml::from_str::<serde_yaml::Value>(&raw) {
-            Ok(value) => serde_json::to_value(value).ok(),
-            Err(err) => {
-                diagnostics.push(Diagnostic::error(
-                    "grist.markdown.frontmatter",
-                    "frontmatter.yaml_parse",
-                    format!("frontmatter YAML parse failed: {err}"),
-                ));
-                None
+
+    diagnostics.push(
+        Diagnostic::warning(
+            "grist.markdown.frontmatter",
+            "frontmatter.unclosed",
+            "frontmatter start marker was found without a closing marker",
+        )
+        .with_range(SourceRange::new(0, opening_len, index))
+        .partial(),
+    );
+    (None, diagnostics, 0)
+}
+
+fn frontmatter_marker_len_at_start(text: &str) -> Option<usize> {
+    if text.starts_with("---\r\n") {
+        Some(5)
+    } else if text.starts_with("---\n") {
+        Some(4)
+    } else {
+        None
+    }
+}
+
+fn scan_unclosed_fences(text: &str, body_start: usize, index: &LineIndex) -> Vec<Diagnostic> {
+    let mut diagnostics = Vec::new();
+    let mut open: Option<(u8, usize, usize)> = None;
+    let mut offset = body_start;
+    while offset < text.len() {
+        let line_end = text[offset..]
+            .find('\n')
+            .map(|relative| offset + relative + 1)
+            .unwrap_or(text.len());
+        let line = &text[offset..line_end];
+        let content = line.trim_end_matches(['\r', '\n']);
+        let indent = content.bytes().take_while(|byte| *byte == b' ').count();
+        if indent <= 3 {
+            let trimmed = &content[indent..];
+            if let Some((marker, len)) = fence_marker(trimmed) {
+                match open {
+                    Some((open_marker, open_len, _))
+                        if marker == open_marker
+                            && len >= open_len
+                            && trimmed[len..].trim().is_empty() =>
+                    {
+                        open = None;
+                    }
+                    None => open = Some((marker, len, offset + indent)),
+                    _ => {}
+                }
             }
-        };
-        return (
-            Some(Frontmatter {
-                range: SourceRange::new(0, marker_end, index),
-                raw,
-                value,
-            }),
-            diagnostics,
-            if text[marker_end..].starts_with('\n') {
-                marker_end + 1
-            } else {
-                marker_end
-            },
+        }
+        offset = line_end;
+    }
+
+    if let Some((marker, len, start)) = open {
+        let marker_text = std::str::from_utf8(&vec![marker; len])
+            .unwrap_or("fence")
+            .to_string();
+        diagnostics.push(
+            Diagnostic::warning(
+                "grist.markdown.fence",
+                "fence.unclosed",
+                format!("fenced code block starting with {marker_text} has no closing fence"),
+            )
+            .with_range(SourceRange::new(start, start + len, index))
+            .partial(),
         );
     }
-    diagnostics.push(Diagnostic::warning(
-        "grist.markdown.frontmatter",
-        "frontmatter.unclosed",
-        "frontmatter start marker was found without a closing marker",
-    ));
-    (None, diagnostics, 0)
+    diagnostics
+}
+
+fn fence_marker(line: &str) -> Option<(u8, usize)> {
+    let first = *line.as_bytes().first()?;
+    if first != b'`' && first != b'~' {
+        return None;
+    }
+    let len = line.bytes().take_while(|byte| *byte == first).count();
+    (len >= 3).then_some((first, len))
 }
 
 fn heading_level(level: HeadingLevel) -> u8 {
@@ -282,6 +470,15 @@ fn heading_level(level: HeadingLevel) -> u8 {
         HeadingLevel::H4 => 4,
         HeadingLevel::H5 => 5,
         HeadingLevel::H6 => 6,
+    }
+}
+
+fn markdown_alignment(alignment: Alignment) -> MarkdownTableAlignment {
+    match alignment {
+        Alignment::None => MarkdownTableAlignment::None,
+        Alignment::Left => MarkdownTableAlignment::Left,
+        Alignment::Center => MarkdownTableAlignment::Center,
+        Alignment::Right => MarkdownTableAlignment::Right,
     }
 }
 
@@ -337,12 +534,14 @@ impl MarkdownNode {
 mod tests {
     use super::*;
 
+    fn parse_fixture(text: &str) -> MarkdownEnvelope {
+        parse_markdown(text, SourceInfo::stdin("README.md"))
+    }
+
     #[test]
     fn parses_heading_fence_and_frontmatter() {
-        let report = parse_markdown(
-            "---\ntitle: Test\n---\n# Heading\n\n```rust\nfn main() {}\n```",
-            SourceInfo::stdin("README.md"),
-        );
+        let report =
+            parse_fixture("---\ntitle: Test\n---\n# Heading\n\n```rust\nfn main() {}\n```");
         assert!(report.payload.frontmatter.is_some());
         assert!(
             report
@@ -354,5 +553,90 @@ mod tests {
         assert!(report.payload.nodes.iter().any(
             |n| n.kind == MarkdownNodeKind::CodeFence && n.language.as_deref() == Some("rust")
         ));
+    }
+
+    #[test]
+    fn preserves_ranges_for_blocks_and_frontmatter_crlf() {
+        let report = parse_fixture("---\r\ntitle: Test\r\n---\r\n# Heading\n\nParagraph text\n");
+        let frontmatter = report.payload.frontmatter.as_ref().unwrap();
+        assert_eq!(frontmatter.value.as_ref().unwrap()["title"], "Test");
+        assert_eq!(frontmatter.range.start_line, 1);
+        assert_eq!(frontmatter.range.end_line, 4);
+
+        let heading = report
+            .payload
+            .nodes
+            .iter()
+            .find(|node| node.kind == MarkdownNodeKind::Heading)
+            .unwrap();
+        assert_eq!(heading.text.as_deref(), Some("Heading"));
+        assert!(heading.range.is_some());
+
+        let paragraph = report
+            .payload
+            .nodes
+            .iter()
+            .find(|node| node.kind == MarkdownNodeKind::Paragraph)
+            .unwrap();
+        assert_eq!(paragraph.text.as_deref(), Some("Paragraph text"));
+        assert!(paragraph.range.is_some());
+    }
+
+    #[test]
+    fn keeps_link_text_in_paragraph_and_emits_link_node() {
+        let report = parse_fixture("See [Grist](https://example.test \"docs\") today.");
+        let paragraph = report
+            .payload
+            .nodes
+            .iter()
+            .find(|node| node.kind == MarkdownNodeKind::Paragraph)
+            .unwrap();
+        assert_eq!(paragraph.text.as_deref(), Some("See Grist today."));
+        let link = report
+            .payload
+            .nodes
+            .iter()
+            .find(|node| node.kind == MarkdownNodeKind::Link)
+            .unwrap();
+        assert_eq!(link.text.as_deref(), Some("Grist"));
+        assert_eq!(link.destination.as_deref(), Some("https://example.test"));
+        assert_eq!(link.title.as_deref(), Some("docs"));
+        assert!(link.range.is_some());
+    }
+
+    #[test]
+    fn parses_tables_with_alignment_and_cell_ranges() {
+        let report = parse_fixture("| name | score |\n| :--- | ---: |\n| alpha | 1 |\n");
+        let table = report
+            .payload
+            .nodes
+            .iter()
+            .find(|node| node.kind == MarkdownNodeKind::Table)
+            .and_then(|node| node.table.as_ref())
+            .unwrap();
+        assert_eq!(table.rows[0], vec!["name", "score"]);
+        assert_eq!(table.rows[1], vec!["alpha", "1"]);
+        assert_eq!(
+            table.alignments,
+            vec![MarkdownTableAlignment::Left, MarkdownTableAlignment::Right]
+        );
+        assert!(table.row_details[0].header);
+        assert!(table.row_details[0].cells[0].range.is_some());
+    }
+
+    #[test]
+    fn reports_yaml_and_unclosed_fence_diagnostics() {
+        let report = parse_fixture("---\ntitle: [unterminated\n---\n```rust\nfn main() {}\n");
+        assert!(report.diagnostics.iter().any(|diagnostic| {
+            diagnostic.parser == "grist.markdown.frontmatter"
+                && diagnostic.code == "frontmatter.yaml_parse"
+                && diagnostic.range.is_some()
+        }));
+        assert!(report.diagnostics.iter().any(|diagnostic| {
+            diagnostic.parser == "grist.markdown.fence"
+                && diagnostic.code == "fence.unclosed"
+                && diagnostic.partial
+                && diagnostic.range.is_some()
+        }));
     }
 }

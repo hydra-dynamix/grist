@@ -65,6 +65,50 @@ fn validate_with_schema(value: &serde_json::Value, schema_name: &str) {
 }
 
 #[test]
+fn cli_parses_markdown_rich_structures_end_to_end() {
+    let output = run_stdin(
+        &["parse", "markdown", "-"],
+        "---\ntitle: Test\n---\n# Heading\n\nSee [Grist](https://example.test \"docs\").\n\n```rust\nfn main() {}\n```\n\n| name | score |\n| :--- | ---: |\n| alpha | 1 |\n",
+    );
+    validate_with_schema(&output, "markdown-envelope");
+    assert_eq!(output["kind"], "markdown");
+    assert_eq!(output["payload"]["frontmatter"]["value"]["title"], "Test");
+
+    let nodes = output["payload"]["nodes"].as_array().unwrap();
+    let heading = nodes.iter().find(|node| node["kind"] == "heading").unwrap();
+    assert_eq!(heading["text"], "Heading");
+    assert!(heading["range"].is_object());
+
+    let paragraph = nodes
+        .iter()
+        .find(|node| node["kind"] == "paragraph")
+        .unwrap();
+    assert_eq!(paragraph["text"], "See Grist.");
+
+    let link = nodes.iter().find(|node| node["kind"] == "link").unwrap();
+    assert_eq!(link["text"], "Grist");
+    assert_eq!(link["destination"], "https://example.test");
+    assert_eq!(link["title"], "docs");
+    assert!(link["range"].is_object());
+
+    let fence = nodes
+        .iter()
+        .find(|node| node["kind"] == "code_fence")
+        .unwrap();
+    assert_eq!(fence["language"], "rust");
+    assert!(fence["range"].is_object());
+
+    let table = nodes.iter().find(|node| node["kind"] == "table").unwrap();
+    assert_eq!(table["table"]["rows"][0][0], "name");
+    assert_eq!(
+        table["table"]["alignments"],
+        serde_json::json!(["left", "right"])
+    );
+    assert_eq!(table["table"]["row_details"][0]["header"], true);
+    assert!(table["table"]["row_details"][0]["cells"][0]["range"].is_object());
+}
+
+#[test]
 fn cli_parses_serialization_with_schema_validation_end_to_end() {
     let dir = temp_dir("json-schema");
     let schema_path = dir.join("schema.json");
