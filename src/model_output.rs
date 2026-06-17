@@ -39,6 +39,7 @@ pub struct ModelOutputCandidate {
     pub command_name: Option<String>,
     pub argument_name: Option<String>,
     pub value: Option<Value>,
+    pub raw_text: Option<String>,
     pub raw_range: Option<SourceRange>,
     pub status: CandidateStatus,
     pub confidence: f32,
@@ -185,6 +186,13 @@ pub fn parse_model_output(
             .normalizations
             .extend(global_normalizations.clone());
         apply_aliases(candidate, &options.aliases);
+        if candidate.raw_text.is_none() {
+            candidate.raw_text = candidate
+                .raw_range
+                .as_ref()
+                .and_then(|range| working.get(range.byte_start..range.byte_end))
+                .map(str::to_string);
+        }
         if let (Some(value), Some(schema)) = (candidate.value.as_ref(), options.schema.as_ref()) {
             let validation_diagnostics = validate_json_schema(value, schema);
             candidate.validation = Some(SchemaValidationResult {
@@ -222,13 +230,13 @@ pub fn parse_model_output(
         .all(|candidate| candidate.status == CandidateStatus::Incomplete)
     {
         ModelOutputStatus::Incomplete
-    } else if candidates.len() == 1 {
+    } else if select_candidate_id(&candidates, options).is_some() {
         ModelOutputStatus::Parsed
     } else {
         ModelOutputStatus::Ambiguous
     };
 
-    let selected_candidate_id = (candidates.len() == 1).then(|| candidates[0].id.clone());
+    let selected_candidate_id = select_candidate_id(&candidates, options);
     let raw_text_sha256 = crate::core::sha256_hex(working.as_bytes());
     Envelope::new(
         ArtifactKind::ModelOutput,
@@ -362,8 +370,9 @@ fn extract_fenced_blocks(
                 .normalizations
                 .push("extracted_incomplete_markdown_fence".into());
             if language == "json" || body.starts_with('{') || body.starts_with('[') {
-                if let Ok(value) = parse_jsonish_value(body) {
-                    candidate.value = Some(value);
+                if let Ok(parsed) = parse_jsonish_value_with_repairs(body) {
+                    candidate.value = Some(parsed.value);
+                    candidate.normalizations.extend(parsed.normalizations);
                     classify_json_tool_shape(&mut candidate);
                     candidate.status = CandidateStatus::Recovered;
                     candidate
@@ -408,9 +417,13 @@ fn extract_fenced_blocks(
             .push("extracted_markdown_fence".into());
         match language.as_str() {
             "json" if body.starts_with('{') || body.starts_with('[') || !body.is_empty() => {
-                match parse_jsonish_value(body) {
-                    Ok(value) => {
-                        candidate.value = Some(value);
+                match parse_jsonish_value_with_repairs(body) {
+                    Ok(parsed) => {
+                        candidate.value = Some(parsed.value);
+                        candidate.normalizations.extend(parsed.normalizations);
+                        if candidate.normalizations.len() > 1 {
+                            candidate.status = CandidateStatus::Recovered;
+                        }
                         classify_json_tool_shape(&mut candidate);
                     }
                     Err(err) => {
@@ -524,9 +537,13 @@ fn extract_fenced_blocks(
                 }
             },
             _ if body.starts_with('{') || body.starts_with('[') => {
-                match parse_jsonish_value(body) {
-                    Ok(value) => {
-                        candidate.value = Some(value);
+                match parse_jsonish_value_with_repairs(body) {
+                    Ok(parsed) => {
+                        candidate.value = Some(parsed.value);
+                        candidate.normalizations.extend(parsed.normalizations);
+                        if candidate.normalizations.len() > 1 {
+                            candidate.status = CandidateStatus::Recovered;
+                        }
                         classify_json_tool_shape(&mut candidate);
                     }
                     Err(err) => {
@@ -688,40 +705,52 @@ fn extract_json_candidates(
     candidates: &mut Vec<ModelOutputCandidate>,
 ) {
     let trimmed = text.trim();
-    if let Ok(value) = parse_jsonish_value(trimmed) {
+    if let Ok(parsed) = parse_jsonish_value_with_repairs(trimmed) {
         let start = text.find(trimmed).unwrap_or(0);
         let mut candidate = json_candidate(
             candidates.len(),
             CandidateGrammar::RawJson,
-            value,
+            parsed.value,
             SourceRange::new(start, start + trimmed.len(), index),
         );
+        candidate.normalizations.extend(parsed.normalizations);
+        if !candidate.normalizations.is_empty() {
+            candidate.status = CandidateStatus::Recovered;
+        }
         classify_json_tool_shape(&mut candidate);
         candidates.push(candidate);
         return;
     }
     if trimmed.starts_with('{') || trimmed.starts_with('[') {
-        let start = text.find(trimmed).unwrap_or(0);
-        let mut candidate = base_candidate(
-            candidates.len(),
-            CandidateGrammar::RawJson,
-            Some(SourceRange::new(start, start + trimmed.len(), index)),
-        );
-        candidate.status = CandidateStatus::Incomplete;
-        candidate.confidence = 0.4;
-        candidate
-            .normalizations
-            .push("preserved_incomplete_raw_json".into());
-        candidate.diagnostics.push(
-            Diagnostic::warning(
-                "grist.model_output.json",
-                "json.incomplete",
-                "raw JSON-like output started but did not parse as a complete value",
-            )
-            .partial(),
-        );
-        candidates.push(candidate);
-        return;
+        let has_embedded_complete_candidates = first_balanced_json_value(trimmed)
+            .map(|(_, end)| {
+                trimmed[end..].trim_start().starts_with('{')
+                    || trimmed[end..].trim_start().starts_with('[')
+            })
+            .unwrap_or(false);
+        if !has_embedded_complete_candidates {
+            let start = text.find(trimmed).unwrap_or(0);
+            let mut candidate = base_candidate(
+                candidates.len(),
+                CandidateGrammar::RawJson,
+                Some(SourceRange::new(start, start + trimmed.len(), index)),
+            );
+            candidate.status = CandidateStatus::Incomplete;
+            candidate.confidence = 0.4;
+            candidate
+                .normalizations
+                .push("preserved_incomplete_raw_json".into());
+            candidate.diagnostics.push(
+                Diagnostic::warning(
+                    "grist.model_output.json",
+                    "json.incomplete",
+                    "raw JSON-like output started but did not parse as a complete value",
+                )
+                .partial(),
+            );
+            candidates.push(candidate);
+            return;
+        }
     }
     let mut search = 0;
     while let Some((start, end)) = first_balanced_json_value(&text[search..]) {
@@ -732,16 +761,20 @@ fn extract_json_candidates(
             continue;
         }
         let slice = &text[absolute_start..absolute_end];
-        if let Ok(value) = parse_jsonish_value(slice) {
+        if let Ok(parsed) = parse_jsonish_value_with_repairs(slice) {
             let mut candidate = json_candidate(
                 candidates.len(),
                 CandidateGrammar::JsonObjectInText,
-                value,
+                parsed.value,
                 SourceRange::new(absolute_start, absolute_end, index),
             );
             candidate
                 .normalizations
                 .push("extracted_balanced_json".into());
+            candidate.normalizations.extend(parsed.normalizations);
+            if candidate.normalizations.len() > 1 {
+                candidate.status = CandidateStatus::Recovered;
+            }
             classify_json_tool_shape(&mut candidate);
             candidates.push(candidate);
         }
@@ -855,12 +888,10 @@ fn parse_command_arg(call: &str, arg_name: &str) -> Result<(Value, String, Vec<S
         return Err("missing balanced JSON argument".into());
     };
     let object = &after[object_start..object_end];
-    let value = parse_jsonish_value(object).map_err(|err| err.to_string())?;
-    Ok((
-        value,
-        arg_name.to_string(),
-        vec!["parsed_python_style_command".into()],
-    ))
+    let parsed = parse_jsonish_value_with_repairs(object).map_err(|err| err.to_string())?;
+    let mut normalizations = vec!["parsed_python_style_command".into()];
+    normalizations.extend(parsed.normalizations);
+    Ok((parsed.value, arg_name.to_string(), normalizations))
 }
 
 fn parse_positional_command_arg(call: &str) -> Result<(Value, String, Vec<String>), String> {
@@ -877,13 +908,11 @@ fn parse_positional_command_arg(call: &str) -> Result<(Value, String, Vec<String
     let Some((object_start, object_end)) = first_balanced_json_value(args) else {
         return Err("missing balanced positional JSON argument".into());
     };
-    let value =
-        parse_jsonish_value(&args[object_start..object_end]).map_err(|err| err.to_string())?;
-    Ok((
-        value,
-        "positional".to_string(),
-        vec!["parsed_python_style_positional_command".into()],
-    ))
+    let parsed = parse_jsonish_value_with_repairs(&args[object_start..object_end])
+        .map_err(|err| err.to_string())?;
+    let mut normalizations = vec!["parsed_python_style_positional_command".into()];
+    normalizations.extend(parsed.normalizations);
+    Ok((parsed.value, "positional".to_string(), normalizations))
 }
 
 fn openai_chat_content(value: &Value) -> Option<&str> {
@@ -898,6 +927,42 @@ fn openai_chat_content(value: &Value) -> Option<&str> {
                 .and_then(|delta| delta.get("content"))
         })?
         .as_str()
+}
+
+fn select_candidate_id(
+    candidates: &[ModelOutputCandidate],
+    options: &ModelOutputOptions,
+) -> Option<String> {
+    if candidates.is_empty() {
+        return None;
+    }
+    if options.schema.is_some() {
+        let mut valid = candidates.iter().filter(|candidate| {
+            candidate.value.is_some()
+                && candidate
+                    .validation
+                    .as_ref()
+                    .map(|validation| validation.valid)
+                    .unwrap_or(false)
+        });
+        if let Some(candidate) = valid.next() {
+            if valid.next().is_none() {
+                return Some(candidate.id.clone());
+            }
+        }
+    }
+    if candidates.len() == 1 {
+        return Some(candidates[0].id.clone());
+    }
+    let mut complete = candidates.iter().filter(|candidate| {
+        candidate.value.is_some()
+            && matches!(
+                candidate.status,
+                CandidateStatus::Complete | CandidateStatus::Recovered
+            )
+    });
+    let selected = complete.next()?;
+    complete.next().is_none().then(|| selected.id.clone())
 }
 
 fn apply_aliases(candidate: &mut ModelOutputCandidate, aliases: &AliasRules) {
@@ -948,6 +1013,7 @@ fn base_candidate(
         command_name: None,
         argument_name: None,
         value: None,
+        raw_text: None,
         raw_range: range,
         status: CandidateStatus::Complete,
         confidence: 0.8,
@@ -1024,20 +1090,97 @@ fn failure_record(
     }
 }
 
-fn parse_jsonish_value(text: &str) -> Result<Value, serde_json::Error> {
-    serde_json::from_str(text).or_else(|_| serde_json::from_str(&fix_jsonish(text)))
+struct JsonishParse {
+    value: Value,
+    normalizations: Vec<String>,
 }
 
-fn fix_jsonish(input: &str) -> String {
-    let mut out = input
-        .trim()
-        .replace("None", "null")
-        .replace("True", "true")
-        .replace("False", "false");
-    out = quote_single_quoted_strings(&out);
-    out = quote_unquoted_object_keys(&out);
-    out = remove_trailing_commas(&out);
-    out
+fn parse_jsonish_value(text: &str) -> Result<Value, serde_json::Error> {
+    parse_jsonish_value_with_repairs(text).map(|parsed| parsed.value)
+}
+
+fn parse_jsonish_value_with_repairs(text: &str) -> Result<JsonishParse, serde_json::Error> {
+    match serde_json::from_str(text) {
+        Ok(value) => Ok(JsonishParse {
+            value,
+            normalizations: Vec::new(),
+        }),
+        Err(original_err) => {
+            let (fixed, normalizations) = fix_jsonish_with_normalizations(text);
+            serde_json::from_str(&fixed)
+                .map(|value| JsonishParse {
+                    value,
+                    normalizations,
+                })
+                .map_err(|_| original_err)
+        }
+    }
+}
+
+fn fix_jsonish_with_normalizations(input: &str) -> (String, Vec<String>) {
+    let mut normalizations = Vec::new();
+    let mut out = input.trim().to_string();
+    for (from, to, name) in [
+        ("None", "null", "replaced_python_none"),
+        ("True", "true", "replaced_python_true"),
+        ("False", "false", "replaced_python_false"),
+    ] {
+        let next = out.replace(from, to);
+        if next != out {
+            normalizations.push(name.to_string());
+            out = next;
+        }
+    }
+    apply_repair(
+        &mut out,
+        &mut normalizations,
+        quote_single_quoted_strings,
+        "quoted_single_quoted_strings",
+    );
+    apply_repair(
+        &mut out,
+        &mut normalizations,
+        quote_unquoted_object_keys,
+        "quoted_unquoted_object_keys",
+    );
+    apply_repair(
+        &mut out,
+        &mut normalizations,
+        escape_unescaped_string_boundary_quotes,
+        "escaped_unescaped_string_quote",
+    );
+    apply_repair(
+        &mut out,
+        &mut normalizations,
+        insert_missing_commas_between_members,
+        "inserted_missing_comma",
+    );
+    apply_repair(
+        &mut out,
+        &mut normalizations,
+        remove_trailing_commas,
+        "removed_trailing_commas",
+    );
+    apply_repair(
+        &mut out,
+        &mut normalizations,
+        complete_unterminated_json_containers,
+        "closed_unterminated_object",
+    );
+    (out, normalizations)
+}
+
+fn apply_repair(
+    out: &mut String,
+    normalizations: &mut Vec<String>,
+    repair: fn(&str) -> String,
+    name: &str,
+) {
+    let next = repair(out);
+    if next != *out {
+        normalizations.push(name.to_string());
+        *out = next;
+    }
 }
 
 fn quote_single_quoted_strings(input: &str) -> String {
@@ -1142,6 +1285,146 @@ fn remove_trailing_commas(input: &str) -> String {
                 continue;
             }
         }
+        out.push(ch);
+    }
+    out
+}
+
+fn insert_missing_commas_between_members(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    let mut chars = input.char_indices().peekable();
+    let mut in_string = false;
+    let mut escape = false;
+    while let Some((_, ch)) = chars.next() {
+        out.push(ch);
+        if in_string {
+            if escape {
+                escape = false;
+            } else if ch == '\\' {
+                escape = true;
+            } else if ch == '"' {
+                in_string = false;
+                let mut lookahead = chars.clone();
+                while matches!(lookahead.peek(), Some((_, c)) if c.is_whitespace()) {
+                    lookahead.next();
+                }
+                if matches!(lookahead.peek(), Some((_, '"')))
+                    && lookahead_quoted_key_colon(lookahead)
+                {
+                    out.push(',');
+                }
+            }
+        } else if ch == '"' {
+            in_string = true;
+        } else if ch == '}' || ch == ']' || ch.is_ascii_digit() || matches!(ch, 'e' | 'E') {
+            let mut lookahead = chars.clone();
+            while matches!(lookahead.peek(), Some((_, c)) if c.is_whitespace()) {
+                lookahead.next();
+            }
+            if matches!(lookahead.peek(), Some((_, '"'))) && lookahead_quoted_key_colon(lookahead) {
+                out.push(',');
+            }
+        }
+    }
+    out
+}
+
+fn lookahead_quoted_key_colon<I>(mut chars: I) -> bool
+where
+    I: Iterator<Item = (usize, char)> + Clone,
+{
+    if !matches!(chars.next(), Some((_, '"'))) {
+        return false;
+    }
+    let mut escape = false;
+    for (_, ch) in chars.by_ref() {
+        if escape {
+            escape = false;
+        } else if ch == '\\' {
+            escape = true;
+        } else if ch == '"' {
+            break;
+        }
+    }
+    while matches!(chars.clone().next(), Some((_, c)) if c.is_whitespace()) {
+        chars.next();
+    }
+    matches!(chars.next(), Some((_, ':')))
+}
+
+fn escape_unescaped_string_boundary_quotes(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    let mut chars = input.char_indices().peekable();
+    let mut in_string = false;
+    let mut escape = false;
+    while let Some((_, ch)) = chars.next() {
+        if in_string {
+            if escape {
+                escape = false;
+                out.push(ch);
+            } else if ch == '\\' {
+                escape = true;
+                out.push(ch);
+            } else if ch == '"' {
+                let mut lookahead = chars.clone();
+                while matches!(lookahead.peek(), Some((_, c)) if c.is_whitespace()) {
+                    lookahead.next();
+                }
+                if matches!(lookahead.peek(), Some((_, ',' | '}' | ']' | ':')))
+                    || lookahead_quoted_key_colon(lookahead.clone())
+                    || lookahead.peek().is_none()
+                {
+                    in_string = false;
+                    out.push(ch);
+                } else {
+                    out.push('\\');
+                    out.push(ch);
+                }
+            } else {
+                out.push(ch);
+            }
+        } else {
+            if ch == '"' {
+                in_string = true;
+            }
+            out.push(ch);
+        }
+    }
+    out
+}
+
+fn complete_unterminated_json_containers(input: &str) -> String {
+    let mut stack = Vec::new();
+    let mut in_string = false;
+    let mut escape = false;
+    for ch in input.chars() {
+        if in_string {
+            if escape {
+                escape = false;
+            } else if ch == '\\' {
+                escape = true;
+            } else if ch == '"' {
+                in_string = false;
+            }
+            continue;
+        }
+        match ch {
+            '"' => in_string = true,
+            '{' => stack.push('}'),
+            '[' => stack.push(']'),
+            '}' | ']' => {
+                if stack.last().copied() == Some(ch) {
+                    stack.pop();
+                }
+            }
+            _ => {}
+        }
+    }
+    if in_string || stack.is_empty() {
+        return input.to_string();
+    }
+    let mut out = input.trim_end().to_string();
+    while let Some(ch) = stack.pop() {
         out.push(ch);
     }
     out
@@ -1455,6 +1738,99 @@ mod tests {
             .unwrap();
         assert_eq!(candidate.command_name.as_deref(), Some("New.Tool"));
         assert!(candidate.value.as_ref().unwrap().get("leaves").is_some());
+        assert!(candidate.validation.as_ref().unwrap().valid);
+    }
+
+    #[test]
+    fn repairs_missing_comma_and_records_candidate_raw_text() {
+        let report = parse_model_output(
+            "{\"narration_text\": \"Aim for sixty seconds.\" \"target_words\": 130}",
+            SourceInfo::stdin("model.txt"),
+            &ModelOutputOptions::default(),
+        );
+        let candidate = &report.payload.candidates[0];
+        assert_eq!(candidate.status, CandidateStatus::Recovered);
+        assert_eq!(candidate.value.as_ref().unwrap()["target_words"], 130);
+        assert!(
+            candidate
+                .normalizations
+                .contains(&"inserted_missing_comma".to_string())
+        );
+        assert_eq!(
+            candidate.raw_text.as_deref(),
+            Some("{\"narration_text\": \"Aim for sixty seconds.\" \"target_words\": 130}")
+        );
+    }
+
+    #[test]
+    fn repairs_unescaped_quote_inside_long_string() {
+        let report = parse_model_output(
+            "{\"narration_text\":\"This has an \"internal\" quote.\" \"target_words\":130}",
+            SourceInfo::stdin("model.txt"),
+            &ModelOutputOptions::default(),
+        );
+        let candidate = &report.payload.candidates[0];
+        assert_eq!(candidate.status, CandidateStatus::Recovered);
+        assert_eq!(
+            candidate.value.as_ref().unwrap()["narration_text"],
+            "This has an \"internal\" quote."
+        );
+        assert!(
+            candidate
+                .normalizations
+                .contains(&"escaped_unescaped_string_quote".to_string())
+        );
+    }
+
+    #[test]
+    fn completes_unterminated_root_object() {
+        let report = parse_model_output(
+            "{\"narrative_contract\": {\"target_words\": 130}",
+            SourceInfo::stdin("model.txt"),
+            &ModelOutputOptions::default(),
+        );
+        let candidate = &report.payload.candidates[0];
+        assert_eq!(candidate.status, CandidateStatus::Recovered);
+        assert_eq!(
+            candidate.value.as_ref().unwrap()["narrative_contract"]["target_words"],
+            130
+        );
+        assert!(
+            candidate
+                .normalizations
+                .contains(&"closed_unterminated_object".to_string())
+        );
+    }
+
+    #[test]
+    fn schema_validation_selects_matching_candidate() {
+        let options = ModelOutputOptions {
+            schema: Some(serde_json::json!({
+                "type": "object",
+                "required": ["section_chunks"]
+            })),
+            ..Default::default()
+        };
+        let report = parse_model_output(
+            "first {\"narrative_contract\": {}} second {\"section_chunks\": []}",
+            SourceInfo::stdin("model.txt"),
+            &options,
+        );
+        let selected = report.payload.selected_candidate_id.as_deref().unwrap();
+        let candidate = report
+            .payload
+            .candidates
+            .iter()
+            .find(|candidate| candidate.id == selected)
+            .unwrap();
+        assert!(
+            candidate
+                .value
+                .as_ref()
+                .unwrap()
+                .get("section_chunks")
+                .is_some()
+        );
         assert!(candidate.validation.as_ref().unwrap().valid);
     }
 

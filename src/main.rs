@@ -85,6 +85,8 @@ enum ParseCommand {
         rules: Option<PathBuf>,
         #[arg(long)]
         strip_think_blocks: bool,
+        #[arg(long)]
+        json_value: bool,
     },
 }
 
@@ -321,6 +323,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 schema,
                 rules,
                 strip_think_blocks,
+                json_value,
             } => {
                 let (text, source) = read_text_input(&input, None)?;
                 #[cfg(feature = "model-output")]
@@ -335,9 +338,25 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                         },
                         ..Default::default()
                     };
-                    print_json(&grist::model_output::parse_model_output(
-                        &text, source, &options,
-                    ))?;
+                    let report = grist::model_output::parse_model_output(&text, source, &options);
+                    if json_value {
+                        let value = report
+                            .payload
+                            .selected_candidate_id
+                            .as_ref()
+                            .and_then(|selected_id| {
+                                report
+                                    .payload
+                                    .candidates
+                                    .iter()
+                                    .find(|candidate| candidate.id == *selected_id)
+                            })
+                            .and_then(|candidate| candidate.value.as_ref())
+                            .ok_or_else(|| "no selected model-output JSON value".to_string())?;
+                        print_json(value)?;
+                    } else {
+                        print_json(&report)?;
+                    }
                 }
                 #[cfg(not(feature = "model-output"))]
                 print_json(&Diagnostic::error(

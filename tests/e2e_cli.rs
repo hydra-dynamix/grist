@@ -173,6 +173,65 @@ fn cli_parses_model_output_rules_schema_and_think_blocks_end_to_end() {
 }
 
 #[test]
+fn cli_repairs_model_output_and_can_emit_selected_json_value() {
+    let dir = temp_dir("model-output-json-value");
+    let schema_path = dir.join("schema.json");
+    fs::write(
+        &schema_path,
+        r#"{"type":"object","required":["section_chunks"]}"#,
+    )
+    .unwrap();
+    let input = r#"{"narrative_contract": {}} {"section_chunks": [], "narration_text": "60 seconds" "target_words": 130}"#;
+    let envelope = run_stdin(
+        &[
+            "parse",
+            "model-output",
+            "-",
+            "--schema",
+            schema_path.to_str().unwrap(),
+        ],
+        input,
+    );
+    validate_with_schema(&envelope, "model-output-envelope");
+    let selected_id = envelope["payload"]["selected_candidate_id"]
+        .as_str()
+        .unwrap();
+    let selected = envelope["payload"]["candidates"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|candidate| candidate["id"] == selected_id)
+        .unwrap();
+    assert_eq!(selected["value"]["target_words"], 130);
+    assert!(
+        selected["raw_text"]
+            .as_str()
+            .unwrap()
+            .contains("section_chunks")
+    );
+    assert!(
+        selected["normalizations"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|normalization| normalization == "inserted_missing_comma")
+    );
+
+    let value = run_stdin(
+        &[
+            "parse",
+            "model-output",
+            "-",
+            "--schema",
+            schema_path.to_str().unwrap(),
+            "--json-value",
+        ],
+        input,
+    );
+    assert_eq!(value["target_words"], 130);
+}
+
+#[test]
 fn cli_ingests_repo_with_filters_and_external_artifacts() {
     let repo = temp_dir("repo");
     fs::create_dir_all(repo.join("src")).unwrap();
