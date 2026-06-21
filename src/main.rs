@@ -40,6 +40,12 @@ enum ParseCommand {
     Markdown {
         input: String,
     },
+    #[command(name = "ldgr-projection")]
+    LdgrProjection {
+        input: String,
+        #[arg(long)]
+        strict: bool,
+    },
     Html {
         input: String,
         #[arg(long, value_enum, default_value_t = HtmlModeArg::Auto)]
@@ -201,6 +207,24 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     "grist.cli",
                     "feature.disabled",
                     "markdown feature is disabled",
+                ))?;
+            }
+            ParseCommand::LdgrProjection { input, strict } => {
+                let (text, source) = read_text_input(&input, None)?;
+                #[cfg(feature = "ldgr-projection")]
+                print_json(&grist::ldgr_projection::parse_ldgr_projection(
+                    &text,
+                    source,
+                    grist::ldgr_projection::LdgrProjectionOptions {
+                        strict,
+                        ..Default::default()
+                    },
+                ))?;
+                #[cfg(not(feature = "ldgr-projection"))]
+                print_json(&Diagnostic::error(
+                    "grist.cli",
+                    "feature.disabled",
+                    "ldgr-projection feature is disabled",
                 ))?;
             }
             ParseCommand::Html { input, mode } => {

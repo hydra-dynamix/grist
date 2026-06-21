@@ -11,6 +11,8 @@ pub mod text;
 
 #[cfg(feature = "html")]
 pub mod html;
+#[cfg(feature = "ldgr-projection")]
+pub mod ldgr_projection;
 #[cfg(feature = "markdown")]
 pub mod markdown;
 #[cfg(feature = "model-output")]

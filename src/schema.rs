@@ -32,6 +32,10 @@ pub fn list_schemas() -> Vec<SchemaEntry> {
             schema_version: crate::core::SchemaVersion::MARKDOWN_V1.into(),
         },
         SchemaEntry {
+            name: "ldgr-projection".into(),
+            schema_version: crate::core::SchemaVersion::LDGR_PROJECTION_V1.into(),
+        },
+        SchemaEntry {
             name: "html".into(),
             schema_version: crate::core::SchemaVersion::HTML_V1.into(),
         },
@@ -65,6 +69,10 @@ pub fn list_schemas() -> Vec<SchemaEntry> {
         },
         SchemaEntry {
             name: "markdown-envelope".into(),
+            schema_version: crate::core::SchemaVersion::ENVELOPE_V1.into(),
+        },
+        SchemaEntry {
+            name: "ldgr-projection-envelope".into(),
             schema_version: crate::core::SchemaVersion::ENVELOPE_V1.into(),
         },
         SchemaEntry {
@@ -109,6 +117,11 @@ pub fn schema_json(name: &str) -> Option<serde_json::Value> {
         "markdown" => {
             Some(serde_json::to_value(schema_for!(crate::markdown::MarkdownDocument)).ok()?)
         }
+        #[cfg(feature = "ldgr-projection")]
+        "ldgr-projection" => Some(
+            serde_json::to_value(schema_for!(crate::ldgr_projection::LdgrProjectionDocument))
+                .ok()?,
+        ),
         #[cfg(feature = "html")]
         "html" => Some(serde_json::to_value(schema_for!(crate::html::HtmlDocument)).ok()?),
         #[cfg(feature = "csv")]
@@ -140,6 +153,13 @@ pub fn schema_json(name: &str) -> Option<serde_json::Value> {
         "markdown-envelope" => Some(
             serde_json::to_value(schema_for!(
                 crate::core::Envelope<crate::markdown::MarkdownDocument>
+            ))
+            .ok()?,
+        ),
+        #[cfg(feature = "ldgr-projection")]
+        "ldgr-projection-envelope" => Some(
+            serde_json::to_value(schema_for!(
+                crate::core::Envelope<crate::ldgr_projection::LdgrProjectionDocument>
             ))
             .ok()?,
         ),
@@ -214,6 +234,10 @@ mod tests {
                 "markdown",
                 include_str!("../schemas/grist.markdown.v1.schema.json"),
             ),
+            (
+                "ldgr-projection",
+                include_str!("../schemas/grist.ldgr-projection.v1.schema.json"),
+            ),
             ("html", include_str!("../schemas/grist.html.v1.schema.json")),
             ("csv", include_str!("../schemas/grist.csv.v1.schema.json")),
             (
@@ -232,6 +256,10 @@ mod tests {
             (
                 "markdown-envelope",
                 include_str!("../schemas/grist.markdown-envelope.v1.schema.json"),
+            ),
+            (
+                "ldgr-projection-envelope",
+                include_str!("../schemas/grist.ldgr-projection-envelope.v1.schema.json"),
             ),
             (
                 "html-envelope",

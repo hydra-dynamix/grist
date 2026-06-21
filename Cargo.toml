@@ -6,6 +6,7 @@ rust-version = "1.85"
 
 [features]
 default = ["markdown", "html", "csv", "rust", "python", "serialization", "model-output", "schemas"]
+ldgr-projection = ["markdown", "serialization", "schemas"]
 markdown = ["dep:pulldown-cmark", "dep:serde_yaml"]
 html = []
 csv = ["dep:csv"]
@@ -15,7 +16,7 @@ typescript = ["dep:tree-sitter", "dep:tree-sitter-typescript"]
 serialization = ["dep:serde_yaml", "dep:toml", "dep:jsonschema"]
 model-output = ["serialization"]
 schemas = ["dep:schemars"]
-cli = ["dep:clap", "markdown", "html", "csv", "rust", "python", "typescript", "serialization", "model-output", "schemas"]
+cli = ["dep:clap", "markdown", "html", "csv", "rust", "python", "typescript", "serialization", "model-output", "ldgr-projection", "schemas"]
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"], optional = true }

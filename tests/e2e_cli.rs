@@ -109,6 +109,23 @@ fn cli_parses_markdown_rich_structures_end_to_end() {
 }
 
 #[test]
+fn cli_parses_ldgr_projection_ticket_end_to_end() {
+    let output = run_stdin(
+        &["parse", "ldgr-projection", "-"],
+        "---\nldgr_doc: 1\nkind: ticket\nid: ticket.cli\nschema: ldgr.ticket.v1\n---\n# Context ignored\n\n```ldgr-contract yaml\ntitle: CLI Ticket\ndescription: Validate CLI projection parsing.\nrequirements:\n  - id: req.cli\n    text: CLI produces a typed ticket\nvalidation_instructions:\n  - run this e2e test\n```\n",
+    );
+    validate_with_schema(&output, "ldgr-projection-envelope");
+    assert_eq!(output["kind"], "ldgr_projection");
+    assert_eq!(output["payload"]["metadata"]["id"], "ticket.cli");
+    assert_eq!(output["payload"]["typed"]["kind"], "ticket");
+    assert_eq!(
+        output["payload"]["typed"]["document"]["title"],
+        "CLI Ticket"
+    );
+    assert!(output["diagnostics"].as_array().unwrap().is_empty());
+}
+
+#[test]
 fn cli_parses_serialization_with_schema_validation_end_to_end() {
     let dir = temp_dir("json-schema");
     let schema_path = dir.join("schema.json");

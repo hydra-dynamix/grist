@@ -22,6 +22,7 @@ impl SchemaVersion {
     pub const SERIALIZATION_V1: &'static str = "grist/serialization/v1";
     pub const MODEL_OUTPUT_V1: &'static str = "grist/model-output/v1";
     pub const REPO_INGEST_V1: &'static str = "grist/repo-ingest/v1";
+    pub const LDGR_PROJECTION_V1: &'static str = "grist.ldgr_projection.v1";
 }
 
 impl From<&str> for SchemaVersion {
@@ -46,6 +47,7 @@ pub enum ArtifactKind {
     RepoIngest,
     FileIngest,
     Text,
+    LdgrProjection,
     Unsupported,
 }
 
