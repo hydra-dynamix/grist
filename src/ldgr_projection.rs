@@ -346,7 +346,36 @@ pub struct LdgrBatchWorker {
     pub work_item_id: LdgrRef,
     pub worktree_path: LdgrRef,
     pub worker_db_path: LdgrRef,
+    pub worker_artifact_root: Option<LdgrRef>,
     pub status: String,
+    pub process: Option<LdgrBatchWorkerProcess>,
+    pub summary: Option<LdgrBatchWorkerSummary>,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct LdgrBatchWorkerProcess {
+    pub launch_id: String,
+    pub pid: Option<u32>,
+    pub status: String,
+    pub started_at: Option<String>,
+    pub finished_at: Option<String>,
+    pub stdout_path: Option<LdgrRef>,
+    pub stderr_path: Option<LdgrRef>,
+    pub exit_status_path: Option<LdgrRef>,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct LdgrBatchWorkerSummary {
+    pub run_status: Option<String>,
+    pub validation_status: Option<String>,
+    pub conflict_status: Option<String>,
+    pub changed_files: Vec<String>,
+    pub observations: Vec<String>,
+    pub artifact_refs: Vec<String>,
+    pub blocking_reason: Option<String>,
+    pub recommended_action: Option<String>,
 }
 
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
