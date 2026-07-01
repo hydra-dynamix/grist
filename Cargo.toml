@@ -3,9 +3,14 @@ name = "grist"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
+description = "Typed document, code, repository, and model-output interpretation utilities."
+license = "Apache-2.0"
+repository = "https://github.com/hydra-dynamix/grist"
+homepage = "https://github.com/hydra-dynamix/grist"
+readme = "README.md"
 
 [features]
-default = ["markdown", "html", "csv", "rust", "python", "serialization", "model-output", "schemas"]
+default = ["markdown", "html", "csv", "rust", "python", "typescript", "serialization", "model-output", "schemas"]
 ldgr-projection = ["markdown", "serialization", "schemas"]
 markdown = ["dep:pulldown-cmark", "dep:serde_yaml"]
 html = []

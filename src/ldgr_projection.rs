@@ -339,7 +339,8 @@ pub struct LdgrBatchWave {
 }
 
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(default)]
 pub struct LdgrBatchWorker {
     pub worker_id: String,
     pub ticket_id: String,
@@ -354,6 +355,7 @@ pub struct LdgrBatchWorker {
 
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(default)]
 pub struct LdgrBatchWorkerProcess {
     pub launch_id: String,
     pub pid: Option<u32>,
@@ -367,6 +369,7 @@ pub struct LdgrBatchWorkerProcess {
 
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(default)]
 pub struct LdgrBatchWorkerSummary {
     pub run_status: Option<String>,
     pub validation_status: Option<String>,
