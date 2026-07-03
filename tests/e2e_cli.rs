@@ -176,6 +176,7 @@ fn cli_parses_model_output_rules_schema_and_think_blocks_end_to_end() {
             "--rules",
             rules_path.to_str().unwrap(),
             "--strip-think-blocks",
+            "--python-style",
         ],
         "<think>private reasoning</think>Old.Tool(arg={nodes:[1,], ok: True})",
     );

@@ -110,6 +110,12 @@ pub struct ModelOutputOptions {
     pub aliases: AliasRules,
     pub strip_think_blocks: bool,
     pub schema: Option<Value>,
+    /// Enable legacy Python-style command calls such as `Namespace.Command(arg={...})`.
+    ///
+    /// JSON-oriented output is the default primary model-output path. Callers that still
+    /// need Python-style command parsing can opt in with this flag and, preferably,
+    /// explicit accepted command/argument names.
+    pub parse_python_style_commands: bool,
 }
 
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
@@ -176,9 +182,11 @@ pub fn parse_model_output(
         ));
     } else {
         extract_fenced_blocks(&working, &index, &mut candidates, &mut failures);
-        extract_xml_tool_calls(&working, &index, &mut candidates);
-        extract_python_style_commands(&working, &index, options, &mut candidates);
         extract_json_candidates(&working, &index, &mut candidates);
+        extract_xml_tool_calls(&working, &index, &mut candidates);
+        if options.parse_python_style_commands {
+            extract_python_style_commands(&working, &index, options, &mut candidates);
+        }
     }
 
     for candidate in candidates.iter_mut() {
@@ -937,32 +945,66 @@ fn select_candidate_id(
         return None;
     }
     if options.schema.is_some() {
-        let mut valid = candidates.iter().filter(|candidate| {
-            candidate.value.is_some()
-                && candidate
-                    .validation
-                    .as_ref()
-                    .map(|validation| validation.valid)
-                    .unwrap_or(false)
-        });
-        if let Some(candidate) = valid.next() {
-            if valid.next().is_none() {
-                return Some(candidate.id.clone());
-            }
+        let valid = candidates
+            .iter()
+            .filter(|candidate| {
+                candidate.value.is_some()
+                    && candidate
+                        .validation
+                        .as_ref()
+                        .map(|validation| validation.valid)
+                        .unwrap_or(false)
+            })
+            .collect::<Vec<_>>();
+        if let Some(candidate) = select_highest_priority_candidate(&valid) {
+            return Some(candidate.id.clone());
         }
     }
     if candidates.len() == 1 {
         return Some(candidates[0].id.clone());
     }
-    let mut complete = candidates.iter().filter(|candidate| {
-        candidate.value.is_some()
-            && matches!(
-                candidate.status,
-                CandidateStatus::Complete | CandidateStatus::Recovered
-            )
-    });
-    let selected = complete.next()?;
-    complete.next().is_none().then(|| selected.id.clone())
+    let complete = candidates
+        .iter()
+        .filter(|candidate| {
+            candidate.value.is_some()
+                && matches!(
+                    candidate.status,
+                    CandidateStatus::Complete | CandidateStatus::Recovered
+                )
+        })
+        .collect::<Vec<_>>();
+    select_highest_priority_candidate(&complete).map(|candidate| candidate.id.clone())
+}
+
+fn select_highest_priority_candidate<'a>(
+    candidates: &[&'a ModelOutputCandidate],
+) -> Option<&'a ModelOutputCandidate> {
+    let max_priority = candidates
+        .iter()
+        .map(|candidate| candidate_grammar_priority(&candidate.grammar))
+        .max()?;
+    let mut top = candidates
+        .iter()
+        .copied()
+        .filter(|candidate| candidate_grammar_priority(&candidate.grammar) == max_priority);
+    let selected = top.next()?;
+    top.next().is_none().then_some(selected)
+}
+
+fn candidate_grammar_priority(grammar: &CandidateGrammar) -> u8 {
+    match grammar {
+        CandidateGrammar::RawJson => 100,
+        CandidateGrammar::FencedJson => 95,
+        CandidateGrammar::JsonObjectInText => 90,
+        CandidateGrammar::OpenAiChatContent => 85,
+        CandidateGrammar::OpenAiToolCall => 80,
+        CandidateGrammar::McpJsonRpc => 80,
+        CandidateGrammar::FencedCode => 60,
+        CandidateGrammar::YamlBlock => 55,
+        CandidateGrammar::TomlBlock => 55,
+        CandidateGrammar::XmlToolCall => 45,
+        CandidateGrammar::PythonStyleCommand => 20,
+    }
 }
 
 fn apply_aliases(candidate: &mut ModelOutputCandidate, aliases: &AliasRules) {
@@ -1556,7 +1598,6 @@ fn looks_like_candidate_start(text: &str) -> bool {
         || text.contains("function")
         || text.contains("jsonrpc")
         || text.contains("{")
-        || text.contains("(")
 }
 
 fn infer_streaming_grammar(text: &str) -> CandidateGrammar {
@@ -1566,8 +1607,6 @@ fn infer_streaming_grammar(text: &str) -> CandidateGrammar {
         CandidateGrammar::McpJsonRpc
     } else if text.contains("function") {
         CandidateGrammar::OpenAiToolCall
-    } else if text.contains('(') {
-        CandidateGrammar::PythonStyleCommand
     } else {
         CandidateGrammar::RawJson
     }
@@ -1578,10 +1617,32 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parses_python_style_command() {
+    fn default_model_output_parser_is_json_primary() {
+        let report = parse_model_output(
+            "Submit.Result(arg={\"a\":1})",
+            SourceInfo::stdin("model.txt"),
+            &ModelOutputOptions::default(),
+        );
+        assert!(
+            report
+                .payload
+                .candidates
+                .iter()
+                .all(|candidate| candidate.grammar != CandidateGrammar::PythonStyleCommand)
+        );
+        assert_eq!(
+            report.payload.candidates[0].grammar,
+            CandidateGrammar::JsonObjectInText
+        );
+        assert_eq!(report.payload.candidates[0].value.as_ref().unwrap()["a"], 1);
+    }
+
+    #[test]
+    fn parses_python_style_command_when_enabled() {
         let options = ModelOutputOptions {
             accepted_commands: vec!["Agent.Run".into()],
             accepted_arguments: vec!["arg".into()],
+            parse_python_style_commands: true,
             ..Default::default()
         };
         let report = parse_model_output(
@@ -1596,6 +1657,26 @@ mod tests {
                 .iter()
                 .any(|candidate| candidate.grammar == CandidateGrammar::PythonStyleCommand)
         );
+    }
+
+    #[test]
+    fn json_candidate_stays_primary_when_python_style_is_enabled() {
+        let report = parse_model_output(
+            "Submit.Result(arg={\"a\":1})",
+            SourceInfo::stdin("model.txt"),
+            &ModelOutputOptions {
+                parse_python_style_commands: true,
+                ..Default::default()
+            },
+        );
+        let selected_id = report.payload.selected_candidate_id.as_deref().unwrap();
+        let selected = report
+            .payload
+            .candidates
+            .iter()
+            .find(|candidate| candidate.id == selected_id)
+            .unwrap();
+        assert_eq!(selected.grammar, CandidateGrammar::JsonObjectInText);
     }
 
     #[test]
@@ -1649,20 +1730,19 @@ mod tests {
         let report = parse_model_output(
             "submit({\"a\":1})",
             SourceInfo::stdin("model.txt"),
-            &ModelOutputOptions::default(),
+            &ModelOutputOptions {
+                parse_python_style_commands: true,
+                ..Default::default()
+            },
         );
-        assert_eq!(
-            report.payload.candidates[0].grammar,
-            CandidateGrammar::PythonStyleCommand
-        );
-        assert_eq!(
-            report.payload.candidates[0].command_name.as_deref(),
-            Some("submit")
-        );
-        assert_eq!(
-            report.payload.candidates[0].argument_name.as_deref(),
-            Some("positional")
-        );
+        let command = report
+            .payload
+            .candidates
+            .iter()
+            .find(|candidate| candidate.grammar == CandidateGrammar::PythonStyleCommand)
+            .unwrap();
+        assert_eq!(command.command_name.as_deref(), Some("submit"));
+        assert_eq!(command.argument_name.as_deref(), Some("positional"));
     }
 
     #[test]
@@ -1721,6 +1801,7 @@ mod tests {
                 argument_aliases: Vec::new(),
             },
             schema: Some(serde_json::json!({"type":"object", "required":["leaves"]})),
+            parse_python_style_commands: true,
             ..Default::default()
         };
         let report = parse_model_output(

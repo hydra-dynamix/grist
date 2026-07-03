@@ -1,35 +1,53 @@
-# dev configuration file
+# Project-local devkit configuration for the LDGR Rust workspace.
+# CI uses the checked-in .dev/bin/dev binary and runs rust_ci.
 
 default_language = "rust"
 
-# ===================== Rust ========================
-
 [tasks.rust_fmt]
-commands = [["cargo", "fmt"]]
+commands = [["cargo", "fmt", "--all"]]
 
 [tasks.rust_fmt_check]
-commands = [["cargo", "fmt", "--", "--check"]]
+commands = [["cargo", "fmt", "--all", "--", "--check"]]
 
 [tasks.rust_lint]
-commands = [["cargo", "clippy", "--all-targets", "--features", "cli", "--", "-D", "warnings"]]
+commands = [["cargo", "clippy", "--workspace", "--all-targets", "--features", "cli"]]
 
 [tasks.rust_type]
-commands = [["cargo", "check", "--features", "cli"]]
-
-[tasks.rust_type_no_default]
-commands = [["cargo", "check", "--no-default-features"]]
+commands = [["cargo", "check", "--workspace", "--features", "cli"]]
 
 [tasks.rust_test]
-commands = [["cargo", "test", "--features", "cli"]]
+commands = [["cargo", "test", "--workspace", "--features", "cli"]]
 
-[tasks.rust_fix]
-commands = ["rust_fmt"]
+[tasks.rust_build]
+commands = [["cargo", "build", "--workspace", "--features", "cli"]]
 
 [tasks.rust_check]
-commands = ["rust_fmt_check", "rust_lint", "rust_type_no_default", "rust_test"]
+commands = ["rust_fmt_check", "rust_lint", "rust_type", "rust_test"]
 
 [tasks.rust_ci]
+commands = ["rust_check", "rust_build"]
+
+# Compatibility aliases for generic dev invocations in CI or local shells.
+[tasks.fmt]
+commands = ["rust_fmt"]
+
+[tasks.lint]
+commands = ["rust_lint"]
+
+[tasks.type]
+commands = ["rust_type"]
+
+[tasks.test]
+commands = ["rust_test"]
+
+[tasks.check]
 commands = ["rust_check"]
+
+[tasks.ci]
+commands = ["rust_ci"]
+
+[tasks.all_ci]
+commands = ["rust_ci"]
 
 [languages.rust]
 install = []
@@ -39,40 +57,6 @@ fmt = ["rust_fmt"]
 lint = ["rust_lint"]
 type = ["rust_type"]
 test = ["rust_test"]
-fix = ["rust_fix"]
 check = ["rust_check"]
 ci = ["rust_ci"]
-
-
-[tasks.all_fmt]
-commands = ["rust_fmt"]
-
-[tasks.all_lint]
-commands = ["rust_lint"]
-
-[tasks.all_type]
-commands = ["rust_type"]
-
-[tasks.all_test]
-commands = ["rust_test"]
-
-[tasks.all_fix]
-commands = ["rust_fix"]
-
-[tasks.all_check]
-commands = ["rust_check"]
-
-[tasks.all_ci]
-commands = ["rust_ci"]
-
-# ===================== Git ========================
-
-[git]
-# main_branch = "main"
-# release_branch = "release-candidate"
-
-# ===================== Environment ========================
-
-[env]
-# required = ["DATABASE_URL"]
-# optional = ["LOG_LEVEL"]
+fix = ["rust_fmt"]

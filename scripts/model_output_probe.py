@@ -125,7 +125,7 @@ def run_probe(request: tuple[str, str, str, str, int, Path]) -> dict[str, Any]:
     try:
         response = chat_completion(endpoint, api_key, model, PARSER_PROMPTS[parser_type])
         content = extract_content(response)
-        parsed = parse_with_grist(grist_bin, content)
+        parsed = parse_with_grist(grist_bin, content, parser_type)
         record.update(
             {
                 "ok": True,
@@ -199,9 +199,12 @@ def extract_content(response: dict[str, Any]) -> str:
     return json.dumps(response, sort_keys=True)
 
 
-def parse_with_grist(grist_bin: Path, content: str) -> dict[str, Any]:
+def parse_with_grist(grist_bin: Path, content: str, parser_type: str) -> dict[str, Any]:
+    args = [str(grist_bin), "parse", "model-output", "-", "--strip-think-blocks"]
+    if parser_type.startswith("python_style"):
+        args.append("--python-style")
     completed = subprocess.run(
-        [str(grist_bin), "parse", "model-output", "-", "--strip-think-blocks"],
+        args,
         input=content,
         text=True,
         capture_output=True,

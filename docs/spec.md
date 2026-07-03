@@ -427,16 +427,16 @@ Model-output parsing is a first-class module.
 
 Initial grammars/candidate types include:
 
-- Python-style command calls such as `Namespace.Command(arg={...})`;
-- OpenAI-style tool/function calls;
 - raw JSON outputs;
 - fenced JSON/code blocks;
-- MCP-style JSON-RPC commands;
-- YAML/TOML/XML-ish extracted tool blocks where useful;
 - prose-wrapped or malformed JSON-like outputs where safe repair is possible;
+- OpenAI-style tool/function calls;
+- MCP-style JSON-RPC commands;
+- Python-style command calls such as `Namespace.Command(arg={...})` when explicitly enabled;
+- YAML/TOML/XML-ish extracted tool blocks where useful;
 - `<think>...</think>` stripping as a normalization where configured.
 
-Python-style command calling is a preferred, robust grammar and must be supported well. OpenAI-style tool calls remain supported for compatibility but should not dominate the design.
+JSON-oriented parsing is the primary/default model-output path. Python-style command calling remains a supported legacy/compatibility option for callers that explicitly enable it, preferably with accepted command and argument names.
 
 ### Candidates
 

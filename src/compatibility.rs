@@ -41,6 +41,7 @@ pub fn parse_strict_normalized_model_output(
             .iter()
             .map(|value| (*value).to_string())
             .collect(),
+        parse_python_style_commands: true,
         ..Default::default()
     };
     let envelope = parse_model_output(text, SourceInfo::stdin("model-output"), &options);

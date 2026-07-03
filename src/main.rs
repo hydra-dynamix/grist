@@ -92,6 +92,8 @@ enum ParseCommand {
         #[arg(long)]
         strip_think_blocks: bool,
         #[arg(long)]
+        python_style: bool,
+        #[arg(long)]
         json_value: bool,
     },
 }
@@ -347,6 +349,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 schema,
                 rules,
                 strip_think_blocks,
+                python_style,
                 json_value,
             } => {
                 let (text, source) = read_text_input(&input, None)?;
@@ -355,6 +358,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     let options = grist::model_output::ModelOutputOptions {
                         schema: load_json_value_optional(schema.as_ref())?,
                         strip_think_blocks,
+                        parse_python_style_commands: python_style,
                         aliases: if let Some(rules_path) = rules.as_ref() {
                             load_alias_rules(rules_path)?
                         } else {
