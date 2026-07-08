@@ -12,6 +12,10 @@ This directory decomposes `docs/spec.md` into implementation tickets grouped by 
 - [Epoch 5 — Model-output parsing](epoch-5-model-output/)
 - [Epoch 6 — Hardening and integration](epoch-6-hardening-integration/)
 
+## Follow-on plans
+
+- [DocumentGraph IR, transforms, LaTeX, and semantic obligations](document-graph-ir/)
+
 ## Dependency graph
 
 ```mermaid
