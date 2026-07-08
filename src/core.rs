@@ -19,6 +19,7 @@ impl SchemaVersion {
     pub const RUST_CODE_V1: &'static str = "grist/rust-code/v1";
     pub const PYTHON_CODE_V1: &'static str = "grist/python-code/v1";
     pub const TYPESCRIPT_CODE_V1: &'static str = "grist/typescript-code/v1";
+    pub const LATEX_V1: &'static str = "grist/latex/v1";
     pub const SERIALIZATION_V1: &'static str = "grist/serialization/v1";
     pub const MODEL_OUTPUT_V1: &'static str = "grist/model-output/v1";
     pub const REPO_INGEST_V1: &'static str = "grist/repo-ingest/v1";
@@ -43,6 +44,7 @@ pub enum ArtifactKind {
     PythonCode,
     #[serde(rename = "typescript_code")]
     TypeScriptCode,
+    Latex,
     Serialization,
     ModelOutput,
     RepoIngest,

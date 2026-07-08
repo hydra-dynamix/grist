@@ -452,6 +452,13 @@ fn parse_detected_text(text: &str, source: SourceInfo, detection: &Detection) ->
             ))
             .ok()
         }
+        #[cfg(feature = "latex")]
+        ContentKind::Latex => serde_json::to_value(crate::latex::parse_latex(
+            text,
+            source,
+            &crate::latex::LatexOptions::default(),
+        ))
+        .ok(),
         #[cfg(feature = "serialization")]
         ContentKind::Json | ContentKind::Jsonl | ContentKind::Yaml | ContentKind::Toml => {
             crate::serialization::format_from_content_kind(&detection.content_kind).and_then(
@@ -476,6 +483,7 @@ fn kind_from_str(value: &str) -> ArtifactKind {
         "rust_code" => ArtifactKind::RustCode,
         "python_code" => ArtifactKind::PythonCode,
         "typescript_code" => ArtifactKind::TypeScriptCode,
+        "latex" => ArtifactKind::Latex,
         "serialization" => ArtifactKind::Serialization,
         "model_output" => ArtifactKind::ModelOutput,
         "repo_ingest" => ArtifactKind::RepoIngest,

@@ -60,6 +60,10 @@ pub fn list_schemas() -> Vec<SchemaEntry> {
             schema_version: crate::core::SchemaVersion::TYPESCRIPT_CODE_V1.into(),
         },
         SchemaEntry {
+            name: "latex".into(),
+            schema_version: crate::core::SchemaVersion::LATEX_V1.into(),
+        },
+        SchemaEntry {
             name: "text".into(),
             schema_version: "grist/text/v1".into(),
         },
@@ -101,6 +105,10 @@ pub fn list_schemas() -> Vec<SchemaEntry> {
         },
         SchemaEntry {
             name: "typescript-code-envelope".into(),
+            schema_version: crate::core::SchemaVersion::ENVELOPE_V1.into(),
+        },
+        SchemaEntry {
+            name: "latex-envelope".into(),
             schema_version: crate::core::SchemaVersion::ENVELOPE_V1.into(),
         },
     ]
@@ -146,6 +154,8 @@ pub fn schema_json(name: &str) -> Option<serde_json::Value> {
         "typescript-code" => {
             Some(serde_json::to_value(schema_for!(crate::typescript::TypeScriptFile)).ok()?)
         }
+        #[cfg(feature = "latex")]
+        "latex" => Some(serde_json::to_value(schema_for!(crate::latex::LatexDocument)).ok()?),
         "text" => Some(serde_json::to_value(schema_for!(crate::text::TextDocument)).ok()?),
         #[cfg(feature = "serialization")]
         "serialization-envelope" => Some(
@@ -209,6 +219,13 @@ pub fn schema_json(name: &str) -> Option<serde_json::Value> {
         "typescript-code-envelope" => Some(
             serde_json::to_value(schema_for!(
                 crate::core::Envelope<crate::typescript::TypeScriptFile>
+            ))
+            .ok()?,
+        ),
+        #[cfg(feature = "latex")]
+        "latex-envelope" => Some(
+            serde_json::to_value(schema_for!(
+                crate::core::Envelope<crate::latex::LatexDocument>
             ))
             .ok()?,
         ),
@@ -315,6 +332,14 @@ mod tests {
             (
                 "typescript-code-envelope",
                 include_str!("../schemas/grist.typescript-code-envelope.v1.schema.json"),
+            ),
+            (
+                "latex",
+                include_str!("../schemas/grist.latex.v1.schema.json"),
+            ),
+            (
+                "latex-envelope",
+                include_str!("../schemas/grist.latex-envelope.v1.schema.json"),
             ),
         ];
         for (name, checked_in) in fixtures {

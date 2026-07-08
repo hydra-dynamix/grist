@@ -68,6 +68,11 @@ enum ParseCommand {
         #[arg(long, value_enum, default_value_t = PythonDetailArg::Semantic)]
         detail: PythonDetailArg,
     },
+    Latex {
+        input: String,
+        #[arg(long, value_enum, default_value_t = LatexDetailArg::Semantic)]
+        detail: LatexDetailArg,
+    },
     #[command(name = "typescript", alias = "ts")]
     TypeScript {
         input: String,
@@ -169,6 +174,13 @@ enum TypeScriptDialectArg {
     TypeScript,
     Tsx,
     Jsx,
+}
+
+#[cfg(feature = "cli")]
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum LatexDetailArg {
+    Semantic,
+    SemanticWithSyntax,
 }
 
 #[cfg(feature = "cli")]
@@ -298,6 +310,23 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     "grist.cli",
                     "feature.disabled",
                     "python feature is disabled",
+                ))?;
+            }
+            ParseCommand::Latex { input, detail } => {
+                let (text, source) = read_text_input(&input, None)?;
+                #[cfg(feature = "latex")]
+                print_json(&grist::latex::parse_latex(
+                    &text,
+                    source,
+                    &grist::latex::LatexOptions {
+                        detail: detail.into(),
+                    },
+                ))?;
+                #[cfg(not(feature = "latex"))]
+                print_json(&Diagnostic::error(
+                    "grist.cli",
+                    "feature.disabled",
+                    "latex feature is disabled",
                 ))?;
             }
             ParseCommand::TypeScript {
@@ -533,6 +562,16 @@ impl From<RustDetailArg> for grist::rust::RustDetailMode {
             RustDetailArg::Semantic => Self::Semantic,
             RustDetailArg::SemanticWithSyntax => Self::SemanticWithSyntax,
             RustDetailArg::SyntaxDebug => Self::SyntaxDebug,
+        }
+    }
+}
+
+#[cfg(feature = "cli")]
+impl From<LatexDetailArg> for grist::latex::LatexDetailMode {
+    fn from(value: LatexDetailArg) -> Self {
+        match value {
+            LatexDetailArg::Semantic => Self::Semantic,
+            LatexDetailArg::SemanticWithSyntax => Self::SemanticWithSyntax,
         }
     }
 }

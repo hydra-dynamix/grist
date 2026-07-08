@@ -20,6 +20,7 @@ exclude = [
 default = ["markdown", "html", "csv", "rust", "python", "typescript", "serialization", "model-output", "document-graph", "schemas"]
 basin = ["python", "document-graph"]
 document-graph = []
+latex = []
 ldgr-projection = ["markdown", "serialization", "schemas"]
 markdown = ["dep:pulldown-cmark", "dep:serde_yaml"]
 html = []
@@ -30,7 +31,7 @@ typescript = ["dep:tree-sitter", "dep:tree-sitter-typescript"]
 serialization = ["dep:serde_yaml", "dep:toml", "dep:jsonschema"]
 model-output = ["serialization"]
 schemas = ["dep:schemars"]
-cli = ["dep:clap", "markdown", "html", "csv", "rust", "python", "typescript", "serialization", "model-output", "ldgr-projection", "schemas"]
+cli = ["dep:clap", "markdown", "html", "csv", "rust", "python", "typescript", "latex", "serialization", "model-output", "ldgr-projection", "schemas"]
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"], optional = true }

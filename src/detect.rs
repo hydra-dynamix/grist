@@ -31,6 +31,7 @@ pub enum ContentKind {
     TypeScript,
     Tsx,
     Jsx,
+    Latex,
     Csv,
     Json,
     Jsonl,
@@ -168,6 +169,12 @@ pub fn detect_path(path: &Path, bytes: &[u8], limits: &Limits) -> Detection {
                 confidence = 0.98;
                 reasons.push("markdown extension".to_string());
             }
+            "tex" | "latex" => {
+                content_kind = ContentKind::Latex;
+                language = Some("latex".to_string());
+                confidence = 0.98;
+                reasons.push("LaTeX extension".to_string());
+            }
             "html" | "htm" => {
                 content_kind = ContentKind::Html;
                 language = Some("html".to_string());
@@ -278,7 +285,10 @@ fn classify_file_kind(filename: &str, extension: &str, path: &Path) -> FileKind 
     {
         return FileKind::Test;
     }
-    if matches!(extension, "md" | "markdown" | "html" | "htm") {
+    if matches!(
+        extension,
+        "md" | "markdown" | "html" | "htm" | "tex" | "latex"
+    ) {
         return FileKind::Documentation;
     }
     if path_string.contains("/target/")
@@ -402,5 +412,17 @@ mod tests {
             &Limits::default(),
         );
         assert_eq!(detection.content_kind, ContentKind::Csv);
+    }
+
+    #[test]
+    fn detects_latex_documentation() {
+        let detection = detect_path(
+            Path::new("paper.tex"),
+            br#"\section{Intro}"#,
+            &Limits::default(),
+        );
+        assert_eq!(detection.content_kind, ContentKind::Latex);
+        assert_eq!(detection.file_kind, FileKind::Documentation);
+        assert_eq!(detection.language.as_deref(), Some("latex"));
     }
 }
