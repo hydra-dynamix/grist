@@ -17,8 +17,9 @@ exclude = [
 ]
 
 [features]
-default = ["markdown", "html", "csv", "rust", "python", "typescript", "serialization", "model-output", "schemas"]
+default = ["markdown", "html", "csv", "rust", "python", "typescript", "serialization", "model-output", "document-graph", "schemas"]
 basin = ["python"]
+document-graph = []
 ldgr-projection = ["markdown", "serialization", "schemas"]
 markdown = ["dep:pulldown-cmark", "dep:serde_yaml"]
 html = []

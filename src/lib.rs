@@ -8,6 +8,8 @@ pub mod core;
 #[cfg(feature = "csv")]
 pub mod csv;
 pub mod detect;
+#[cfg(feature = "document-graph")]
+pub mod document_graph;
 pub mod ingest;
 pub mod text;
 
