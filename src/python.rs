@@ -35,6 +35,7 @@ pub struct PythonSymbol {
     pub visibility: PythonVisibility,
     pub parent: Option<String>,
     pub decorators: Vec<String>,
+    pub superclasses: Vec<String>,
     pub doc: Option<String>,
     pub syntax: Option<PythonSyntaxSummary>,
 }
@@ -305,6 +306,11 @@ impl PythonCollector<'_, '_> {
                     node_kind: kind.to_string(),
                     named_child_count: node.named_child_count(),
                 });
+            let superclasses = if kind == "class_definition" {
+                self.class_bases_for(node)
+            } else {
+                Vec::new()
+            };
             self.symbols.push(PythonSymbol {
                 id: id.clone(),
                 name: name.clone(),
@@ -316,6 +322,7 @@ impl PythonCollector<'_, '_> {
                 visibility: visibility_for(&name),
                 parent: parents.last().cloned(),
                 decorators: decorators.clone(),
+                superclasses,
                 doc: doc_for(self.source(node)),
                 syntax,
             });
@@ -377,6 +384,16 @@ impl PythonCollector<'_, '_> {
             }
         }
         out
+    }
+
+    fn class_bases_for(&self, node: Node) -> Vec<String> {
+        if let Some(bases) = self.field_source(node, "superclasses") {
+            let parsed = parse_class_bases(&bases);
+            if !parsed.is_empty() {
+                return parsed;
+            }
+        }
+        parse_class_bases(self.source(node))
     }
 
     fn import_for(&self, node: Node) -> PythonImport {
@@ -445,6 +462,23 @@ impl PythonCollector<'_, '_> {
             .map(|child| normalize_ws(self.source(child).trim()))
             .filter(|value| !value.is_empty())
     }
+}
+
+fn parse_class_bases(src: &str) -> Vec<String> {
+    let header = src.split_once(':').map(|(header, _)| header).unwrap_or(src);
+    let Some(start) = header.find('(') else {
+        return Vec::new();
+    };
+    let Some(end) = header.rfind(')') else {
+        return Vec::new();
+    };
+    if end <= start {
+        return Vec::new();
+    }
+    split_args(&header[start + 1..end])
+        .into_iter()
+        .filter(|base| !base.contains('='))
+        .collect()
 }
 
 fn parse_import(src: &str) -> (String, Vec<String>, Vec<String>, usize) {
@@ -577,7 +611,7 @@ mod tests {
 
     #[test]
     fn extracts_symbols_imports_and_decorators() {
-        let src = "import os, sys as system\nfrom .helpers import build as make\nclass Form:\n    @classmethod\n    async def create(cls):\n        value = cls()\n        if value:\n            return value\n        return cls()\n";
+        let src = "import os, sys as system\nfrom .helpers import build as make\nclass Form(BaseForm, mixins.Serializable, metaclass=Meta):\n    @classmethod\n    async def create(cls):\n        value = cls()\n        if value:\n            return value\n        return cls()\n";
         let report = parse_python(
             src,
             SourceInfo::stdin("forms.py"),
@@ -585,7 +619,16 @@ mod tests {
                 detail: PythonDetailMode::SemanticWithSyntax,
             },
         );
-        assert!(report.payload.symbols.iter().any(|s| s.name == "Form"));
+        let form = report
+            .payload
+            .symbols
+            .iter()
+            .find(|s| s.name == "Form")
+            .expect("class symbol should be extracted");
+        assert_eq!(
+            form.superclasses,
+            vec!["BaseForm".to_string(), "mixins.Serializable".to_string()]
+        );
         assert!(
             report
                 .payload

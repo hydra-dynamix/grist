@@ -1,5 +1,7 @@
 //! Grist interpretation utility library.
 
+#[cfg(feature = "basin")]
+pub mod basin;
 #[cfg(all(feature = "model-output", feature = "rust"))]
 pub mod compatibility;
 pub mod core;
