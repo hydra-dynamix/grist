@@ -13,7 +13,11 @@ use std::path::PathBuf;
 
 #[cfg(feature = "cli")]
 #[derive(Parser)]
-#[command(name = "grist", about = "Grist interpretation utility")]
+#[command(
+    name = "grist",
+    about = "Grist interpretation utility",
+    long_about = "Grist parses documents/code/model outputs into typed JSON envelopes, emits public JSON Schemas, ingests files/repos, and transforms supported formats through DocumentGraph."
+)]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -22,22 +26,29 @@ struct Cli {
 #[cfg(feature = "cli")]
 #[derive(Subcommand)]
 enum Command {
+    /// Parse one input into a typed Grist JSON envelope.
     Parse {
         #[command(subcommand)]
         command: ParseCommand,
     },
+    /// Detect and ingest one file or repository into Grist artifact reports.
     Ingest {
         #[command(subcommand)]
         command: IngestCommand,
     },
+    /// List or emit checked-in public JSON Schema contracts.
     Schema {
         #[command(subcommand)]
         command: SchemaCommand,
     },
+    /// Convert supported inputs through DocumentGraph and render graph/Markdown/LaTeX.
     Transform {
+        /// Input path. The source kind is inferred from extension: .md, .tex, .py, .rs, .ts, .tsx, .jsx.
         input: String,
+        /// Target representation to emit.
         #[arg(long, value_enum)]
         to: TransformTargetArg,
+        /// Run deterministic conditional-obligation extraction before emitting the target.
         #[arg(long)]
         extract_obligations: bool,
     },
@@ -46,67 +57,103 @@ enum Command {
 #[cfg(feature = "cli")]
 #[derive(Subcommand)]
 enum ParseCommand {
+    /// Parse Markdown headings, paragraphs, links, fences, tables, and frontmatter.
     Markdown {
+        /// Input path or `-` for stdin.
         input: String,
     },
+    /// Parse LDGR Markdown Projection documents.
     #[command(name = "ldgr-projection")]
     LdgrProjection {
+        /// Input path or `-` for stdin.
         input: String,
+        /// Treat validation diagnostics as strict parse diagnostics.
         #[arg(long)]
         strict: bool,
     },
+    /// Parse HTML fragments or documents.
     Html {
+        /// Input path or `-` for stdin.
         input: String,
+        /// HTML parse mode.
         #[arg(long, value_enum, default_value_t = HtmlModeArg::Auto)]
         mode: HtmlModeArg,
     },
+    /// Parse CSV data.
     Csv {
+        /// Input path or `-` for stdin.
         input: String,
+        /// CSV delimiter.
         #[arg(long, value_enum, default_value_t = CsvDelimiterArg::Comma)]
         delimiter: CsvDelimiterArg,
+        /// Treat the first row as data instead of headers.
         #[arg(long)]
         no_headers: bool,
     },
+    /// Parse Rust code with tree-sitter.
     Rust {
+        /// Input path or `-` for stdin.
         input: String,
+        /// Semantic/syntax detail level.
         #[arg(long, value_enum, default_value_t = RustDetailArg::Semantic)]
         detail: RustDetailArg,
     },
+    /// Parse Python code with tree-sitter.
     Python {
+        /// Input path or `-` for stdin.
         input: String,
+        /// Semantic/syntax detail level.
         #[arg(long, value_enum, default_value_t = PythonDetailArg::Semantic)]
         detail: PythonDetailArg,
     },
+    /// Parse LaTeX documents, preserving unknown commands as raw nodes.
     Latex {
+        /// Input path or `-` for stdin.
         input: String,
+        /// Semantic/syntax detail level.
         #[arg(long, value_enum, default_value_t = LatexDetailArg::Semantic)]
         detail: LatexDetailArg,
     },
+    /// Parse TypeScript, TSX, or JSX code with tree-sitter.
     #[command(name = "typescript", alias = "ts")]
     TypeScript {
+        /// Input path or `-` for stdin.
         input: String,
+        /// TypeScript parser dialect.
         #[arg(long, value_enum, default_value_t = TypeScriptDialectArg::TypeScript)]
         dialect: TypeScriptDialectArg,
+        /// Semantic/syntax detail level.
         #[arg(long, value_enum, default_value_t = TypeScriptDetailArg::Semantic)]
         detail: TypeScriptDetailArg,
     },
+    /// Parse JSON, JSONL, YAML, or TOML values with optional schema validation.
     Json {
+        /// Input path or `-` for stdin.
         input: String,
+        /// Serialization format.
         #[arg(long, value_enum, default_value_t = SerializationFormatArg::Json)]
         format: SerializationFormatArg,
+        /// Optional JSON Schema file.
         #[arg(long)]
         schema: Option<PathBuf>,
     },
+    /// Parse model-output text, repair candidate JSON/tool calls, and optionally validate.
     ModelOutput {
+        /// Input path or `-` for stdin.
         input: String,
+        /// Optional JSON Schema file.
         #[arg(long)]
         schema: Option<PathBuf>,
+        /// Optional alias/repair rules file.
         #[arg(long)]
         rules: Option<PathBuf>,
+        /// Remove <think>...</think> blocks before parsing.
         #[arg(long)]
         strip_think_blocks: bool,
+        /// Enable Python-style command parsing.
         #[arg(long)]
         python_style: bool,
+        /// Emit only the selected JSON value instead of the full envelope.
         #[arg(long)]
         json_value: bool,
     },
@@ -115,21 +162,31 @@ enum ParseCommand {
 #[cfg(feature = "cli")]
 #[derive(Subcommand)]
 enum IngestCommand {
+    /// Detect and ingest one file or stdin stream.
     File {
+        /// Input path or `-` for stdin.
         input: String,
+        /// Filename hint for stdin detection.
         #[arg(long)]
         filename: Option<PathBuf>,
+        /// Reserved explicit kind override.
         #[arg(long)]
         kind: Option<String>,
     },
+    /// Walk a repository and ingest supported files.
     Repo {
+        /// Repository root path.
         path: PathBuf,
+        /// Include ignored files instead of honoring ignore rules.
         #[arg(long)]
         include_ignored: bool,
+        /// Include glob; may be repeated.
         #[arg(long = "include")]
         include_globs: Vec<String>,
+        /// Exclude glob; may be repeated.
         #[arg(long = "exclude")]
         exclude_globs: Vec<String>,
+        /// Write artifacts to this directory instead of inlining them.
         #[arg(long)]
         external_artifact_dir: Option<PathBuf>,
     },
@@ -211,8 +268,13 @@ enum TransformTargetArg {
 #[cfg(feature = "cli")]
 #[derive(Subcommand)]
 enum SchemaCommand {
+    /// List public schema names and schema versions.
     List,
-    Emit { name: String },
+    /// Emit one public JSON Schema by name.
+    Emit {
+        /// Schema name, for example `markdown-envelope`, `document-graph`, or `latex-envelope`.
+        name: String,
+    },
 }
 
 #[cfg(feature = "cli")]

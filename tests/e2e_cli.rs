@@ -54,6 +54,16 @@ fn run(args: &[&str]) -> serde_json::Value {
     serde_json::from_slice(&output.stdout).unwrap()
 }
 
+fn run_text(args: &[&str]) -> String {
+    let output = Command::new(grist()).args(args).output().unwrap();
+    assert!(
+        output.status.success(),
+        "command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8(output.stdout).unwrap()
+}
+
 fn validate_with_schema(value: &serde_json::Value, schema_name: &str) {
     let schema = run(&["schema", "emit", schema_name]);
     let validator = jsonschema::validator_for(&schema).unwrap();
@@ -539,4 +549,73 @@ fn cli_rust_detail_mode_exposes_syntax_debug() {
     );
     validate_with_schema(&output, "rust-code-envelope");
     assert_eq!(output["payload"]["detail"]["root_kind"], "source_file");
+}
+
+#[test]
+fn cli_help_menus_describe_parse_and_transform_surfaces() {
+    let top = run_text(&["--help"]);
+    assert!(top.contains("Parse one input into a typed Grist JSON envelope"));
+    assert!(top.contains("Convert supported inputs through DocumentGraph"));
+
+    let parse = run_text(&["parse", "--help"]);
+    assert!(parse.contains("Parse LaTeX documents"));
+    assert!(parse.contains("Parse TypeScript, TSX, or JSX code"));
+
+    let transform = run_text(&["transform", "--help"]);
+    assert!(transform.contains("Target representation to emit"));
+    assert!(transform.contains("extract-obligations"));
+    assert!(transform.contains(".md, .tex, .py, .rs, .ts, .tsx, .jsx"));
+}
+
+#[test]
+fn cli_parses_latex_with_schema_validation_end_to_end() {
+    let output = run_stdin(
+        &["parse", "latex", "-", "--detail", "semantic-with-syntax"],
+        "\\section{Intro}\nSee \\label{sec:intro} and $x$.\\unknowncmd{raw}\n",
+    );
+    validate_with_schema(&output, "latex-envelope");
+    assert_eq!(output["kind"], "latex");
+    assert!(
+        output["payload"]["nodes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|node| node["kind"] == "section" && node["argument"] == "Intro")
+    );
+    assert_eq!(output["payload"]["detail"]["raw_command_count"], 1);
+}
+
+#[test]
+fn cli_transforms_documents_through_document_graph() {
+    let dir = temp_dir("transform");
+    let markdown = dir.join("rules.md");
+    fs::write(
+        &markdown,
+        "# Rules\n\nIf the file is executable, it must have a shebang.\n",
+    )
+    .unwrap();
+
+    let graph = run(&[
+        "transform",
+        markdown.to_str().unwrap(),
+        "--to",
+        "graph",
+        "--extract-obligations",
+    ]);
+    validate_with_schema(&graph, "document-graph");
+    assert!(
+        graph["nodes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|node| node["kind"] == "obligation")
+    );
+
+    let latex = run_text(&["transform", markdown.to_str().unwrap(), "--to", "latex"]);
+    assert!(latex.contains("\\section{Rules}"));
+
+    let tex = dir.join("paper.tex");
+    fs::write(&tex, "\\section{Intro}\nHello.\n").unwrap();
+    let rendered_markdown = run_text(&["transform", tex.to_str().unwrap(), "--to", "markdown"]);
+    assert!(rendered_markdown.contains("# Intro"));
 }

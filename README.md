@@ -33,6 +33,8 @@ The library can be used without the CLI feature.
 
 ## CLI quick start
 
+See [`docs/cli.md`](docs/cli.md) for the full command menu and examples.
+
 ```sh
 grist parse markdown README.md
 grist parse html fragment.html --mode fragment
@@ -77,6 +79,7 @@ The `cli` feature enables the `grist` binary and pulls in the parser features ne
 ## Schemas and specs
 
 - `docs/spec.md` describes the public interpretation contract.
+- `docs/cli.md` describes the CLI command menu, parse/ingest/schema/transform commands, and examples.
 - `docs/ldgr-projection-module-spec.md` describes the LDGR Markdown Projection parser/renderer contract.
 - `docs/document-graph.md` describes the normalized graph IR, transforms, LaTeX support, basin integration, and semantic obligation policy.
 - `schemas/` contains checked-in JSON Schema files for public envelopes and payloads.
