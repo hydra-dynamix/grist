@@ -3,6 +3,8 @@ use clap::{Parser, Subcommand, ValueEnum};
 #[cfg(feature = "cli")]
 use grist::core::{Diagnostic, SourceInfo};
 #[cfg(feature = "cli")]
+use grist::document_graph::ToDocumentGraph;
+#[cfg(feature = "cli")]
 use grist::ingest::{FileIngestOptions, RepoIngestOptions};
 #[cfg(feature = "cli")]
 use std::io::Read;
@@ -31,6 +33,13 @@ enum Command {
     Schema {
         #[command(subcommand)]
         command: SchemaCommand,
+    },
+    Transform {
+        input: String,
+        #[arg(long, value_enum)]
+        to: TransformTargetArg,
+        #[arg(long)]
+        extract_obligations: bool,
     },
 }
 
@@ -189,6 +198,14 @@ enum TypeScriptDetailArg {
     Semantic,
     SemanticWithSyntax,
     SyntaxDebug,
+}
+
+#[cfg(feature = "cli")]
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum TransformTargetArg {
+    Graph,
+    Markdown,
+    Latex,
 }
 
 #[cfg(feature = "cli")]
@@ -480,8 +497,96 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         },
+        Command::Transform {
+            input,
+            to,
+            extract_obligations,
+        } => {
+            let mut graph = parse_input_to_document_graph(&input)?;
+            if extract_obligations {
+                grist::document_graph::extract_conditional_obligations(&mut graph);
+            }
+            match to {
+                TransformTargetArg::Graph => print_json(&graph)?,
+                TransformTargetArg::Markdown => {
+                    let rendered = grist::document_graph::render_markdown(
+                        &graph,
+                        grist::document_graph::TransformOptions::default(),
+                    )?;
+                    print!("{rendered}");
+                }
+                TransformTargetArg::Latex => {
+                    let rendered = grist::document_graph::render_latex(
+                        &graph,
+                        grist::document_graph::TransformOptions::default(),
+                    )?;
+                    print!("{rendered}");
+                }
+            }
+        }
     }
     Ok(())
+}
+
+#[cfg(feature = "cli")]
+fn parse_input_to_document_graph(
+    input: &str,
+) -> Result<grist::document_graph::DocumentGraph, Box<dyn std::error::Error>> {
+    let (text, source) = read_text_input(input, None)?;
+    let extension = if input == "-" {
+        String::new()
+    } else {
+        PathBuf::from(input)
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .unwrap_or_default()
+            .to_ascii_lowercase()
+    };
+    let context = grist::document_graph::DocumentGraphContext::new(format!("graph:{input}"));
+    match extension.as_str() {
+        "md" | "markdown" => Ok(grist::markdown::parse_markdown(&text, source)
+            .payload
+            .to_document_graph(context)?),
+        "tex" | "latex" => Ok(grist::latex::parse_latex(
+            &text,
+            source,
+            &grist::latex::LatexOptions::default(),
+        )
+        .payload
+        .to_document_graph(context)?),
+        "py" | "pyi" => Ok(grist::python::parse_python(
+            &text,
+            source,
+            &grist::python::PythonIngestOptions::default(),
+        )
+        .payload
+        .to_document_graph(context)?),
+        "rs" => Ok(grist::rust::parse_rust(
+            &text,
+            source,
+            &grist::rust::RustIngestOptions::default(),
+        )
+        .payload
+        .to_document_graph(context)?),
+        "ts" | "mts" | "cts" | "tsx" | "jsx" => Ok(grist::typescript::parse_typescript(
+            &text,
+            source,
+            &grist::typescript::TypeScriptIngestOptions {
+                dialect: match extension.as_str() {
+                    "tsx" => grist::typescript::TypeScriptDialect::Tsx,
+                    "jsx" => grist::typescript::TypeScriptDialect::Jsx,
+                    _ => grist::typescript::TypeScriptDialect::TypeScript,
+                },
+                ..Default::default()
+            },
+        )
+        .payload
+        .to_document_graph(context)?),
+        _ => Err(format!(
+            "cannot infer transform source kind for `{input}`; use a supported extension (.md, .tex, .py, .rs, .ts, .tsx, .jsx)"
+        )
+        .into()),
+    }
 }
 
 #[cfg(feature = "cli")]
