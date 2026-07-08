@@ -1564,6 +1564,65 @@ mod tests {
     }
 
     #[test]
+    fn conditional_obligation_graph_serializes_with_provenance() {
+        let mut graph = DocumentGraph::new("graph:obligation", DocumentKind::Document);
+        graph.add_node(DocumentNode::new(
+            "condition:file-executable",
+            DocumentNodeKind::Condition,
+        ));
+        let obligation = ObligationAttrs {
+            modality: ObligationModality::Must,
+            polarity: ObligationPolarity::Positive,
+            subject: Some("file".to_string()),
+            predicate: Some("has_shebang".to_string()),
+            action: Some("include shebang".to_string()),
+            source_text: Some("If a file is executable, it must have a shebang.".to_string()),
+            extraction_method: Some("test-fixture".to_string()),
+            confidence: Some(1.0),
+            attrs: AttrMap::new(),
+        };
+        graph.add_node(
+            DocumentNode::new("obligation:has-shebang", DocumentNodeKind::Obligation)
+                .with_attr("obligation", serde_json::to_value(&obligation).unwrap()),
+        );
+        graph.add_edge(DocumentEdge::new(
+            "obligation:has-shebang",
+            DocumentRelation::ConditionalOn,
+            "condition:file-executable",
+        ));
+        graph.add_edge(DocumentEdge::new(
+            "obligation:has-shebang",
+            DocumentRelation::Requires,
+            "state:has-shebang",
+        ));
+        graph.add_edge(DocumentEdge::new(
+            "obligation:has-shebang",
+            DocumentRelation::DerivedFrom,
+            "source:line-1",
+        ));
+
+        let value = serde_json::to_value(&graph).expect("graph should serialize");
+        let decoded: DocumentGraph =
+            serde_json::from_value(value).expect("graph should deserialize");
+        assert!(
+            decoded
+                .edges
+                .iter()
+                .any(|edge| edge.relation == DocumentRelation::ConditionalOn)
+        );
+        let obligation_value = decoded
+            .nodes
+            .iter()
+            .find(|node| node.kind == DocumentNodeKind::Obligation)
+            .and_then(|node| node.attrs.get("obligation"))
+            .expect("obligation attrs should be preserved");
+        let decoded_attrs: ObligationAttrs = serde_json::from_value(obligation_value.clone())
+            .expect("obligation attrs should decode");
+        assert_eq!(decoded_attrs.modality, ObligationModality::Must);
+        assert_eq!(decoded_attrs.predicate.as_deref(), Some("has_shebang"));
+    }
+
+    #[test]
     fn transform_error_maps_to_stable_diagnostic_codes() {
         let err = TransformError::MissingRequiredAttribute {
             target: "n:link".to_string(),
