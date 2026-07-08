@@ -563,6 +563,7 @@ fn cli_help_menus_describe_parse_and_transform_surfaces() {
 
     let transform = run_text(&["transform", "--help"]);
     assert!(transform.contains("Target representation to emit"));
+    assert!(transform.contains("--file <INPUT>"));
     assert!(transform.contains("extract-obligations"));
     assert!(transform.contains(".md, .tex, .py, .rs, .ts, .tsx, .jsx"));
 }
@@ -611,7 +612,13 @@ fn cli_transforms_documents_through_document_graph() {
             .any(|node| node["kind"] == "obligation")
     );
 
-    let latex = run_text(&["transform", markdown.to_str().unwrap(), "--to", "latex"]);
+    let latex = run_text(&[
+        "transform",
+        "--file",
+        markdown.to_str().unwrap(),
+        "--to",
+        "latex",
+    ]);
     assert!(latex.contains("\\section{Rules}"));
 
     let tex = dir.join("paper.tex");

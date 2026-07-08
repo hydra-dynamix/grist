@@ -44,7 +44,11 @@ enum Command {
     /// Convert supported inputs through DocumentGraph and render graph/Markdown/LaTeX.
     Transform {
         /// Input path. The source kind is inferred from extension: .md, .tex, .py, .rs, .ts, .tsx, .jsx.
-        input: String,
+        #[arg(value_name = "INPUT", required_unless_present = "file")]
+        input: Option<String>,
+        /// Input path as a named flag, equivalent to the positional INPUT.
+        #[arg(long, value_name = "INPUT", conflicts_with = "input")]
+        file: Option<String>,
         /// Target representation to emit.
         #[arg(long, value_enum)]
         to: TransformTargetArg,
@@ -561,9 +565,13 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         },
         Command::Transform {
             input,
+            file,
             to,
             extract_obligations,
         } => {
+            let input = input
+                .or(file)
+                .ok_or_else(|| "transform requires an input path".to_string())?;
             let mut graph = parse_input_to_document_graph(&input)?;
             if extract_obligations {
                 grist::document_graph::extract_conditional_obligations(&mut graph);
