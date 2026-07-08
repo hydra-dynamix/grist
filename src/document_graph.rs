@@ -639,6 +639,175 @@ fn project_markdown_table(
     }
 }
 
+/// Extract explicit conditional obligations from prose nodes in-place.
+///
+/// This deterministic pass intentionally handles only clear patterns such as
+/// "if/when/unless <condition>, <subject> must/shall/should/may <action>".
+/// Ambiguous prose is left untouched rather than guessed.
+pub fn extract_conditional_obligations(graph: &mut DocumentGraph) -> usize {
+    let candidates = graph
+        .nodes
+        .iter()
+        .filter(|node| {
+            matches!(
+                node.kind,
+                DocumentNodeKind::Paragraph
+                    | DocumentNodeKind::Text
+                    | DocumentNodeKind::Requirement
+            )
+        })
+        .filter_map(|node| {
+            node.text
+                .as_ref()
+                .map(|text| (node.id.clone(), text.clone()))
+        })
+        .collect::<Vec<_>>();
+
+    let mut extracted = 0_usize;
+    for (source_id, text) in candidates {
+        let Some(parsed) = parse_conditional_obligation(&text) else {
+            continue;
+        };
+        let condition_id = format!("{}:condition:{}", source_id, extracted);
+        let obligation_id = format!("{}:obligation:{}", source_id, extracted);
+        let required_state_id = format!("{}:required-state:{}", source_id, extracted);
+
+        graph.add_node(
+            DocumentNode::new(&condition_id, DocumentNodeKind::Condition)
+                .with_text(parsed.condition.clone())
+                .with_attr("connector", parsed.connector.clone()),
+        );
+        let attrs = ObligationAttrs {
+            modality: parsed.modality.clone(),
+            polarity: parsed.polarity.clone(),
+            subject: parsed.subject.clone(),
+            predicate: parsed.predicate.clone(),
+            action: Some(parsed.action.clone()),
+            source_text: Some(text.clone()),
+            extraction_method: Some("deterministic-if-modal-v1".to_string()),
+            confidence: Some(1.0),
+            attrs: AttrMap::new(),
+        };
+        graph.add_node(
+            DocumentNode::new(&obligation_id, DocumentNodeKind::Obligation)
+                .with_text(parsed.action.clone())
+                .with_attr("obligation", serde_json::to_value(&attrs).unwrap()),
+        );
+        graph.add_node(
+            DocumentNode::new(&required_state_id, DocumentNodeKind::Requirement)
+                .with_text(parsed.action.clone()),
+        );
+        graph.add_edge(DocumentEdge::new(
+            &obligation_id,
+            DocumentRelation::ConditionalOn,
+            &condition_id,
+        ));
+        graph.add_edge(DocumentEdge::new(
+            &obligation_id,
+            relation_for_obligation(&parsed.modality, &parsed.polarity),
+            &required_state_id,
+        ));
+        graph.add_edge(DocumentEdge::new(
+            &obligation_id,
+            DocumentRelation::DerivedFrom,
+            &source_id,
+        ));
+        graph.add_edge(DocumentEdge::new(
+            &source_id,
+            DocumentRelation::EvidenceFor,
+            &obligation_id,
+        ));
+        extracted += 1;
+    }
+    extracted
+}
+
+#[derive(Debug, Clone)]
+struct ParsedConditionalObligation {
+    connector: String,
+    condition: String,
+    modality: ObligationModality,
+    polarity: ObligationPolarity,
+    subject: Option<String>,
+    predicate: Option<String>,
+    action: String,
+}
+
+fn parse_conditional_obligation(text: &str) -> Option<ParsedConditionalObligation> {
+    let normalized = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    let lower = normalized.to_ascii_lowercase();
+    let (connector, after_connector) =
+        ["if ", "when ", "unless "].into_iter().find_map(|prefix| {
+            lower
+                .strip_prefix(prefix)
+                .map(|_| (prefix.trim(), &normalized[prefix.len()..]))
+        })?;
+    let (condition, consequent) = after_connector.split_once(',')?;
+    let consequent_trimmed = consequent.trim();
+    let lower_consequent = consequent_trimmed.to_ascii_lowercase();
+    let modal = [
+        "must not",
+        "shall not",
+        "should not",
+        "must",
+        "shall",
+        "should",
+        "may",
+    ]
+    .into_iter()
+    .find_map(|modal| lower_consequent.find(modal).map(|idx| (modal, idx)))?;
+    let (modal, modal_idx) = modal;
+    let subject = consequent_trimmed[..modal_idx]
+        .trim()
+        .trim_end_matches(',')
+        .trim();
+    let action_start = modal_idx + modal.len();
+    let action = consequent_trimmed[action_start..]
+        .trim()
+        .trim_end_matches('.')
+        .to_string();
+    if condition.trim().is_empty() || action.is_empty() {
+        return None;
+    }
+    let modality = match modal {
+        "must" => ObligationModality::Must,
+        "shall" => ObligationModality::Shall,
+        "should" => ObligationModality::Should,
+        "may" => ObligationModality::May,
+        "must not" => ObligationModality::MustNot,
+        "shall not" => ObligationModality::ShallNot,
+        "should not" => ObligationModality::ShouldNot,
+        _ => ObligationModality::Unknown,
+    };
+    let polarity = match modal {
+        "may" => ObligationPolarity::Permission,
+        "must not" | "shall not" | "should not" => ObligationPolarity::Prohibition,
+        _ => ObligationPolarity::Positive,
+    };
+    Some(ParsedConditionalObligation {
+        connector: connector.to_string(),
+        condition: condition.trim().to_string(),
+        modality,
+        polarity,
+        subject: (!subject.is_empty()).then(|| subject.to_string()),
+        predicate: Some(action.clone()),
+        action,
+    })
+}
+
+fn relation_for_obligation(
+    modality: &ObligationModality,
+    polarity: &ObligationPolarity,
+) -> DocumentRelation {
+    match (modality, polarity) {
+        (ObligationModality::May, _) | (_, ObligationPolarity::Permission) => {
+            DocumentRelation::Allows
+        }
+        (_, ObligationPolarity::Prohibition) => DocumentRelation::Forbids,
+        _ => DocumentRelation::Requires,
+    }
+}
+
 #[cfg(feature = "markdown")]
 pub fn render_markdown(
     graph: &DocumentGraph,
@@ -1660,6 +1829,66 @@ mod tests {
         assert_eq!(graph.id, "graph:tiny");
         assert_eq!(graph.language.as_deref(), Some("text"));
         assert_eq!(graph.nodes.len(), 1);
+    }
+
+    #[test]
+    fn conditional_obligation_extraction_handles_positive_and_negative_cases() {
+        let mut graph = DocumentGraph::new("graph:rules", DocumentKind::Document);
+        graph.add_node(
+            DocumentNode::new("p:positive", DocumentNodeKind::Paragraph)
+                .with_text("If the file is executable, it must have a shebang."),
+        );
+        graph.add_node(
+            DocumentNode::new("p:negative", DocumentNodeKind::Paragraph)
+                .with_text("This paragraph mentions quality but has no explicit condition."),
+        );
+
+        let count = extract_conditional_obligations(&mut graph);
+        assert_eq!(count, 1);
+        assert!(
+            graph
+                .edges
+                .iter()
+                .any(|edge| edge.relation == DocumentRelation::ConditionalOn)
+        );
+        assert!(
+            graph
+                .edges
+                .iter()
+                .any(|edge| edge.relation == DocumentRelation::Requires)
+        );
+        assert_eq!(
+            graph
+                .nodes
+                .iter()
+                .filter(|node| node.kind == DocumentNodeKind::Obligation)
+                .count(),
+            1
+        );
+    }
+
+    #[cfg(feature = "latex")]
+    #[test]
+    fn conditional_obligation_extraction_works_on_latex_projection() {
+        use crate::core::SourceInfo;
+        use crate::latex::{LatexOptions, parse_latex};
+
+        let parsed = parse_latex(
+            "If the file is executable, it must have a shebang.\n",
+            SourceInfo::stdin("rules.tex"),
+            &LatexOptions::default(),
+        );
+        let mut graph = parsed
+            .payload
+            .to_document_graph(DocumentGraphContext::new("graph:latex-rules"))
+            .expect("latex projection should succeed");
+        assert_eq!(extract_conditional_obligations(&mut graph), 1);
+        assert!(
+            graph
+                .edges
+                .iter()
+                .any(|edge| edge.relation == DocumentRelation::ConditionalOn)
+        );
     }
 
     #[cfg(feature = "markdown")]
