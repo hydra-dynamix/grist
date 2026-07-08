@@ -8,6 +8,13 @@ license = "Apache-2.0"
 repository = "https://github.com/hydra-dynamix/grist"
 homepage = "https://github.com/hydra-dynamix/grist"
 readme = "README.md"
+exclude = [
+    ".dev/**",
+    ".github/**",
+    "artifacts/**",
+    "Cargo.toml.orig",
+    "target/**",
+]
 
 [features]
 default = ["markdown", "html", "csv", "rust", "python", "typescript", "serialization", "model-output", "schemas"]

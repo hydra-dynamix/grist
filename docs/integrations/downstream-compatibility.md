@@ -76,7 +76,7 @@ Grist supports the immediate local-first formats needed by the first integration
 
 `grist::compatibility::parse_research_chain_model_output` intentionally maps to the same strict normalized shape as the graph-composer compatibility function so research-chain can replace its narrow parser without inheriting Grist's richer ambiguity semantics by accident.
 
-Notebook/PDF/DOCX/HTML ingestion remain outside the initial Grist parser set and should be added as concrete parser modules when those downstream ingestion paths are activated. Plain text, Markdown, source, and JSON-like evidence paths are operational now and exercised by `dev ci`.
+Notebook/PDF/DOCX ingestion remain outside the initial Grist parser set and should be added as concrete parser modules when those downstream ingestion paths are activated. Plain text, Markdown, HTML, source, and JSON-like evidence paths are operational now and exercised by `dev ci`.
 
 ## Production validation
 
