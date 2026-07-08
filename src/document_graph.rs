@@ -14,6 +14,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
+use thiserror::Error;
 
 pub type DocumentGraphEnvelope = crate::core::Envelope<DocumentGraph>;
 pub type AttrMap = BTreeMap<String, Value>;
@@ -362,6 +363,145 @@ pub enum ObligationPolarity {
     Unknown,
 }
 
+/// Convert a parser-specific payload into a normalized `DocumentGraph`.
+pub trait ToDocumentGraph {
+    fn to_document_graph(
+        &self,
+        context: DocumentGraphContext,
+    ) -> Result<DocumentGraph, TransformError>;
+}
+
+/// Render or project a `DocumentGraph` into a target output type.
+pub trait FromDocumentGraph: Sized {
+    fn from_document_graph(
+        graph: &DocumentGraph,
+        options: TransformOptions,
+    ) -> Result<Self, TransformError>;
+}
+
+/// Shared context for source-to-graph projections.
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct DocumentGraphContext {
+    pub graph_id: String,
+    pub source: Option<SourceInfo>,
+    pub language: Option<String>,
+    pub dialect: Option<String>,
+    pub attrs: AttrMap,
+}
+
+impl DocumentGraphContext {
+    pub fn new(graph_id: impl Into<String>) -> Self {
+        Self {
+            graph_id: graph_id.into(),
+            source: None,
+            language: None,
+            dialect: None,
+            attrs: AttrMap::new(),
+        }
+    }
+
+    pub fn with_source(mut self, source: SourceInfo) -> Self {
+        self.source = Some(source);
+        self
+    }
+
+    pub fn with_language(mut self, language: impl Into<String>) -> Self {
+        self.language = Some(language.into());
+        self
+    }
+
+    pub fn with_dialect(mut self, dialect: impl Into<String>) -> Self {
+        self.dialect = Some(dialect.into());
+        self
+    }
+}
+
+/// Options controlling graph rendering/projection behavior.
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TransformOptions {
+    pub allow_lossy: bool,
+    pub allow_raw_fallback: bool,
+    pub fail_on_warning: bool,
+}
+
+impl Default for TransformOptions {
+    fn default() -> Self {
+        Self {
+            allow_lossy: false,
+            allow_raw_fallback: true,
+            fail_on_warning: false,
+        }
+    }
+}
+
+/// One non-fatal transform warning.
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TransformWarning {
+    pub kind: TransformWarningKind,
+    pub message: String,
+    pub node_id: Option<String>,
+    pub edge_source: Option<String>,
+    pub edge_target: Option<String>,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum TransformWarningKind {
+    LossyProjection,
+    RawFallback,
+    UnsupportedAttribute,
+    MissingRange,
+    Other(String),
+}
+
+/// Structured production errors for graph conversions and renderers.
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Error)]
+#[serde(rename_all = "snake_case", tag = "kind")]
+pub enum TransformError {
+    #[error("unsupported node kind {node_kind:?} on node {node_id}")]
+    UnsupportedNodeKind {
+        node_id: String,
+        node_kind: DocumentNodeKind,
+    },
+    #[error("unsupported relation {relation:?} from {edge_source} to {edge_target}")]
+    UnsupportedRelation {
+        edge_source: String,
+        relation: DocumentRelation,
+        edge_target: String,
+    },
+    #[error("missing required attribute {attr} on {target}")]
+    MissingRequiredAttribute { target: String, attr: String },
+    #[error("invalid graph shape: {message}")]
+    InvalidGraphShape { message: String },
+    #[error("lossy transform rejected: {message}")]
+    LossyTransformRejected { message: String },
+    #[error("feature {feature} is required for {operation}")]
+    FeatureUnavailable { feature: String, operation: String },
+    #[error("transform failed: {message}")]
+    Other { message: String },
+}
+
+impl TransformError {
+    pub fn diagnostic_code(&self) -> &'static str {
+        match self {
+            TransformError::UnsupportedNodeKind { .. } => "document_graph.unsupported_node_kind",
+            TransformError::UnsupportedRelation { .. } => "document_graph.unsupported_relation",
+            TransformError::MissingRequiredAttribute { .. } => {
+                "document_graph.missing_required_attribute"
+            }
+            TransformError::InvalidGraphShape { .. } => "document_graph.invalid_graph_shape",
+            TransformError::LossyTransformRejected { .. } => "document_graph.lossy_rejected",
+            TransformError::FeatureUnavailable { .. } => "document_graph.feature_unavailable",
+            TransformError::Other { .. } => "document_graph.transform_error",
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -421,5 +561,45 @@ mod tests {
         assert_eq!(attrs.modality, ObligationModality::Must);
         assert_eq!(attrs.polarity, ObligationPolarity::Positive);
         assert_eq!(attrs.subject.as_deref(), Some("file"));
+    }
+
+    #[test]
+    fn transform_error_maps_to_stable_diagnostic_codes() {
+        let err = TransformError::MissingRequiredAttribute {
+            target: "n:link".to_string(),
+            attr: "destination".to_string(),
+        };
+        assert_eq!(
+            err.diagnostic_code(),
+            "document_graph.missing_required_attribute"
+        );
+        assert!(err.to_string().contains("destination"));
+    }
+
+    struct TinyDoc;
+
+    impl ToDocumentGraph for TinyDoc {
+        fn to_document_graph(
+            &self,
+            context: DocumentGraphContext,
+        ) -> Result<DocumentGraph, TransformError> {
+            let mut graph = DocumentGraph::new(context.graph_id, DocumentKind::Document);
+            graph.source = context.source;
+            graph.language = context.language;
+            graph.dialect = context.dialect;
+            graph.attrs = context.attrs;
+            graph.add_node(DocumentNode::new("n:root", DocumentNodeKind::Document));
+            Ok(graph)
+        }
+    }
+
+    #[test]
+    fn transform_traits_project_to_graph_with_context() {
+        let graph = TinyDoc
+            .to_document_graph(DocumentGraphContext::new("graph:tiny").with_language("text"))
+            .expect("projection should succeed");
+        assert_eq!(graph.id, "graph:tiny");
+        assert_eq!(graph.language.as_deref(), Some("text"));
+        assert_eq!(graph.nodes.len(), 1);
     }
 }
