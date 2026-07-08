@@ -637,6 +637,464 @@ fn project_markdown_table(
     }
 }
 
+#[cfg(feature = "python")]
+impl ToDocumentGraph for crate::python::PythonFile {
+    fn to_document_graph(
+        &self,
+        context: DocumentGraphContext,
+    ) -> Result<DocumentGraph, TransformError> {
+        use crate::python::PythonSymbolKind;
+
+        let mut graph = code_graph_from_context(context, DocumentKind::Python, "python");
+        let root_id = ensure_code_root(&mut graph, "python");
+        let symbol_ids = self
+            .symbols
+            .iter()
+            .map(|symbol| {
+                (
+                    symbol.qualified_name.clone(),
+                    code_node_id(&graph.id, "symbol", &symbol.id),
+                )
+            })
+            .collect::<BTreeMap<_, _>>();
+
+        for symbol in &self.symbols {
+            let id = code_node_id(&graph.id, "symbol", &symbol.id);
+            let mut node = DocumentNode::new(
+                &id,
+                match symbol.kind {
+                    PythonSymbolKind::Class => DocumentNodeKind::Class,
+                    PythonSymbolKind::Function => DocumentNodeKind::Function,
+                    PythonSymbolKind::Method => DocumentNodeKind::Method,
+                    PythonSymbolKind::Unknown => DocumentNodeKind::Symbol,
+                },
+            )
+            .with_name(symbol.name.clone())
+            .with_qualified_name(symbol.qualified_name.clone());
+            node.range = Some(symbol.range.clone());
+            node.parent = symbol_parent_node(&graph.id, &symbol.qualified_name, &symbol_ids);
+            insert_json_attr(&mut node.attrs, "visibility", &symbol.visibility);
+            insert_json_attr(&mut node.attrs, "decorators", &symbol.decorators);
+            insert_json_attr(&mut node.attrs, "superclasses", &symbol.superclasses);
+            insert_json_attr(&mut node.attrs, "doc", &symbol.doc);
+            graph.add_node(node);
+            graph.add_contains(
+                node_parent_or_root(
+                    &root_id,
+                    symbol_parent_node(&graph.id, &symbol.qualified_name, &symbol_ids),
+                ),
+                &id,
+            );
+
+            for superclass in &symbol.superclasses {
+                graph.add_edge(DocumentEdge::new(
+                    &id,
+                    DocumentRelation::Inherits,
+                    superclass,
+                ));
+            }
+        }
+
+        for import in &self.imports {
+            let id = code_node_id(&graph.id, "import", &import.id);
+            let mut node =
+                DocumentNode::new(&id, DocumentNodeKind::Import).with_name(import.module.clone());
+            node.range = Some(import.range.clone());
+            insert_json_attr(&mut node.attrs, "names", &import.names);
+            insert_json_attr(&mut node.attrs, "aliases", &import.aliases);
+            insert_json_attr(&mut node.attrs, "level", &import.level);
+            graph.add_node(node);
+            graph.add_contains(&root_id, &id);
+            graph.add_edge(DocumentEdge::new(&root_id, DocumentRelation::Imports, &id));
+        }
+
+        for assignment in &self.assignments {
+            add_code_fact_node(
+                &mut graph,
+                &root_id,
+                "assignment",
+                &assignment.id,
+                DocumentNodeKind::Assignment,
+                assignment.parent.as_deref(),
+                &symbol_ids,
+                Some(assignment.range.clone()),
+                Some(assignment.lhs.clone()),
+                |attrs| {
+                    insert_json_attr(attrs, "rhs", &assignment.rhs);
+                    insert_json_attr(attrs, "operator", &assignment.operator);
+                },
+            );
+        }
+        for ret in &self.returns {
+            add_code_fact_node(
+                &mut graph,
+                &root_id,
+                "return",
+                &ret.id,
+                DocumentNodeKind::Return,
+                ret.parent.as_deref(),
+                &symbol_ids,
+                Some(ret.range.clone()),
+                ret.expression.clone(),
+                |_| {},
+            );
+        }
+        for branch in &self.branches {
+            add_code_fact_node(
+                &mut graph,
+                &root_id,
+                "branch",
+                &branch.id,
+                DocumentNodeKind::Branch,
+                branch.parent.as_deref(),
+                &symbol_ids,
+                Some(branch.range.clone()),
+                branch.condition.clone(),
+                |attrs| insert_json_attr(attrs, "kind", &branch.kind),
+            );
+        }
+        for call in &self.calls {
+            let parent = parent_lookup(call.parent.as_deref(), &symbol_ids)
+                .unwrap_or_else(|| root_id.clone());
+            let id = code_node_id(&graph.id, "call", &call.id);
+            let mut node = DocumentNode::new(&id, DocumentNodeKind::Call)
+                .with_name(call.target.clone())
+                .with_text(call.target.clone());
+            node.range = Some(call.range.clone());
+            insert_json_attr(&mut node.attrs, "args", &call.args);
+            graph.add_node(node);
+            graph.add_contains(&parent, &id);
+            graph.add_edge(DocumentEdge::new(
+                &parent,
+                DocumentRelation::Calls,
+                call.target.clone(),
+            ));
+        }
+
+        Ok(graph)
+    }
+}
+
+#[cfg(feature = "rust")]
+impl ToDocumentGraph for crate::rust::RustFile {
+    fn to_document_graph(
+        &self,
+        context: DocumentGraphContext,
+    ) -> Result<DocumentGraph, TransformError> {
+        use crate::rust::RustSymbolKind;
+
+        let mut graph = code_graph_from_context(context, DocumentKind::Rust, "rust");
+        let root_id = ensure_code_root(&mut graph, "rust");
+        let symbol_ids = self
+            .symbols
+            .iter()
+            .map(|symbol| {
+                (
+                    symbol.name.clone(),
+                    code_node_id(&graph.id, "symbol", &symbol.id),
+                )
+            })
+            .collect::<BTreeMap<_, _>>();
+
+        for symbol in &self.symbols {
+            let id = code_node_id(&graph.id, "symbol", &symbol.id);
+            let mut node = DocumentNode::new(
+                &id,
+                match symbol.kind {
+                    RustSymbolKind::Module => DocumentNodeKind::Module,
+                    RustSymbolKind::Function => DocumentNodeKind::Function,
+                    RustSymbolKind::Method => DocumentNodeKind::Method,
+                    RustSymbolKind::Struct => DocumentNodeKind::Class,
+                    RustSymbolKind::Enum => DocumentNodeKind::Enum,
+                    RustSymbolKind::Trait => DocumentNodeKind::Interface,
+                    RustSymbolKind::TypeAlias => DocumentNodeKind::TypeAlias,
+                    RustSymbolKind::Const | RustSymbolKind::Static => DocumentNodeKind::Variable,
+                    RustSymbolKind::MacroDefinition | RustSymbolKind::MacroInvocation => {
+                        DocumentNodeKind::Symbol
+                    }
+                    RustSymbolKind::Impl | RustSymbolKind::Union | RustSymbolKind::Unknown => {
+                        DocumentNodeKind::Symbol
+                    }
+                },
+            )
+            .with_name(symbol.name.clone())
+            .with_qualified_name(symbol.name.clone());
+            node.range = Some(symbol.range.clone());
+            node.parent = parent_lookup(symbol.parent.as_deref(), &symbol_ids);
+            insert_json_attr(&mut node.attrs, "visibility", &symbol.visibility);
+            insert_json_attr(&mut node.attrs, "attributes", &symbol.attributes);
+            insert_json_attr(&mut node.attrs, "doc", &symbol.doc);
+            graph.add_node(node);
+            graph.add_contains(
+                node_parent_or_root(
+                    &root_id,
+                    parent_lookup(symbol.parent.as_deref(), &symbol_ids),
+                ),
+                &id,
+            );
+        }
+
+        for import in &self.imports {
+            let id = code_node_id(&graph.id, "import", &import.id);
+            let mut node = DocumentNode::new(&id, DocumentNodeKind::Import)
+                .with_name(import.alias.clone().unwrap_or_else(|| import.path.clone()))
+                .with_text(import.path.clone());
+            node.range = Some(import.range.clone());
+            insert_json_attr(&mut node.attrs, "path", &import.path);
+            insert_json_attr(&mut node.attrs, "alias", &import.alias);
+            insert_json_attr(&mut node.attrs, "visibility", &import.visibility);
+            graph.add_node(node);
+            graph.add_contains(&root_id, &id);
+            graph.add_edge(DocumentEdge::new(&root_id, DocumentRelation::Imports, &id));
+        }
+
+        Ok(graph)
+    }
+}
+
+#[cfg(feature = "typescript")]
+impl ToDocumentGraph for crate::typescript::TypeScriptFile {
+    fn to_document_graph(
+        &self,
+        context: DocumentGraphContext,
+    ) -> Result<DocumentGraph, TransformError> {
+        use crate::typescript::TypeScriptSymbolKind;
+
+        let mut graph = code_graph_from_context(context, DocumentKind::TypeScript, "typescript");
+        graph.dialect = Some(format!("{:?}", self.dialect).to_lowercase());
+        let root_id = ensure_code_root(&mut graph, "typescript");
+        let symbol_ids = self
+            .symbols
+            .iter()
+            .map(|symbol| {
+                (
+                    symbol.qualified_name.clone(),
+                    code_node_id(&graph.id, "symbol", &symbol.id),
+                )
+            })
+            .collect::<BTreeMap<_, _>>();
+
+        for symbol in &self.symbols {
+            let id = code_node_id(&graph.id, "symbol", &symbol.id);
+            let mut node = DocumentNode::new(
+                &id,
+                match symbol.kind {
+                    TypeScriptSymbolKind::Class => DocumentNodeKind::Class,
+                    TypeScriptSymbolKind::Function => DocumentNodeKind::Function,
+                    TypeScriptSymbolKind::Method => DocumentNodeKind::Method,
+                    TypeScriptSymbolKind::Constructor => DocumentNodeKind::Constructor,
+                    TypeScriptSymbolKind::Interface => DocumentNodeKind::Interface,
+                    TypeScriptSymbolKind::TypeAlias => DocumentNodeKind::TypeAlias,
+                    TypeScriptSymbolKind::Enum => DocumentNodeKind::Enum,
+                    TypeScriptSymbolKind::Namespace => DocumentNodeKind::Namespace,
+                    TypeScriptSymbolKind::Variable => DocumentNodeKind::Variable,
+                    TypeScriptSymbolKind::Field => DocumentNodeKind::Field,
+                    TypeScriptSymbolKind::Unknown => DocumentNodeKind::Symbol,
+                },
+            )
+            .with_name(symbol.name.clone())
+            .with_qualified_name(symbol.qualified_name.clone());
+            node.range = Some(symbol.range.clone());
+            node.parent = symbol_parent_node(&graph.id, &symbol.qualified_name, &symbol_ids);
+            insert_json_attr(&mut node.attrs, "visibility", &symbol.visibility);
+            insert_json_attr(&mut node.attrs, "modifiers", &symbol.modifiers);
+            insert_json_attr(&mut node.attrs, "decorators", &symbol.decorators);
+            insert_json_attr(&mut node.attrs, "doc", &symbol.doc);
+            graph.add_node(node);
+            graph.add_contains(
+                node_parent_or_root(
+                    &root_id,
+                    symbol_parent_node(&graph.id, &symbol.qualified_name, &symbol_ids),
+                ),
+                &id,
+            );
+        }
+
+        for import in &self.imports {
+            let id = code_node_id(&graph.id, "import", &import.id);
+            let mut node =
+                DocumentNode::new(&id, DocumentNodeKind::Import).with_name(import.module.clone());
+            node.range = Some(import.range.clone());
+            insert_json_attr(&mut node.attrs, "names", &import.names);
+            insert_json_attr(&mut node.attrs, "default", &import.default);
+            insert_json_attr(&mut node.attrs, "namespace", &import.namespace);
+            graph.add_node(node);
+            graph.add_contains(&root_id, &id);
+            graph.add_edge(DocumentEdge::new(&root_id, DocumentRelation::Imports, &id));
+        }
+        for export in &self.exports {
+            let id = code_node_id(&graph.id, "export", &export.id);
+            let mut node = DocumentNode::new(&id, DocumentNodeKind::Export);
+            node.range = Some(export.range.clone());
+            insert_json_attr(&mut node.attrs, "names", &export.names);
+            insert_json_attr(&mut node.attrs, "source", &export.source);
+            graph.add_node(node);
+            graph.add_contains(&root_id, &id);
+            graph.add_edge(DocumentEdge::new(&root_id, DocumentRelation::Exports, &id));
+        }
+
+        for assignment in &self.assignments {
+            add_code_fact_node(
+                &mut graph,
+                &root_id,
+                "assignment",
+                &assignment.id,
+                DocumentNodeKind::Assignment,
+                assignment.parent.as_deref(),
+                &symbol_ids,
+                Some(assignment.range.clone()),
+                Some(assignment.lhs.clone()),
+                |attrs| {
+                    insert_json_attr(attrs, "rhs", &assignment.rhs);
+                    insert_json_attr(attrs, "operator", &assignment.operator);
+                },
+            );
+        }
+        for ret in &self.returns {
+            add_code_fact_node(
+                &mut graph,
+                &root_id,
+                "return",
+                &ret.id,
+                DocumentNodeKind::Return,
+                ret.parent.as_deref(),
+                &symbol_ids,
+                Some(ret.range.clone()),
+                ret.expression.clone(),
+                |_| {},
+            );
+        }
+        for branch in &self.branches {
+            add_code_fact_node(
+                &mut graph,
+                &root_id,
+                "branch",
+                &branch.id,
+                DocumentNodeKind::Branch,
+                branch.parent.as_deref(),
+                &symbol_ids,
+                Some(branch.range.clone()),
+                branch.condition.clone(),
+                |attrs| insert_json_attr(attrs, "kind", &branch.kind),
+            );
+        }
+        for call in &self.calls {
+            let parent = parent_lookup(call.parent.as_deref(), &symbol_ids)
+                .unwrap_or_else(|| root_id.clone());
+            let id = code_node_id(&graph.id, "call", &call.id);
+            let mut node = DocumentNode::new(&id, DocumentNodeKind::Call)
+                .with_name(call.target.clone())
+                .with_text(call.target.clone());
+            node.range = Some(call.range.clone());
+            insert_json_attr(&mut node.attrs, "args", &call.args);
+            graph.add_node(node);
+            graph.add_contains(&parent, &id);
+            graph.add_edge(DocumentEdge::new(
+                &parent,
+                DocumentRelation::Calls,
+                call.target.clone(),
+            ));
+        }
+
+        Ok(graph)
+    }
+}
+
+#[cfg(any(feature = "python", feature = "rust", feature = "typescript"))]
+fn code_graph_from_context(
+    context: DocumentGraphContext,
+    kind: DocumentKind,
+    default_language: &str,
+) -> DocumentGraph {
+    let mut graph = DocumentGraph::new(context.graph_id, kind);
+    graph.source = context.source;
+    graph.language = Some(
+        context
+            .language
+            .unwrap_or_else(|| default_language.to_string()),
+    );
+    graph.dialect = context.dialect;
+    graph.attrs = context.attrs;
+    graph
+}
+
+#[cfg(any(feature = "python", feature = "rust", feature = "typescript"))]
+fn ensure_code_root(graph: &mut DocumentGraph, language: &str) -> String {
+    let root_id = format!("{}:module", graph.id);
+    graph.add_node(
+        DocumentNode::new(&root_id, DocumentNodeKind::Module)
+            .with_name(language)
+            .with_qualified_name(language),
+    );
+    root_id
+}
+
+#[cfg(any(feature = "python", feature = "rust", feature = "typescript"))]
+fn code_node_id(graph_id: &str, category: &str, id: &str) -> String {
+    format!("{}:{}:{}", graph_id, category, id)
+}
+
+#[cfg(any(feature = "python", feature = "rust", feature = "typescript"))]
+fn insert_json_attr<T: Serialize>(attrs: &mut AttrMap, key: &str, value: &T) {
+    if let Ok(value) = serde_json::to_value(value) {
+        if !value.is_null() {
+            attrs.insert(key.to_string(), value);
+        }
+    }
+}
+
+#[cfg(any(feature = "python", feature = "typescript"))]
+fn symbol_parent_node(
+    _graph_id: &str,
+    qualified_name: &str,
+    symbol_ids: &BTreeMap<String, String>,
+) -> Option<String> {
+    let (parent, _) = qualified_name.rsplit_once('.')?;
+    symbol_ids.get(parent).cloned()
+}
+
+#[cfg(any(feature = "python", feature = "rust", feature = "typescript"))]
+fn parent_lookup(parent: Option<&str>, symbol_ids: &BTreeMap<String, String>) -> Option<String> {
+    let parent = parent?;
+    symbol_ids.get(parent).cloned().or_else(|| {
+        symbol_ids.iter().find_map(|(qualified, id)| {
+            qualified
+                .ends_with(&format!(".{parent}"))
+                .then(|| id.clone())
+        })
+    })
+}
+
+#[cfg(any(feature = "python", feature = "rust", feature = "typescript"))]
+fn node_parent_or_root(root_id: &str, parent: Option<String>) -> String {
+    parent.unwrap_or_else(|| root_id.to_string())
+}
+
+#[cfg(any(feature = "python", feature = "typescript"))]
+fn add_code_fact_node<F>(
+    graph: &mut DocumentGraph,
+    root_id: &str,
+    category: &str,
+    id: &str,
+    kind: DocumentNodeKind,
+    parent: Option<&str>,
+    symbol_ids: &BTreeMap<String, String>,
+    range: Option<SourceRange>,
+    text: Option<String>,
+    add_attrs: F,
+) where
+    F: FnOnce(&mut AttrMap),
+{
+    let parent = parent_lookup(parent, symbol_ids).unwrap_or_else(|| root_id.to_string());
+    let node_id = code_node_id(&graph.id, category, id);
+    let mut node = DocumentNode::new(&node_id, kind);
+    node.range = range;
+    node.text = text;
+    add_attrs(&mut node.attrs);
+    graph.add_node(node);
+    graph.add_contains(parent, node_id);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -784,6 +1242,111 @@ mod tests {
                 .iter()
                 .any(|node| node.kind == DocumentNodeKind::TableCell
                     && node.text.as_deref() == Some("1"))
+        );
+    }
+
+    #[cfg(feature = "python")]
+    #[test]
+    fn python_projection_emits_symbols_imports_calls_and_inherits() {
+        use crate::core::SourceInfo;
+        use crate::python::{PythonDetailMode, PythonIngestOptions, parse_python};
+
+        let src = "from base import Base\nclass Form(Base):\n    def create(self):\n        return helper()\ndef helper():\n    return 1\n";
+        let parsed = parse_python(
+            src,
+            SourceInfo::stdin("forms.py"),
+            &PythonIngestOptions {
+                detail: PythonDetailMode::Semantic,
+            },
+        );
+        let graph = parsed
+            .payload
+            .to_document_graph(DocumentGraphContext::new("graph:python"))
+            .expect("python graph projection should succeed");
+        assert_eq!(graph.kind, DocumentKind::Python);
+        assert!(graph.nodes.iter().any(
+            |node| node.kind == DocumentNodeKind::Class && node.name.as_deref() == Some("Form")
+        ));
+        assert!(
+            graph
+                .edges
+                .iter()
+                .any(|edge| edge.relation == DocumentRelation::Inherits && edge.target == "Base")
+        );
+        assert!(
+            graph
+                .edges
+                .iter()
+                .any(|edge| edge.relation == DocumentRelation::Calls && edge.target == "helper")
+        );
+    }
+
+    #[cfg(feature = "rust")]
+    #[test]
+    fn rust_projection_emits_symbols_and_imports() {
+        use crate::core::SourceInfo;
+        use crate::rust::{RustDetailMode, RustIngestOptions, parse_rust};
+
+        let src = "use std::fmt;\npub struct Form;\nimpl Form { pub fn create(&self) {} }\n";
+        let parsed = parse_rust(
+            src,
+            SourceInfo::stdin("lib.rs"),
+            &RustIngestOptions {
+                detail: RustDetailMode::Semantic,
+            },
+        );
+        let graph = parsed
+            .payload
+            .to_document_graph(DocumentGraphContext::new("graph:rust"))
+            .expect("rust graph projection should succeed");
+        assert_eq!(graph.kind, DocumentKind::Rust);
+        assert!(graph.nodes.iter().any(
+            |node| node.kind == DocumentNodeKind::Class && node.name.as_deref() == Some("Form")
+        ));
+        assert!(
+            graph
+                .edges
+                .iter()
+                .any(|edge| edge.relation == DocumentRelation::Imports)
+        );
+    }
+
+    #[cfg(feature = "typescript")]
+    #[test]
+    fn typescript_projection_emits_symbols_imports_exports_and_calls() {
+        use crate::core::SourceInfo;
+        use crate::typescript::{
+            TypeScriptDetailMode, TypeScriptDialect, TypeScriptIngestOptions, parse_typescript,
+        };
+
+        let src = "import { helper } from './helper';\nexport class Form { create() { return helper(); } }\n";
+        let parsed = parse_typescript(
+            src,
+            SourceInfo::stdin("form.ts"),
+            &TypeScriptIngestOptions {
+                dialect: TypeScriptDialect::TypeScript,
+                detail: TypeScriptDetailMode::Semantic,
+            },
+        );
+        let graph = parsed
+            .payload
+            .to_document_graph(DocumentGraphContext::new("graph:ts"))
+            .expect("typescript graph projection should succeed");
+        assert_eq!(graph.kind, DocumentKind::TypeScript);
+        assert!(graph.nodes.iter().any(
+            |node| node.kind == DocumentNodeKind::Class && node.name.as_deref() == Some("Form")
+        ));
+        assert!(
+            graph
+                .edges
+                .iter()
+                .any(|edge| edge.relation == DocumentRelation::Imports)
+        );
+        assert!(
+            graph
+                .edges
+                .iter()
+                .any(|edge| edge.relation == DocumentRelation::Exports)
         );
     }
 }
