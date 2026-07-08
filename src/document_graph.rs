@@ -502,6 +502,141 @@ impl TransformError {
     }
 }
 
+#[cfg(feature = "markdown")]
+impl ToDocumentGraph for crate::markdown::MarkdownDocument {
+    fn to_document_graph(
+        &self,
+        context: DocumentGraphContext,
+    ) -> Result<DocumentGraph, TransformError> {
+        use crate::markdown::MarkdownNodeKind;
+
+        let mut graph = DocumentGraph::new(context.graph_id, DocumentKind::Markdown);
+        graph.source = context.source;
+        graph.language = Some(context.language.unwrap_or_else(|| "markdown".to_string()));
+        graph.dialect = context.dialect;
+        graph.attrs = context.attrs;
+
+        let root_id = format!("{}:root", graph.id);
+        graph.add_node(DocumentNode::new(&root_id, DocumentNodeKind::Document).with_ordinal(0));
+
+        let mut ordinal = 1_usize;
+        if let Some(frontmatter) = &self.frontmatter {
+            let node_id = format!("{}:frontmatter", graph.id);
+            let mut node = DocumentNode::new(&node_id, DocumentNodeKind::Frontmatter)
+                .with_range(frontmatter.range.clone())
+                .with_text(frontmatter.raw.clone())
+                .with_ordinal(ordinal);
+            if let Some(value) = &frontmatter.value {
+                node.attrs.insert("value".to_string(), value.clone());
+            }
+            graph.add_node(node);
+            graph.add_contains(&root_id, &node_id);
+            ordinal += 1;
+        }
+
+        for md_node in &self.nodes {
+            let node_id = markdown_node_id(&graph.id, &md_node.id);
+            let kind = match md_node.kind {
+                MarkdownNodeKind::Heading => DocumentNodeKind::Heading,
+                MarkdownNodeKind::Paragraph => DocumentNodeKind::Paragraph,
+                MarkdownNodeKind::CodeFence => DocumentNodeKind::CodeBlock,
+                MarkdownNodeKind::Link => DocumentNodeKind::Link,
+                MarkdownNodeKind::Table => DocumentNodeKind::Table,
+                MarkdownNodeKind::Text => DocumentNodeKind::Text,
+            };
+            let mut node = DocumentNode::new(&node_id, kind).with_ordinal(ordinal);
+            node.range = md_node.range.clone();
+            node.text = md_node.text.clone();
+            insert_opt_attr(&mut node.attrs, "level", md_node.level.map(Value::from));
+            insert_opt_attr(
+                &mut node.attrs,
+                "language",
+                md_node.language.clone().map(Value::from),
+            );
+            insert_opt_attr(
+                &mut node.attrs,
+                "info",
+                md_node.info.clone().map(Value::from),
+            );
+            insert_opt_attr(
+                &mut node.attrs,
+                "destination",
+                md_node.destination.clone().map(Value::from),
+            );
+            insert_opt_attr(
+                &mut node.attrs,
+                "title",
+                md_node.title.clone().map(Value::from),
+            );
+            if let Some(table) = &md_node.table {
+                if let Ok(value) = serde_json::to_value(table) {
+                    node.attrs.insert("table".to_string(), value);
+                }
+            }
+            graph.add_node(node);
+            graph.add_contains(&root_id, &node_id);
+
+            if let Some(destination) = &md_node.destination {
+                graph.add_edge(
+                    DocumentEdge::new(&node_id, DocumentRelation::LinksTo, destination)
+                        .with_attr("target_kind", "uri"),
+                );
+            }
+
+            if let Some(table) = &md_node.table {
+                project_markdown_table(&mut graph, &node_id, table);
+            }
+            ordinal += 1;
+        }
+
+        Ok(graph)
+    }
+}
+
+#[cfg(feature = "markdown")]
+fn markdown_node_id(graph_id: &str, node_id: &str) -> String {
+    format!("{}:{}", graph_id, node_id)
+}
+
+#[cfg(feature = "markdown")]
+fn insert_opt_attr(attrs: &mut AttrMap, key: &str, value: Option<Value>) {
+    if let Some(value) = value {
+        attrs.insert(key.to_string(), value);
+    }
+}
+
+#[cfg(feature = "markdown")]
+fn project_markdown_table(
+    graph: &mut DocumentGraph,
+    table_node_id: &str,
+    table: &crate::markdown::MarkdownTable,
+) {
+    for (row_idx, row) in table.row_details.iter().enumerate() {
+        let row_id = format!("{}:row:{}", table_node_id, row_idx);
+        let mut row_node = DocumentNode::new(&row_id, DocumentNodeKind::TableRow)
+            .with_ordinal(row_idx)
+            .with_attr("header", row.header);
+        row_node.range = row.range.clone();
+        graph.add_node(row_node);
+        graph.add_contains(table_node_id, &row_id);
+
+        for (cell_idx, cell) in row.cells.iter().enumerate() {
+            let cell_id = format!("{}:cell:{}", row_id, cell_idx);
+            let mut cell_node = DocumentNode::new(&cell_id, DocumentNodeKind::TableCell)
+                .with_text(cell.text.clone())
+                .with_ordinal(cell_idx);
+            cell_node.range = cell.range.clone();
+            if let Some(alignment) = table.alignments.get(cell_idx) {
+                if let Ok(value) = serde_json::to_value(alignment) {
+                    cell_node.attrs.insert("alignment".to_string(), value);
+                }
+            }
+            graph.add_node(cell_node);
+            graph.add_contains(&row_id, &cell_id);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -601,5 +736,54 @@ mod tests {
         assert_eq!(graph.id, "graph:tiny");
         assert_eq!(graph.language.as_deref(), Some("text"));
         assert_eq!(graph.nodes.len(), 1);
+    }
+
+    #[cfg(feature = "markdown")]
+    #[test]
+    fn markdown_projection_preserves_structure_links_and_tables() {
+        use crate::core::SourceInfo;
+        use crate::markdown::parse_markdown;
+
+        let src = "---\ntitle: Demo\n---\n# Intro\n\nSee [site](https://example.com).\n\n| A | B |\n|---|---|\n| 1 | 2 |\n";
+        let parsed = parse_markdown(src, SourceInfo::stdin("demo.md"));
+        let graph = parsed
+            .payload
+            .to_document_graph(DocumentGraphContext::new("graph:markdown"))
+            .expect("markdown graph projection should succeed");
+
+        assert_eq!(graph.kind, DocumentKind::Markdown);
+        assert!(
+            graph
+                .nodes
+                .iter()
+                .any(|node| node.kind == DocumentNodeKind::Frontmatter)
+        );
+        assert!(
+            graph
+                .nodes
+                .iter()
+                .any(|node| node.kind == DocumentNodeKind::Heading
+                    && node.text.as_deref() == Some("Intro"))
+        );
+        assert!(
+            graph
+                .edges
+                .iter()
+                .any(|edge| edge.relation == DocumentRelation::LinksTo
+                    && edge.target == "https://example.com")
+        );
+        assert!(
+            graph
+                .nodes
+                .iter()
+                .any(|node| node.kind == DocumentNodeKind::TableRow)
+        );
+        assert!(
+            graph
+                .nodes
+                .iter()
+                .any(|node| node.kind == DocumentNodeKind::TableCell
+                    && node.text.as_deref() == Some("1"))
+        );
     }
 }
