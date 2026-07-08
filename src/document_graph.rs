@@ -904,6 +904,15 @@ fn render_markdown_node(
                 node.text.as_deref().unwrap_or("")
             ))
         }
+        DocumentNodeKind::Label => Ok(format!("{{#{} }}\n", node.text.as_deref().unwrap_or(""))),
+        DocumentNodeKind::Reference => Ok(format!("[{}]\n", node.text.as_deref().unwrap_or(""))),
+        DocumentNodeKind::Citation => Ok(format!("[@{}]\n", node.text.as_deref().unwrap_or(""))),
+        DocumentNodeKind::MathInline => Ok(format!("${}$", node.text.as_deref().unwrap_or(""))),
+        DocumentNodeKind::MathBlock => {
+            Ok(format!("$$\n{}\n$$\n", node.text.as_deref().unwrap_or("")))
+        }
+        DocumentNodeKind::Emphasis => Ok(format!("*{}*", node.text.as_deref().unwrap_or(""))),
+        DocumentNodeKind::Strong => Ok(format!("**{}**", node.text.as_deref().unwrap_or(""))),
         DocumentNodeKind::Table => render_markdown_table_node(node, graph),
         DocumentNodeKind::RawBlock | DocumentNodeKind::RawInline if options.allow_raw_fallback => {
             Ok(node.text.clone().unwrap_or_default())
@@ -1007,7 +1016,7 @@ pub fn render_latex(
 
     let mut out = String::new();
     for node in render_nodes {
-        let rendered = render_latex_node(node, options.clone())?;
+        let rendered = render_latex_node(node, graph, options.clone())?;
         if rendered.is_empty() {
             continue;
         }
@@ -1025,6 +1034,7 @@ pub fn render_latex(
 #[cfg(feature = "latex")]
 fn render_latex_node(
     node: &DocumentNode,
+    graph: &DocumentGraph,
     options: TransformOptions,
 ) -> Result<String, TransformError> {
     match node.kind {
@@ -1063,6 +1073,7 @@ fn render_latex_node(
             "\\begin{{verbatim}}\n{}\n\\end{{verbatim}}\n",
             node.text.as_deref().unwrap_or("")
         )),
+        DocumentNodeKind::Table => render_latex_table_node(node, graph),
         DocumentNodeKind::Label => Ok(format!("\\label{{{}}}", node.text.as_deref().unwrap_or(""))),
         DocumentNodeKind::Reference => {
             Ok(format!("\\ref{{{}}}", node.text.as_deref().unwrap_or("")))
@@ -1100,6 +1111,66 @@ fn render_latex_node(
             node_kind: node.kind.clone(),
         }),
     }
+}
+
+#[cfg(feature = "latex")]
+fn render_latex_table_node(
+    node: &DocumentNode,
+    graph: &DocumentGraph,
+) -> Result<String, TransformError> {
+    let mut rows = graph
+        .edges
+        .iter()
+        .filter(|edge| edge.relation == DocumentRelation::Contains && edge.source == node.id)
+        .filter_map(|edge| {
+            graph
+                .nodes
+                .iter()
+                .find(|candidate| candidate.id == edge.target)
+        })
+        .filter(|candidate| candidate.kind == DocumentNodeKind::TableRow)
+        .collect::<Vec<_>>();
+    rows.sort_by_key(|row| row.ordinal.unwrap_or(usize::MAX));
+    if rows.is_empty() {
+        return Ok(String::new());
+    }
+
+    let mut rendered_rows = Vec::new();
+    let mut max_cols = 0_usize;
+    for row in rows {
+        let mut cells = graph
+            .edges
+            .iter()
+            .filter(|edge| edge.relation == DocumentRelation::Contains && edge.source == row.id)
+            .filter_map(|edge| {
+                graph
+                    .nodes
+                    .iter()
+                    .find(|candidate| candidate.id == edge.target)
+            })
+            .filter(|candidate| candidate.kind == DocumentNodeKind::TableCell)
+            .collect::<Vec<_>>();
+        cells.sort_by_key(|cell| cell.ordinal.unwrap_or(usize::MAX));
+        max_cols = max_cols.max(cells.len());
+        rendered_rows.push(
+            cells
+                .into_iter()
+                .map(|cell| escape_latex(cell.text.as_deref().unwrap_or("")))
+                .collect::<Vec<_>>(),
+        );
+    }
+    let cols = if max_cols == 0 { 1 } else { max_cols };
+    let mut out = format!("\\begin{{tabular}}{{{}}}\n", "l".repeat(cols));
+    for (idx, row) in rendered_rows.iter().enumerate() {
+        out.push_str(&row.join(" & "));
+        out.push_str(" \\\\");
+        out.push('\n');
+        if idx == 0 {
+            out.push_str("\\hline\n");
+        }
+    }
+    out.push_str("\\end{tabular}\n");
+    Ok(out)
 }
 
 #[cfg(feature = "latex")]
