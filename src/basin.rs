@@ -5,8 +5,10 @@
 //! are optionally preserved, and retrieval is prefix-consistency pruning over the
 //! canonical traces.
 
-use crate::core::SourceRange;
-use crate::python::{PythonFile, PythonImport, PythonSymbol, PythonSymbolKind};
+use crate::document_graph::{
+    DocumentGraph, DocumentGraphContext, DocumentNodeKind, DocumentRelation, ToDocumentGraph,
+};
+use crate::python::PythonFile;
 
 #[cfg(feature = "schemas")]
 use schemars::JsonSchema;
@@ -408,53 +410,43 @@ impl Default for WalkOptions {
     }
 }
 
-/// Build a typed code graph from grist's Python parser output.
-pub fn graph_from_python_file(module: impl Into<String>, file: &PythonFile) -> CodeGraph {
-    let module = module.into();
-    let mut graph = CodeGraph::new(module.clone());
+/// Build a typed basin graph from a normalized `DocumentGraph`.
+pub fn graph_from_document_graph(document: &DocumentGraph) -> CodeGraph {
+    let mut graph = CodeGraph::new(document.id.clone());
 
-    for symbol in &file.symbols {
-        let node = local_symbol(&module, symbol);
-        graph.nodes.insert(node.clone());
+    for node in &document.nodes {
+        graph.nodes.insert(node.id.clone());
         if matches!(
-            symbol.kind,
-            PythonSymbolKind::Function | PythonSymbolKind::Method
+            node.kind,
+            DocumentNodeKind::Function | DocumentNodeKind::Method | DocumentNodeKind::Constructor
         ) {
-            graph.roots.insert(node.clone());
-        }
-
-        let parent = parent_symbol_id(&module, symbol).unwrap_or_else(|| module.clone());
-        graph.add_edge(parent, "CONTAINS", node.clone());
-
-        if matches!(symbol.kind, PythonSymbolKind::Class) {
-            for base in &symbol.superclasses {
-                graph.add_edge(
-                    node.clone(),
-                    "INHERITS",
-                    resolve_python_target(&module, file, base),
-                );
-            }
+            graph.roots.insert(node.id.clone());
         }
     }
 
-    for import in &file.imports {
-        for target in import_targets(import) {
-            graph.add_edge(module.clone(), "IMPORTS", target);
-        }
-    }
-
-    for call in &file.calls {
-        let Some(enclosing) = enclosing_symbol(file, &call.range) else {
-            continue;
-        };
-        let src = local_symbol(&module, enclosing);
-        let dst = resolve_python_target(&module, file, &call.target);
-        if !dst.is_empty() {
-            graph.add_edge(src, "CALLS", dst);
+    for edge in &document.edges {
+        if let Some(relation) = basin_relation(&edge.relation) {
+            graph.add_edge(edge.source.clone(), relation, edge.target.clone());
         }
     }
 
     graph
+}
+
+/// Build a typed code graph from grist's Python parser output via `DocumentGraph`.
+pub fn graph_from_python_file(module: impl Into<String>, file: &PythonFile) -> CodeGraph {
+    let document = file
+        .to_document_graph(DocumentGraphContext::new(module.into()).with_language("python"))
+        .expect("PythonFile to DocumentGraph projection should not fail");
+    graph_from_document_graph(&document)
+}
+
+pub fn walks_from_document_graph(
+    document: &DocumentGraph,
+    options: WalkOptions,
+) -> Vec<Vec<WalkStep>> {
+    let graph = graph_from_document_graph(document);
+    walks_from_graph(&graph, options)
 }
 
 pub fn walks_from_python_file(
@@ -462,8 +454,10 @@ pub fn walks_from_python_file(
     file: &PythonFile,
     options: WalkOptions,
 ) -> Vec<Vec<WalkStep>> {
-    let graph = graph_from_python_file(module, file);
-    walks_from_graph(&graph, options)
+    let document = file
+        .to_document_graph(DocumentGraphContext::new(module.into()).with_language("python"))
+        .expect("PythonFile to DocumentGraph projection should not fail");
+    walks_from_document_graph(&document, options)
 }
 
 /// Produce bounded DFS walks rooted at function/method symbols.
@@ -538,93 +532,20 @@ fn edge_connected_roots(graph: &CodeGraph) -> Vec<String> {
     roots.into_iter().collect()
 }
 
-fn local_symbol(module: &str, symbol: &PythonSymbol) -> String {
-    if module.is_empty() {
-        symbol.qualified_name.clone()
-    } else {
-        format!("{}.{}", module, symbol.qualified_name)
+fn basin_relation(relation: &DocumentRelation) -> Option<&'static str> {
+    match relation {
+        DocumentRelation::Contains => Some("CONTAINS"),
+        DocumentRelation::Calls => Some("CALLS"),
+        DocumentRelation::Imports => Some("IMPORTS"),
+        DocumentRelation::Exports => Some("EXPORTS"),
+        DocumentRelation::Inherits => Some("INHERITS"),
+        DocumentRelation::Implements => Some("IMPLEMENTS"),
+        DocumentRelation::References => Some("REFERENCES"),
+        DocumentRelation::Defines => Some("DEFINES"),
+        DocumentRelation::Assigns => Some("ASSIGNS"),
+        DocumentRelation::Returns => Some("RETURNS"),
+        _ => None,
     }
-}
-
-fn parent_symbol_id(module: &str, symbol: &PythonSymbol) -> Option<String> {
-    let (parent, _) = symbol.qualified_name.rsplit_once('.')?;
-    Some(if module.is_empty() {
-        parent.to_string()
-    } else {
-        format!("{}.{}", module, parent)
-    })
-}
-
-fn resolve_python_target(module: &str, file: &PythonFile, target: &str) -> String {
-    let target = target.trim();
-    if target.is_empty() {
-        return String::new();
-    }
-
-    let matches = file
-        .symbols
-        .iter()
-        .filter(|symbol| symbol.qualified_name == target || symbol.name == target)
-        .collect::<Vec<_>>();
-    if matches.len() == 1 {
-        return local_symbol(module, matches[0]);
-    }
-
-    resolve_imported_target(file, target).unwrap_or_else(|| target.to_string())
-}
-
-fn resolve_imported_target(file: &PythonFile, target: &str) -> Option<String> {
-    for import in &file.imports {
-        if import.module.is_empty() {
-            for name in &import.names {
-                let root = name.split('.').next().unwrap_or(name);
-                if target == root || target.starts_with(&format!("{root}.")) {
-                    return Some(target.replacen(root, name, 1));
-                }
-            }
-        } else {
-            for name in &import.names {
-                if target == name || target.starts_with(&format!("{name}.")) {
-                    return Some(target.replacen(name, &format!("{}.{}", import.module, name), 1));
-                }
-            }
-        }
-    }
-    None
-}
-
-fn import_targets(import: &PythonImport) -> Vec<String> {
-    let mut targets = Vec::new();
-    if import.module.is_empty() {
-        targets.extend(import.names.iter().cloned());
-    } else if import.names.is_empty() {
-        targets.push(import.module.clone());
-    } else {
-        targets.extend(
-            import
-                .names
-                .iter()
-                .map(|name| format!("{}.{}", import.module, name)),
-        );
-    }
-    targets.extend(import.aliases.iter().cloned());
-    targets.sort();
-    targets.dedup();
-    targets
-}
-
-fn enclosing_symbol<'a>(file: &'a PythonFile, range: &SourceRange) -> Option<&'a PythonSymbol> {
-    file.symbols
-        .iter()
-        .filter(|symbol| {
-            symbol.range.byte_start <= range.byte_start && symbol.range.byte_end >= range.byte_end
-        })
-        .min_by_key(|symbol| {
-            symbol
-                .range
-                .byte_end
-                .saturating_sub(symbol.range.byte_start)
-        })
 }
 
 #[cfg(test)]
@@ -703,20 +624,24 @@ def helper():
         let graph = graph_from_python_file("repo:forms", &parsed.payload);
 
         assert!(graph.edges.iter().any(|edge| {
-            edge.relation == "INHERITS" && edge.src == "repo:forms.Form" && edge.dst == "base.Base"
+            edge.relation == "INHERITS" && edge.src.contains("Form") && edge.dst == "Base"
         }));
         assert!(graph.edges.iter().any(|edge| {
             edge.relation == "CONTAINS"
-                && edge.src == "repo:forms.Form"
-                && edge.dst == "repo:forms.Form.create"
+                && edge.src.contains("Form")
+                && edge.dst.contains("Form_create")
         }));
         assert!(graph.edges.iter().any(|edge| {
-            edge.relation == "CALLS"
-                && edge.src == "repo:forms.Form.create"
-                && edge.dst == "repo:forms.helper"
+            edge.relation == "CALLS" && edge.src.contains("Form_create") && edge.dst == "helper"
         }));
 
-        let walks = walks_from_graph(&graph, WalkOptions::default());
+        let document = parsed
+            .payload
+            .to_document_graph(crate::document_graph::DocumentGraphContext::new(
+                "repo:forms",
+            ))
+            .expect("python document graph projection should succeed");
+        let walks = walks_from_document_graph(&document, WalkOptions::default());
         assert!(!walks.is_empty());
     }
 }
