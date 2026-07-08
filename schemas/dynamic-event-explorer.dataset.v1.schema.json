@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "dynamic-event-explorer/dataset/v1",
+  "title": "Dynamic Event Explorer Dataset",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "name": { "type": "string" },
+    "title": { "type": "string" },
+    "dataset_name": { "type": "string" },
+    "datasetName": { "type": "string" },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "canonical_events": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/event" }
+    },
+    "canonicalEvents": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/event" }
+    },
+    "events": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/event" }
+    },
+    "signals": {
+      "type": "array",
+      "items": { "type": "object", "additionalProperties": true }
+    },
+    "participants": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          { "type": "string" },
+          { "type": "object", "additionalProperties": true }
+        ]
+      }
+    }
+  },
+  "anyOf": [
+    { "required": ["canonical_events"] },
+    { "required": ["canonicalEvents"] },
+    { "required": ["events"] }
+  ],
+  "definitions": {
+    "event": {
+      "type": "object",
+      "additionalProperties": true,
+      "anyOf": [
+        { "required": ["id"] },
+        { "required": ["event_id"] },
+        { "required": ["eventId"] }
+      ],
+      "properties": {
+        "id": { "type": ["string", "number"] },
+        "event_id": { "type": ["string", "number"] },
+        "eventId": { "type": ["string", "number"] },
+        "t": { "type": ["number", "string"] },
+        "time": { "type": ["number", "string"] },
+        "timestamp": { "type": ["number", "string"] },
+        "start": { "type": ["number", "string"] },
+        "tick": { "type": ["number", "string"] },
+        "type": { "type": "string" },
+        "kind": { "type": "string" },
+        "label": { "type": "string" },
+        "name": { "type": "string" },
+        "participants": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              { "type": "string" },
+              { "type": "object", "additionalProperties": true }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

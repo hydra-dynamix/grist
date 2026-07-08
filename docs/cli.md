@@ -1,6 +1,6 @@
 # Grist CLI reference
 
-The `grist` binary is a JSON-oriented control surface over the library APIs. Successful parser, ingest, and schema commands emit JSON unless a transform renderer explicitly emits Markdown or LaTeX text.
+The `grist` binary is a JSON-oriented control surface over the library APIs. Successful parser, ingest, schema, render, and validate commands emit JSON unless a transform renderer explicitly emits Markdown or LaTeX text.
 
 Install from a checkout with:
 
@@ -14,6 +14,8 @@ cargo install --path . --features cli
 grist parse      Parse one input into a typed Grist JSON envelope.
 grist ingest     Detect and ingest one file or repository into artifact reports.
 grist schema     List or emit checked-in public JSON Schema contracts.
+grist render     Render parsed artifacts into stable inspection JSON.
+grist validate   Validate inputs against stable Grist-supported contracts.
 grist transform  Convert supported inputs through DocumentGraph and render graph/Markdown/LaTeX.
 ```
 
@@ -22,6 +24,8 @@ Use `--help` at any level:
 ```sh
 grist --help
 grist parse --help
+grist render --help
+grist validate --help
 grist transform --help
 ```
 
@@ -61,10 +65,49 @@ grist schema list
 grist schema emit markdown-envelope
 grist schema emit document-graph
 grist schema emit document-graph-envelope
+grist schema emit rendered-summary
+grist schema emit dynamic-event-explorer-dataset
 grist schema emit latex-envelope
 ```
 
 Checked-in schema artifacts live in `schemas/` and are validated by schema drift tests.
+
+## Render commands
+
+Render commands parse supported input and project it into deterministic inspection artifacts. Output is JSON, not prose-only.
+
+```sh
+grist render json-summary data.json
+grist render json-summary - --profile dynamic-event-dataset
+grist render serialization-summary config.yaml --format yaml
+grist render json-summary data.json --schema schemas/dynamic-event-explorer.dataset.v1.schema.json
+```
+
+`rendered-summary` output uses this shape:
+
+```json
+{
+  "schema_version": "grist/rendered-summary/v1",
+  "source_schema_version": "grist/serialization/v1",
+  "title": "Dynamic Event Dataset",
+  "profile": "dynamic-event-dataset",
+  "sections": [
+    {"heading": "Canonical Events", "facts": ["9 canonical events", "7 participants"]}
+  ],
+  "tables": [],
+  "diagnostics": []
+}
+```
+
+Generic JSON summaries report root type, top-level keys, array lengths, repeated object shapes, and detected id/time/name-like fields. The optional `dynamic-event-dataset` profile adds dataset-oriented facts such as canonical event count, signal count, participant count, time extent, context keys, metadata keys, malformed/missing-field diagnostics, and representative events.
+
+## Validate commands
+
+```sh
+grist validate json dataset.json --schema schemas/dynamic-event-explorer.dataset.v1.schema.json
+```
+
+Validation emits the normal `serialization-envelope`; callers should consume `payload.value` only when blocking diagnostics are absent and `payload.validation.valid` is true.
 
 ## Transform commands
 

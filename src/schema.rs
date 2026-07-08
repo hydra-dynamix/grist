@@ -40,6 +40,14 @@ pub fn list_schemas() -> Vec<SchemaEntry> {
             schema_version: crate::core::SchemaVersion::DOCUMENT_GRAPH_V1.into(),
         },
         SchemaEntry {
+            name: "rendered-summary".into(),
+            schema_version: crate::core::SchemaVersion::RENDERED_SUMMARY_V1.into(),
+        },
+        SchemaEntry {
+            name: "dynamic-event-explorer-dataset".into(),
+            schema_version: "dynamic-event-explorer/dataset/v1".into(),
+        },
+        SchemaEntry {
             name: "html".into(),
             schema_version: crate::core::SchemaVersion::HTML_V1.into(),
         },
@@ -142,6 +150,13 @@ pub fn schema_json(name: &str) -> Option<serde_json::Value> {
         "document-graph" => {
             Some(serde_json::to_value(schema_for!(crate::document_graph::DocumentGraph)).ok()?)
         }
+        "rendered-summary" => {
+            Some(serde_json::to_value(schema_for!(crate::summary::RenderedSummary)).ok()?)
+        }
+        "dynamic-event-explorer-dataset" => serde_json::from_str(include_str!(
+            "../schemas/dynamic-event-explorer.dataset.v1.schema.json"
+        ))
+        .ok(),
         #[cfg(feature = "html")]
         "html" => Some(serde_json::to_value(schema_for!(crate::html::HtmlDocument)).ok()?),
         #[cfg(feature = "csv")]
@@ -277,6 +292,10 @@ mod tests {
             (
                 "document-graph",
                 include_str!("../schemas/grist.document-graph.v1.schema.json"),
+            ),
+            (
+                "rendered-summary",
+                include_str!("../schemas/grist.rendered-summary.v1.schema.json"),
             ),
             ("html", include_str!("../schemas/grist.html.v1.schema.json")),
             ("csv", include_str!("../schemas/grist.csv.v1.schema.json")),

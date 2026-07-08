@@ -25,6 +25,7 @@ impl SchemaVersion {
     pub const REPO_INGEST_V1: &'static str = "grist/repo-ingest/v1";
     pub const LDGR_PROJECTION_V1: &'static str = "grist.ldgr_projection.v1";
     pub const DOCUMENT_GRAPH_V1: &'static str = "grist/document-graph/v1";
+    pub const RENDERED_SUMMARY_V1: &'static str = "grist/rendered-summary/v1";
 }
 
 impl From<&str> for SchemaVersion {

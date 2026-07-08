@@ -41,6 +41,16 @@ enum Command {
         #[command(subcommand)]
         command: SchemaCommand,
     },
+    /// Render parsed artifacts into stable inspection JSON such as rendered summaries.
+    Render {
+        #[command(subcommand)]
+        command: RenderCommand,
+    },
+    /// Validate inputs against stable Grist-supported contracts.
+    Validate {
+        #[command(subcommand)]
+        command: ValidateCommand,
+    },
     /// Convert supported inputs through DocumentGraph and render graph/Markdown/LaTeX.
     Transform {
         /// Positional paths: INPUT [OUTPUT], or OUTPUT when --file supplies INPUT. Input kind is inferred from extension: .md, .tex, .py, .rs, .ts, .tsx, .jsx.
@@ -200,6 +210,51 @@ enum IngestCommand {
 }
 
 #[cfg(feature = "cli")]
+#[derive(Subcommand)]
+enum RenderCommand {
+    /// Parse JSON and emit a structured rendered-summary JSON document.
+    #[command(name = "json-summary")]
+    JsonSummary {
+        /// Input path or `-` for stdin.
+        input: String,
+        /// Optional JSON Schema file to validate before summarization.
+        #[arg(long)]
+        schema: Option<PathBuf>,
+        /// Optional built-in summarization profile.
+        #[arg(long, value_enum)]
+        profile: Option<SummaryProfileArg>,
+    },
+    /// Parse JSON/JSONL/YAML/TOML and emit a structured rendered-summary JSON document.
+    #[command(name = "serialization-summary")]
+    SerializationSummary {
+        /// Input path or `-` for stdin.
+        input: String,
+        /// Serialization format.
+        #[arg(long, value_enum, default_value_t = SerializationFormatArg::Json)]
+        format: SerializationFormatArg,
+        /// Optional JSON Schema file to validate before summarization.
+        #[arg(long)]
+        schema: Option<PathBuf>,
+        /// Optional built-in summarization profile.
+        #[arg(long, value_enum)]
+        profile: Option<SummaryProfileArg>,
+    },
+}
+
+#[cfg(feature = "cli")]
+#[derive(Subcommand)]
+enum ValidateCommand {
+    /// Parse JSON and validate it against a JSON Schema file.
+    Json {
+        /// Input path or `-` for stdin.
+        input: String,
+        /// JSON Schema file.
+        #[arg(long)]
+        schema: PathBuf,
+    },
+}
+
+#[cfg(feature = "cli")]
 #[derive(Debug, Clone, Copy, ValueEnum)]
 enum SerializationFormatArg {
     Json,
@@ -262,6 +317,12 @@ enum TypeScriptDetailArg {
     Semantic,
     SemanticWithSyntax,
     SyntaxDebug,
+}
+
+#[cfg(feature = "cli")]
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum SummaryProfileArg {
+    DynamicEventDataset,
 }
 
 #[cfg(feature = "cli")]
@@ -566,6 +627,44 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         },
+        Command::Render { command } => match command {
+            RenderCommand::JsonSummary {
+                input,
+                schema,
+                profile,
+            } => {
+                let summary = render_serialization_summary(
+                    &input,
+                    SerializationFormatArg::Json,
+                    schema.as_ref(),
+                    profile,
+                )?;
+                print_json(&summary)?;
+            }
+            RenderCommand::SerializationSummary {
+                input,
+                format,
+                schema,
+                profile,
+            } => {
+                let summary =
+                    render_serialization_summary(&input, format, schema.as_ref(), profile)?;
+                print_json(&summary)?;
+            }
+        },
+        Command::Validate { command } => match command {
+            ValidateCommand::Json { input, schema } => {
+                let (text, source) = read_text_input(&input, None)?;
+                print_json(&grist::serialization::parse_serialization_with_options(
+                    &text,
+                    grist::serialization::SerializationFormat::Json,
+                    source,
+                    &grist::serialization::SerializationOptions {
+                        schema: Some(load_json_value(&schema)?),
+                    },
+                ))?;
+            }
+        },
         Command::Transform {
             paths,
             file,
@@ -598,6 +697,29 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     Ok(())
+}
+
+#[cfg(feature = "cli")]
+fn render_serialization_summary(
+    input: &str,
+    format: SerializationFormatArg,
+    schema: Option<&PathBuf>,
+    profile: Option<SummaryProfileArg>,
+) -> Result<grist::summary::RenderedSummary, Box<dyn std::error::Error>> {
+    let (text, source) = read_text_input(input, None)?;
+    let envelope = grist::serialization::parse_serialization_with_options(
+        &text,
+        format.into(),
+        source,
+        &grist::serialization::SerializationOptions {
+            schema: load_json_value_optional(schema)?,
+        },
+    );
+    Ok(grist::summary::summarize_serialization_payload(
+        &envelope.payload,
+        envelope.diagnostics,
+        profile.map(Into::into),
+    ))
 }
 
 #[cfg(feature = "cli")]
@@ -684,6 +806,15 @@ fn read_text_input(
             std::fs::read_to_string(&path)?,
             SourceInfo::from_path(&path),
         ))
+    }
+}
+
+#[cfg(feature = "cli")]
+impl From<SummaryProfileArg> for grist::summary::SummaryProfile {
+    fn from(value: SummaryProfileArg) -> Self {
+        match value {
+            SummaryProfileArg::DynamicEventDataset => Self::DynamicEventDataset,
+        }
     }
 }
 
@@ -838,21 +969,23 @@ fn print_json<T: serde::Serialize>(value: &T) -> Result<(), serde_json::Error> {
 }
 
 #[cfg(feature = "cli")]
+fn load_json_value(path: &PathBuf) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+    let text = std::fs::read_to_string(path)?;
+    let value = match path.extension().and_then(|ext| ext.to_str()) {
+        Some("yaml" | "yml") => {
+            serde_json::to_value(serde_yaml::from_str::<serde_yaml::Value>(&text)?)?
+        }
+        Some("toml") => serde_json::to_value(text.parse::<toml::Value>()?)?,
+        _ => serde_json::from_str(&text)?,
+    };
+    Ok(value)
+}
+
+#[cfg(feature = "cli")]
 fn load_json_value_optional(
     path: Option<&PathBuf>,
 ) -> Result<Option<serde_json::Value>, Box<dyn std::error::Error>> {
-    path.map(|path| {
-        let text = std::fs::read_to_string(path)?;
-        let value = match path.extension().and_then(|ext| ext.to_str()) {
-            Some("yaml" | "yml") => {
-                serde_json::to_value(serde_yaml::from_str::<serde_yaml::Value>(&text)?)?
-            }
-            Some("toml") => serde_json::to_value(text.parse::<toml::Value>()?)?,
-            _ => serde_json::from_str(&text)?,
-        };
-        Ok(value)
-    })
-    .transpose()
+    path.map(load_json_value).transpose()
 }
 
 #[cfg(feature = "cli")]

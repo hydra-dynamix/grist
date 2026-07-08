@@ -30,6 +30,7 @@ pub mod rust;
 pub mod schema;
 #[cfg(feature = "serialization")]
 pub mod serialization;
+pub mod summary;
 #[cfg(feature = "typescript")]
 pub mod typescript;
 

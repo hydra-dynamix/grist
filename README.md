@@ -46,6 +46,9 @@ grist parse latex paper.tex
 grist parse json config.toml --format toml
 grist parse model-output response.txt --json-value
 grist parse ldgr-projection ticket.md --strict
+grist render json-summary data.json
+grist render json-summary data.json --profile dynamic-event-dataset
+grist validate json dataset.json --schema schemas/dynamic-event-explorer.dataset.v1.schema.json
 grist transform README.md --to graph
 grist transform README.md --to latex
 grist transform paper.tex --to markdown
@@ -56,7 +59,7 @@ grist schema list
 grist schema emit markdown-envelope
 ```
 
-All successful CLI commands print JSON. CLI errors are emitted as structured diagnostics.
+All successful parse, ingest, schema, render, and validate CLI commands print JSON. Transform renderers may emit Markdown or LaTeX text when requested. CLI errors are emitted as structured diagnostics.
 
 ## Rust usage
 
@@ -79,7 +82,7 @@ The `cli` feature enables the `grist` binary and pulls in the parser features ne
 ## Schemas and specs
 
 - `docs/spec.md` describes the public interpretation contract.
-- `docs/cli.md` describes the CLI command menu, parse/ingest/schema/transform commands, and examples.
+- `docs/cli.md` describes the CLI command menu, parse/ingest/schema/render/validate/transform commands, and examples.
 - `docs/ldgr-projection-module-spec.md` describes the LDGR Markdown Projection parser/renderer contract.
 - `docs/document-graph.md` describes the normalized graph IR, transforms, LaTeX support, basin integration, and semantic obligation policy.
 - `schemas/` contains checked-in JSON Schema files for public envelopes and payloads.

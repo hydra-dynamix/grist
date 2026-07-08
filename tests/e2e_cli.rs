@@ -136,6 +136,92 @@ fn cli_parses_ldgr_projection_ticket_end_to_end() {
 }
 
 #[test]
+fn cli_renders_json_summaries_and_validates_dynamic_event_datasets() {
+    let dataset = r#"{
+        "metadata": {"name": "Dynamic Event Dataset", "source": "fixture"},
+        "context": {"domain": "test"},
+        "canonical_events": [
+            {"id": "e1", "t": 0, "type": "start", "participants": ["alice", "bob"]},
+            {"id": "e2", "t": 45, "type": "stop", "actor": "alice"}
+        ],
+        "signals": [{"id": "s1"}]
+    }"#;
+
+    let summary = run_stdin(
+        &[
+            "render",
+            "json-summary",
+            "-",
+            "--profile",
+            "dynamic-event-dataset",
+        ],
+        dataset,
+    );
+    validate_with_schema(&summary, "rendered-summary");
+    assert_eq!(summary["schema_version"], "grist/rendered-summary/v1");
+    assert_eq!(summary["source_schema_version"], "grist/serialization/v1");
+    assert_eq!(summary["profile"], "dynamic-event-dataset");
+    assert!(
+        summary["sections"][0]["facts"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|fact| fact == "2 canonical events")
+    );
+    assert!(
+        summary["sections"][0]["facts"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|fact| fact == "time range 0-45")
+    );
+    assert!(
+        summary["tables"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|table| table["title"] == "Representative Events")
+    );
+
+    let dir = temp_dir("dynamic-event-schema");
+    let dataset_path = dir.join("dataset.json");
+    let schema_path = dir.join("dynamic-event.schema.json");
+    fs::write(&dataset_path, dataset).unwrap();
+    fs::write(
+        &schema_path,
+        serde_json::to_string(&run(&["schema", "emit", "dynamic-event-explorer-dataset"])).unwrap(),
+    )
+    .unwrap();
+
+    let validated = run(&[
+        "validate",
+        "json",
+        dataset_path.to_str().unwrap(),
+        "--schema",
+        schema_path.to_str().unwrap(),
+    ]);
+    validate_with_schema(&validated, "serialization-envelope");
+    assert_eq!(validated["payload"]["validation"]["valid"], true);
+}
+
+#[test]
+fn cli_renders_serialization_summary_for_yaml() {
+    let summary = run_stdin(
+        &["render", "serialization-summary", "-", "--format", "yaml"],
+        "name: Demo\nitems:\n  - id: a\n    time: 1\n  - id: b\n    time: 2\n",
+    );
+    validate_with_schema(&summary, "rendered-summary");
+    assert_eq!(summary["title"], "Demo");
+    assert!(
+        summary["sections"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|section| section["heading"] == "Arrays")
+    );
+}
+
+#[test]
 fn cli_parses_serialization_with_schema_validation_end_to_end() {
     let dir = temp_dir("json-schema");
     let schema_path = dir.join("schema.json");
@@ -555,11 +641,20 @@ fn cli_rust_detail_mode_exposes_syntax_debug() {
 fn cli_help_menus_describe_parse_and_transform_surfaces() {
     let top = run_text(&["--help"]);
     assert!(top.contains("Parse one input into a typed Grist JSON envelope"));
+    assert!(top.contains("Render parsed artifacts into stable inspection JSON"));
+    assert!(top.contains("Validate inputs against stable Grist-supported contracts"));
     assert!(top.contains("Convert supported inputs through DocumentGraph"));
 
     let parse = run_text(&["parse", "--help"]);
     assert!(parse.contains("Parse LaTeX documents"));
     assert!(parse.contains("Parse TypeScript, TSX, or JSX code"));
+
+    let render = run_text(&["render", "--help"]);
+    assert!(render.contains("json-summary"));
+    assert!(render.contains("serialization-summary"));
+
+    let validate = run_text(&["validate", "--help"]);
+    assert!(validate.contains("Parse JSON and validate it against a JSON Schema file"));
 
     let transform = run_text(&["transform", "--help"]);
     assert!(transform.contains("Target representation to emit"));
