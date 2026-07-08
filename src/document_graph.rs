@@ -637,6 +637,184 @@ fn project_markdown_table(
     }
 }
 
+#[cfg(feature = "markdown")]
+pub fn render_markdown(
+    graph: &DocumentGraph,
+    options: TransformOptions,
+) -> Result<String, TransformError> {
+    let mut out = String::new();
+    let roots = graph
+        .nodes
+        .iter()
+        .filter(|node| node.kind == DocumentNodeKind::Document)
+        .map(|node| node.id.as_str())
+        .collect::<Vec<_>>();
+    let mut render_nodes = graph
+        .nodes
+        .iter()
+        .filter(|node| node.kind != DocumentNodeKind::Document)
+        .filter(|node| !is_nested_markdown_child(graph, &node.id, &roots))
+        .collect::<Vec<_>>();
+    render_nodes.sort_by_key(|node| node.ordinal.unwrap_or(usize::MAX));
+
+    for node in render_nodes {
+        let rendered = render_markdown_node(node, graph, &options)?;
+        if rendered.is_empty() {
+            continue;
+        }
+        if !out.is_empty() && !out.ends_with("\n\n") {
+            out.push('\n');
+        }
+        out.push_str(&rendered);
+        if !out.ends_with('\n') {
+            out.push('\n');
+        }
+    }
+
+    Ok(out)
+}
+
+#[cfg(feature = "markdown")]
+fn is_nested_markdown_child(graph: &DocumentGraph, node_id: &str, roots: &[&str]) -> bool {
+    graph.edges.iter().any(|edge| {
+        edge.relation == DocumentRelation::Contains
+            && edge.target == node_id
+            && !roots.contains(&edge.source.as_str())
+    })
+}
+
+#[cfg(feature = "markdown")]
+fn render_markdown_node(
+    node: &DocumentNode,
+    graph: &DocumentGraph,
+    options: &TransformOptions,
+) -> Result<String, TransformError> {
+    match node.kind {
+        DocumentNodeKind::Frontmatter => Ok(node
+            .text
+            .as_ref()
+            .map(|raw| format!("---\n{}\n---\n", raw.trim_matches('\n')))
+            .unwrap_or_default()),
+        DocumentNodeKind::Heading => {
+            let level = node
+                .attrs
+                .get("level")
+                .and_then(Value::as_u64)
+                .unwrap_or(1)
+                .clamp(1, 6);
+            Ok(format!(
+                "{} {}\n",
+                "#".repeat(level as usize),
+                node.text.as_deref().unwrap_or("")
+            ))
+        }
+        DocumentNodeKind::Paragraph => Ok(format!("{}\n", node.text.as_deref().unwrap_or(""))),
+        DocumentNodeKind::Text => Ok(node.text.clone().unwrap_or_default()),
+        DocumentNodeKind::Link => {
+            let destination = node
+                .attrs
+                .get("destination")
+                .and_then(Value::as_str)
+                .ok_or_else(|| TransformError::MissingRequiredAttribute {
+                    target: node.id.clone(),
+                    attr: "destination".to_string(),
+                })?;
+            let text = node.text.as_deref().unwrap_or(destination);
+            Ok(format!("[{text}]({destination})\n"))
+        }
+        DocumentNodeKind::CodeBlock => {
+            let language = node
+                .attrs
+                .get("language")
+                .and_then(Value::as_str)
+                .unwrap_or("");
+            Ok(format!(
+                "```{language}\n{}\n```\n",
+                node.text.as_deref().unwrap_or("")
+            ))
+        }
+        DocumentNodeKind::Table => render_markdown_table_node(node, graph),
+        DocumentNodeKind::RawBlock | DocumentNodeKind::RawInline if options.allow_raw_fallback => {
+            Ok(node.text.clone().unwrap_or_default())
+        }
+        _ if options.allow_lossy => Ok(String::new()),
+        _ => Err(TransformError::UnsupportedNodeKind {
+            node_id: node.id.clone(),
+            node_kind: node.kind.clone(),
+        }),
+    }
+}
+
+#[cfg(feature = "markdown")]
+fn render_markdown_table_node(
+    node: &DocumentNode,
+    graph: &DocumentGraph,
+) -> Result<String, TransformError> {
+    if let Some(table_value) = node.attrs.get("table") {
+        if let Ok(table) =
+            serde_json::from_value::<crate::markdown::MarkdownTable>(table_value.clone())
+        {
+            return Ok(render_markdown_table_rows(&table.rows));
+        }
+    }
+
+    let mut rows = graph
+        .edges
+        .iter()
+        .filter(|edge| edge.relation == DocumentRelation::Contains && edge.source == node.id)
+        .filter_map(|edge| {
+            graph
+                .nodes
+                .iter()
+                .find(|candidate| candidate.id == edge.target)
+        })
+        .filter(|candidate| candidate.kind == DocumentNodeKind::TableRow)
+        .collect::<Vec<_>>();
+    rows.sort_by_key(|row| row.ordinal.unwrap_or(usize::MAX));
+    let mut table_rows = Vec::new();
+    for row in rows {
+        let mut cells = graph
+            .edges
+            .iter()
+            .filter(|edge| edge.relation == DocumentRelation::Contains && edge.source == row.id)
+            .filter_map(|edge| {
+                graph
+                    .nodes
+                    .iter()
+                    .find(|candidate| candidate.id == edge.target)
+            })
+            .filter(|candidate| candidate.kind == DocumentNodeKind::TableCell)
+            .collect::<Vec<_>>();
+        cells.sort_by_key(|cell| cell.ordinal.unwrap_or(usize::MAX));
+        table_rows.push(
+            cells
+                .into_iter()
+                .map(|cell| cell.text.clone().unwrap_or_default())
+                .collect::<Vec<_>>(),
+        );
+    }
+    Ok(render_markdown_table_rows(&table_rows))
+}
+
+#[cfg(feature = "markdown")]
+fn render_markdown_table_rows(rows: &[Vec<String>]) -> String {
+    if rows.is_empty() {
+        return String::new();
+    }
+    let mut out = String::new();
+    out.push('|');
+    out.push_str(&rows[0].join(" | "));
+    out.push_str("|\n|");
+    out.push_str(&vec!["---"; rows[0].len()].join("|"));
+    out.push_str("|\n");
+    for row in rows.iter().skip(1) {
+        out.push('|');
+        out.push_str(&row.join(" | "));
+        out.push_str("|\n");
+    }
+    out
+}
+
 #[cfg(feature = "python")]
 impl ToDocumentGraph for crate::python::PythonFile {
     fn to_document_graph(
@@ -1243,6 +1421,54 @@ mod tests {
                 .any(|node| node.kind == DocumentNodeKind::TableCell
                     && node.text.as_deref() == Some("1"))
         );
+    }
+
+    #[cfg(feature = "markdown")]
+    #[test]
+    fn markdown_renderer_outputs_supported_prose_graph() {
+        use crate::core::SourceInfo;
+        use crate::markdown::parse_markdown;
+
+        let src =
+            "# Intro\n\nSee [site](https://example.com).\n\n| A | B |\n|---|---|\n| 1 | 2 |\n";
+        let parsed = parse_markdown(src, SourceInfo::stdin("demo.md"));
+        let graph = parsed
+            .payload
+            .to_document_graph(DocumentGraphContext::new("graph:markdown"))
+            .expect("markdown graph projection should succeed");
+        let rendered = render_markdown(&graph, TransformOptions::default())
+            .expect("markdown rendering should succeed");
+
+        assert!(rendered.contains("# Intro"));
+        assert!(rendered.contains("[site](https://example.com)"));
+        assert!(rendered.contains("|A | B|"));
+        assert!(rendered.contains("|1 | 2|"));
+    }
+
+    #[cfg(feature = "markdown")]
+    #[test]
+    fn markdown_renderer_rejects_unsupported_nodes_without_lossy_mode() {
+        let mut graph = DocumentGraph::new("graph:code", DocumentKind::Markdown);
+        graph.add_node(DocumentNode::new("root", DocumentNodeKind::Document));
+        graph.add_node(DocumentNode::new("fn", DocumentNodeKind::Function));
+        graph.add_contains("root", "fn");
+
+        let err = render_markdown(&graph, TransformOptions::default())
+            .expect_err("unsupported code node should fail without lossy mode");
+        assert_eq!(
+            err.diagnostic_code(),
+            "document_graph.unsupported_node_kind"
+        );
+
+        let rendered = render_markdown(
+            &graph,
+            TransformOptions {
+                allow_lossy: true,
+                ..TransformOptions::default()
+            },
+        )
+        .expect("lossy rendering should skip unsupported nodes");
+        assert!(rendered.is_empty());
     }
 
     #[cfg(feature = "python")]
