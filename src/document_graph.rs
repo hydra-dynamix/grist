@@ -676,7 +676,7 @@ pub fn render_markdown(
     Ok(out)
 }
 
-#[cfg(feature = "markdown")]
+#[cfg(any(feature = "markdown", feature = "latex"))]
 fn is_nested_markdown_child(graph: &DocumentGraph, node_id: &str, roots: &[&str]) -> bool {
     graph.edges.iter().any(|edge| {
         edge.relation == DocumentRelation::Contains
@@ -815,6 +815,134 @@ fn render_markdown_table_rows(rows: &[Vec<String>]) -> String {
         out.push_str("|\n");
     }
     out
+}
+
+#[cfg(feature = "latex")]
+pub fn render_latex(
+    graph: &DocumentGraph,
+    options: TransformOptions,
+) -> Result<String, TransformError> {
+    let roots = graph
+        .nodes
+        .iter()
+        .filter(|node| node.kind == DocumentNodeKind::Document)
+        .map(|node| node.id.as_str())
+        .collect::<Vec<_>>();
+    let mut render_nodes = graph
+        .nodes
+        .iter()
+        .filter(|node| node.kind != DocumentNodeKind::Document)
+        .filter(|node| !is_nested_markdown_child(graph, &node.id, &roots))
+        .collect::<Vec<_>>();
+    render_nodes.sort_by_key(|node| node.ordinal.unwrap_or(usize::MAX));
+
+    let mut out = String::new();
+    for node in render_nodes {
+        let rendered = render_latex_node(node, options.clone())?;
+        if rendered.is_empty() {
+            continue;
+        }
+        if !out.is_empty() && !out.ends_with("\n\n") {
+            out.push('\n');
+        }
+        out.push_str(&rendered);
+        if !out.ends_with('\n') {
+            out.push('\n');
+        }
+    }
+    Ok(out)
+}
+
+#[cfg(feature = "latex")]
+fn render_latex_node(
+    node: &DocumentNode,
+    options: TransformOptions,
+) -> Result<String, TransformError> {
+    match node.kind {
+        DocumentNodeKind::Heading | DocumentNodeKind::Section => {
+            let level = node.attrs.get("level").and_then(Value::as_u64).unwrap_or(1);
+            let cmd = match level {
+                1 => "section",
+                2 => "subsection",
+                3 => "subsubsection",
+                _ => "paragraph",
+            };
+            Ok(format!(
+                "\\{}{{{}}}\n",
+                cmd,
+                escape_latex(node.text.as_deref().unwrap_or(""))
+            ))
+        }
+        DocumentNodeKind::Paragraph | DocumentNodeKind::Text => Ok(format!(
+            "{}\n",
+            escape_latex(node.text.as_deref().unwrap_or(""))
+        )),
+        DocumentNodeKind::Emphasis => Ok(format!(
+            "\\emph{{{}}}",
+            escape_latex(node.text.as_deref().unwrap_or(""))
+        )),
+        DocumentNodeKind::Strong => Ok(format!(
+            "\\textbf{{{}}}",
+            escape_latex(node.text.as_deref().unwrap_or(""))
+        )),
+        DocumentNodeKind::MathInline => Ok(format!("${}$", node.text.as_deref().unwrap_or(""))),
+        DocumentNodeKind::MathBlock => Ok(format!(
+            "\\[\n{}\n\\]\n",
+            node.text.as_deref().unwrap_or("")
+        )),
+        DocumentNodeKind::CodeBlock => Ok(format!(
+            "\\begin{{verbatim}}\n{}\n\\end{{verbatim}}\n",
+            node.text.as_deref().unwrap_or("")
+        )),
+        DocumentNodeKind::Label => Ok(format!("\\label{{{}}}", node.text.as_deref().unwrap_or(""))),
+        DocumentNodeKind::Reference => {
+            Ok(format!("\\ref{{{}}}", node.text.as_deref().unwrap_or("")))
+        }
+        DocumentNodeKind::Citation => {
+            Ok(format!("\\cite{{{}}}", node.text.as_deref().unwrap_or("")))
+        }
+        DocumentNodeKind::Link => {
+            let destination = node
+                .attrs
+                .get("destination")
+                .and_then(Value::as_str)
+                .ok_or_else(|| TransformError::MissingRequiredAttribute {
+                    target: node.id.clone(),
+                    attr: "destination".to_string(),
+                })?;
+            Ok(format!(
+                "\\href{{{}}}{{{}}}",
+                escape_latex(destination),
+                escape_latex(node.text.as_deref().unwrap_or(destination))
+            ))
+        }
+        DocumentNodeKind::RawBlock | DocumentNodeKind::RawInline if options.allow_raw_fallback => {
+            if let Some(command) = node.attrs.get("command").and_then(Value::as_str) {
+                if let Some(arg) = node.attrs.get("argument").and_then(Value::as_str) {
+                    return Ok(format!("\\{}{{{}}}", command, arg));
+                }
+                return Ok(format!("\\{}", command));
+            }
+            Ok(node.text.clone().unwrap_or_default())
+        }
+        _ if options.allow_lossy => Ok(String::new()),
+        _ => Err(TransformError::UnsupportedNodeKind {
+            node_id: node.id.clone(),
+            node_kind: node.kind.clone(),
+        }),
+    }
+}
+
+#[cfg(feature = "latex")]
+fn escape_latex(text: &str) -> String {
+    text.replace('\\', "\\textbackslash{}")
+        .replace('&', "\\&")
+        .replace('%', "\\%")
+        .replace('$', "\\$")
+        .replace('#', "\\#")
+        .replace('_', "\\_")
+        .replace('{', "\\{")
+        .replace('}', "\\}")
 }
 
 #[cfg(feature = "latex")]
@@ -1570,6 +1698,52 @@ mod tests {
         )
         .expect("lossy rendering should skip unsupported nodes");
         assert!(rendered.is_empty());
+    }
+
+    #[cfg(all(feature = "markdown", feature = "latex"))]
+    #[test]
+    fn latex_renderer_outputs_markdown_graph_as_latex() {
+        use crate::core::SourceInfo;
+        use crate::markdown::parse_markdown;
+
+        let parsed = parse_markdown(
+            "# Intro\n\nHello **world**.\n",
+            SourceInfo::stdin("demo.md"),
+        );
+        let graph = parsed
+            .payload
+            .to_document_graph(DocumentGraphContext::new("graph:markdown"))
+            .expect("markdown graph projection should succeed");
+        let rendered = render_latex(&graph, TransformOptions::default())
+            .expect("latex rendering should succeed");
+        assert!(rendered.contains("\\section{Intro}"));
+        assert!(rendered.contains("Hello world."));
+    }
+
+    #[cfg(feature = "latex")]
+    #[test]
+    fn latex_renderer_outputs_latex_graph_as_latex() {
+        use crate::core::SourceInfo;
+        use crate::latex::{LatexOptions, parse_latex};
+
+        let src = "\\section{Intro}\nSee \\label{sec:intro} \\ref{sec:intro} \\cite{paper} and $x$. \\unknowncmd{raw}\n";
+        let parsed = parse_latex(
+            src,
+            SourceInfo::stdin("paper.tex"),
+            &LatexOptions::default(),
+        );
+        let graph = parsed
+            .payload
+            .to_document_graph(DocumentGraphContext::new("graph:latex"))
+            .expect("latex graph projection should succeed");
+        let rendered = render_latex(&graph, TransformOptions::default())
+            .expect("latex rendering should succeed");
+        assert!(rendered.contains("\\section{Intro}"));
+        assert!(rendered.contains("\\label{sec:intro}"));
+        assert!(rendered.contains("\\ref{sec:intro}"));
+        assert!(rendered.contains("\\cite{paper}"));
+        assert!(rendered.contains("$x$"));
+        assert!(rendered.contains("\\unknowncmd{raw}"));
     }
 
     #[cfg(feature = "latex")]

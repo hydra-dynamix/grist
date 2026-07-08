@@ -440,14 +440,26 @@ fn extract_inline_nodes(
     for command in unknown_commands(src) {
         *raw_command_count += 1;
         if let Some(start) = src.find(&format!("\\{}", command)) {
+            let after_command = start + command.len() + 1;
+            let (end, argument) = if src[after_command..].starts_with('{') {
+                if let Some(end_rel) = src[after_command + 1..].find('}') {
+                    let arg_start = after_command + 1;
+                    let arg_end = arg_start + end_rel;
+                    (arg_end + 1, Some(src[arg_start..arg_end].to_string()))
+                } else {
+                    (after_command, None)
+                }
+            } else {
+                (after_command, None)
+            };
             push_node(
                 nodes,
                 LatexNodeKind::RawCommand,
-                byte_offset + start..byte_offset + start + command.len() + 1,
+                byte_offset + start..byte_offset + end,
                 line_index,
-                Some(command),
-                None,
-                None,
+                Some(command.clone()),
+                argument.clone(),
+                argument,
                 None,
                 BTreeMap::new(),
             );
