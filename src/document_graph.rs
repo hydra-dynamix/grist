@@ -189,6 +189,8 @@ pub enum DocumentNodeKind {
     InlineCode,
     MathInline,
     MathBlock,
+    Label,
+    Reference,
     Citation,
     Footnote,
     Figure,
@@ -813,6 +815,105 @@ fn render_markdown_table_rows(rows: &[Vec<String>]) -> String {
         out.push_str("|\n");
     }
     out
+}
+
+#[cfg(feature = "latex")]
+impl ToDocumentGraph for crate::latex::LatexDocument {
+    fn to_document_graph(
+        &self,
+        context: DocumentGraphContext,
+    ) -> Result<DocumentGraph, TransformError> {
+        use crate::latex::LatexNodeKind;
+
+        let mut graph = DocumentGraph::new(context.graph_id, DocumentKind::Latex);
+        graph.source = context.source;
+        graph.language = Some(context.language.unwrap_or_else(|| "latex".to_string()));
+        graph.dialect = context.dialect;
+        graph.attrs = context.attrs;
+
+        let root_id = format!("{}:root", graph.id);
+        graph.add_node(DocumentNode::new(&root_id, DocumentNodeKind::Document).with_name("latex"));
+
+        for (idx, latex_node) in self.nodes.iter().enumerate() {
+            let node_id = format!("{}:{}", graph.id, latex_node.id);
+            let kind = match latex_node.kind {
+                LatexNodeKind::Section => DocumentNodeKind::Heading,
+                LatexNodeKind::Paragraph => DocumentNodeKind::Paragraph,
+                LatexNodeKind::Text => DocumentNodeKind::Text,
+                LatexNodeKind::Command => match latex_node.command.as_deref() {
+                    Some("textbf") => DocumentNodeKind::Strong,
+                    Some("emph") => DocumentNodeKind::Emphasis,
+                    _ => DocumentNodeKind::RawInline,
+                },
+                LatexNodeKind::Environment => DocumentNodeKind::RawBlock,
+                LatexNodeKind::MathInline => DocumentNodeKind::MathInline,
+                LatexNodeKind::MathBlock => DocumentNodeKind::MathBlock,
+                LatexNodeKind::Label => DocumentNodeKind::Label,
+                LatexNodeKind::Ref => DocumentNodeKind::Reference,
+                LatexNodeKind::Citation => DocumentNodeKind::Citation,
+                LatexNodeKind::Comment => DocumentNodeKind::RawBlock,
+                LatexNodeKind::RawCommand | LatexNodeKind::RawInline => DocumentNodeKind::RawInline,
+            };
+            let mut node = DocumentNode::new(&node_id, kind).with_ordinal(idx);
+            node.range = Some(latex_node.range.clone());
+            node.text = latex_node
+                .text
+                .clone()
+                .or_else(|| latex_node.argument.clone())
+                .or_else(|| latex_node.name.clone());
+            node.name = latex_node.name.clone();
+            insert_json_attr(&mut node.attrs, "command", &latex_node.command);
+            insert_json_attr(&mut node.attrs, "argument", &latex_node.argument);
+            for (key, value) in &latex_node.attrs {
+                node.attrs.insert(key.clone(), value.clone());
+            }
+            graph.add_node(node);
+            graph.add_contains(&root_id, &node_id);
+
+            match latex_node.kind {
+                LatexNodeKind::Ref => {
+                    if let Some(target) = latex_node.argument.as_ref().or(latex_node.name.as_ref())
+                    {
+                        graph.add_edge(DocumentEdge::new(
+                            &node_id,
+                            DocumentRelation::References,
+                            target,
+                        ));
+                    }
+                }
+                LatexNodeKind::Citation => {
+                    if let Some(target) = latex_node.argument.as_ref().or(latex_node.name.as_ref())
+                    {
+                        graph.add_edge(DocumentEdge::new(
+                            &node_id,
+                            DocumentRelation::Cites,
+                            target,
+                        ));
+                    }
+                }
+                LatexNodeKind::Label => {
+                    if let Some(target) = latex_node.argument.as_ref().or(latex_node.name.as_ref())
+                    {
+                        graph.add_edge(DocumentEdge::new(
+                            &node_id,
+                            DocumentRelation::Defines,
+                            target,
+                        ));
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        graph
+            .diagnostics
+            .extend(self.parse_errors.iter().map(|err| {
+                Diagnostic::error("grist.latex", "latex.parse", err.message.clone())
+                    .with_range(err.range.clone())
+            }));
+
+        Ok(graph)
+    }
 }
 
 #[cfg(feature = "python")]
@@ -1469,6 +1570,63 @@ mod tests {
         )
         .expect("lossy rendering should skip unsupported nodes");
         assert!(rendered.is_empty());
+    }
+
+    #[cfg(feature = "latex")]
+    #[test]
+    fn latex_projection_preserves_sections_math_refs_citations_and_raw() {
+        use crate::core::SourceInfo;
+        use crate::latex::{LatexOptions, parse_latex};
+
+        let src = "\\section{Intro}\nSee \\label{sec:intro} \\ref{sec:intro} \\cite{paper} and $x$. \\unknowncmd{raw}\n";
+        let parsed = parse_latex(
+            src,
+            SourceInfo::stdin("paper.tex"),
+            &LatexOptions::default(),
+        );
+        let graph = parsed
+            .payload
+            .to_document_graph(DocumentGraphContext::new("graph:latex"))
+            .expect("latex graph projection should succeed");
+
+        assert_eq!(graph.kind, DocumentKind::Latex);
+        assert!(
+            graph
+                .nodes
+                .iter()
+                .any(|node| node.kind == DocumentNodeKind::Heading
+                    && node.text.as_deref() == Some("Intro"))
+        );
+        assert!(
+            graph
+                .nodes
+                .iter()
+                .any(|node| node.kind == DocumentNodeKind::MathInline
+                    && node.text.as_deref() == Some("x"))
+        );
+        assert!(
+            graph
+                .nodes
+                .iter()
+                .any(|node| node.kind == DocumentNodeKind::Label
+                    && node.text.as_deref() == Some("sec:intro"))
+        );
+        assert!(graph.edges.iter().any(
+            |edge| edge.relation == DocumentRelation::References && edge.target == "sec:intro"
+        ));
+        assert!(
+            graph
+                .edges
+                .iter()
+                .any(|edge| edge.relation == DocumentRelation::Cites && edge.target == "paper")
+        );
+        assert!(
+            graph
+                .nodes
+                .iter()
+                .any(|node| node.kind == DocumentNodeKind::RawInline
+                    && node.attrs.get("command").and_then(Value::as_str) == Some("unknowncmd"))
+        );
     }
 
     #[cfg(feature = "python")]
