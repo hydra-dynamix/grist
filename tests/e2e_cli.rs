@@ -564,6 +564,7 @@ fn cli_help_menus_describe_parse_and_transform_surfaces() {
     let transform = run_text(&["transform", "--help"]);
     assert!(transform.contains("Target representation to emit"));
     assert!(transform.contains("--file <INPUT>"));
+    assert!(transform.contains("--output <OUTPUT>"));
     assert!(transform.contains("extract-obligations"));
     assert!(transform.contains(".md, .tex, .py, .rs, .ts, .tsx, .jsx"));
 }
@@ -620,6 +621,36 @@ fn cli_transforms_documents_through_document_graph() {
         "latex",
     ]);
     assert!(latex.contains("\\section{Rules}"));
+
+    let output_tex = dir.join("rules.tex");
+    let stdout = run_text(&[
+        "transform",
+        "--file",
+        markdown.to_str().unwrap(),
+        "--to",
+        "latex",
+        output_tex.to_str().unwrap(),
+    ]);
+    assert!(stdout.is_empty());
+    assert!(
+        fs::read_to_string(&output_tex)
+            .unwrap()
+            .contains("\\section{Rules}")
+    );
+
+    let output_graph = dir.join("rules.json");
+    let stdout = run_text(&[
+        "transform",
+        markdown.to_str().unwrap(),
+        "--to",
+        "graph",
+        "--output",
+        output_graph.to_str().unwrap(),
+    ]);
+    assert!(stdout.is_empty());
+    let graph_file: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&output_graph).unwrap()).unwrap();
+    validate_with_schema(&graph_file, "document-graph");
 
     let tex = dir.join("paper.tex");
     fs::write(&tex, "\\section{Intro}\nHello.\n").unwrap();

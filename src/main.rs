@@ -43,12 +43,15 @@ enum Command {
     },
     /// Convert supported inputs through DocumentGraph and render graph/Markdown/LaTeX.
     Transform {
-        /// Input path. The source kind is inferred from extension: .md, .tex, .py, .rs, .ts, .tsx, .jsx.
-        #[arg(value_name = "INPUT", required_unless_present = "file")]
-        input: Option<String>,
+        /// Positional paths: INPUT [OUTPUT], or OUTPUT when --file supplies INPUT. Input kind is inferred from extension: .md, .tex, .py, .rs, .ts, .tsx, .jsx.
+        #[arg(value_name = "PATH", num_args = 0..=2)]
+        paths: Vec<String>,
         /// Input path as a named flag, equivalent to the positional INPUT.
-        #[arg(long, value_name = "INPUT", conflicts_with = "input")]
+        #[arg(long, value_name = "INPUT")]
         file: Option<String>,
+        /// Output path. If omitted, output is written to stdout.
+        #[arg(short, long, value_name = "OUTPUT")]
+        output: Option<PathBuf>,
         /// Target representation to emit.
         #[arg(long, value_enum)]
         to: TransformTargetArg,
@@ -564,33 +567,32 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
         },
         Command::Transform {
-            input,
+            paths,
             file,
+            output,
             to,
             extract_obligations,
         } => {
-            let input = input
-                .or(file)
-                .ok_or_else(|| "transform requires an input path".to_string())?;
+            let (input, output_path) = resolve_transform_paths(paths, file, output)?;
             let mut graph = parse_input_to_document_graph(&input)?;
             if extract_obligations {
                 grist::document_graph::extract_conditional_obligations(&mut graph);
             }
             match to {
-                TransformTargetArg::Graph => print_json(&graph)?,
+                TransformTargetArg::Graph => write_json_output(&graph, output_path.as_ref())?,
                 TransformTargetArg::Markdown => {
                     let rendered = grist::document_graph::render_markdown(
                         &graph,
                         grist::document_graph::TransformOptions::default(),
                     )?;
-                    print!("{rendered}");
+                    write_text_output(&rendered, output_path.as_ref())?;
                 }
                 TransformTargetArg::Latex => {
                     let rendered = grist::document_graph::render_latex(
                         &graph,
                         grist::document_graph::TransformOptions::default(),
                     )?;
-                    print!("{rendered}");
+                    write_text_output(&rendered, output_path.as_ref())?;
                 }
             }
         }
@@ -771,6 +773,62 @@ impl From<TypeScriptDetailArg> for grist::typescript::TypeScriptDetailMode {
             TypeScriptDetailArg::SyntaxDebug => Self::SyntaxDebug,
         }
     }
+}
+
+#[cfg(feature = "cli")]
+fn resolve_transform_paths(
+    paths: Vec<String>,
+    file: Option<String>,
+    output: Option<PathBuf>,
+) -> Result<(String, Option<PathBuf>), Box<dyn std::error::Error>> {
+    let (input, positional_output) = if let Some(file) = file {
+        if paths.len() > 1 {
+            return Err("with --file, provide at most one positional output path".into());
+        }
+        (file, paths.into_iter().next())
+    } else {
+        let mut paths = paths.into_iter();
+        let input = paths
+            .next()
+            .ok_or_else(|| "transform requires an input path".to_string())?;
+        (input, paths.next())
+    };
+
+    if output.is_some() && positional_output.is_some() {
+        return Err("provide output either as a positional path or with --output, not both".into());
+    }
+
+    Ok((
+        input,
+        output.or_else(|| positional_output.map(PathBuf::from)),
+    ))
+}
+
+#[cfg(feature = "cli")]
+fn write_text_output(
+    text: &str,
+    output: Option<&PathBuf>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(path) = output {
+        std::fs::write(path, text)?;
+    } else {
+        print!("{text}");
+    }
+    Ok(())
+}
+
+#[cfg(feature = "cli")]
+fn write_json_output<T: serde::Serialize>(
+    value: &T,
+    output: Option<&PathBuf>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let json = serde_json::to_string(value)?;
+    if let Some(path) = output {
+        std::fs::write(path, format!("{json}\n"))?;
+    } else {
+        println!("{json}");
+    }
+    Ok(())
 }
 
 #[cfg(feature = "cli")]

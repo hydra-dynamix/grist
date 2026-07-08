@@ -83,14 +83,16 @@ Targets:
 ```sh
 grist transform README.md --to graph
 grist transform README.md --to latex
-grist transform --file README.md --to latex
+grist transform README.md --to latex README.tex
+grist transform --file README.md --to latex README.tex
+grist transform --file README.md --to latex --output README.tex
 grist transform paper.tex --to markdown
 grist transform requirements.md --to graph --extract-obligations
 ```
 
 Target behavior:
 
-The input may be positional (`grist transform README.md --to latex`) or named with `--file`.
+The input may be positional (`grist transform README.md --to latex`) or named with `--file`. Output goes to stdout unless you provide a second positional output path or `--output`.
 
 - `--to graph` emits JSON `DocumentGraph`.
 - `--to markdown` emits rendered Markdown text.
