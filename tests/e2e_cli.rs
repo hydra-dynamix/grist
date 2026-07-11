@@ -346,6 +346,17 @@ fn cli_repairs_model_output_and_can_emit_selected_json_value() {
 }
 
 #[test]
+fn cli_repairs_redundant_object_opener_and_selects_json_value() {
+    let input = r#"[
+      {"title":"The Speed Limit Contradiction","exclusive_scope":["speed"]},
+      {
+      {"title":"Fusion of Dimensions","exclusive_scope":["fusion"]}
+    ]"#;
+    let value = run_stdin(&["parse", "model-output", "-", "--json-value"], input);
+    assert_eq!(value[1]["title"], "Fusion of Dimensions");
+}
+
+#[test]
 fn cli_ingests_repo_with_filters_and_external_artifacts() {
     let repo = temp_dir("repo");
     fs::create_dir_all(repo.join("src")).unwrap();

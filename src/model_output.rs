@@ -182,6 +182,7 @@ pub fn parse_model_output(
         ));
     } else {
         extract_fenced_blocks(&working, &index, &mut candidates, &mut failures);
+        extract_nested_json_fences(&working, &index, &mut candidates);
         extract_json_candidates(&working, &index, &mut candidates);
         extract_xml_tool_calls(&working, &index, &mut candidates);
         if options.parse_python_style_commands {
@@ -262,6 +263,49 @@ pub fn parse_model_output(
     )
     .with_hashes(Hashes::for_bytes(text.as_bytes(), Some(text)))
     .with_diagnostics(diagnostics)
+}
+
+fn extract_nested_json_fences(
+    text: &str,
+    index: &LineIndex,
+    candidates: &mut Vec<ModelOutputCandidate>,
+) {
+    for marker in ["```json\n", "```JSON\n", "```json\r\n", "```JSON\r\n"] {
+        let mut search = 0;
+        while let Some(relative_start) = text[search..].find(marker) {
+            let start = search + relative_start;
+            let body_start = start + marker.len();
+            let Some(relative_end) = text[body_start..].find("```") else {
+                break;
+            };
+            let end = body_start + relative_end;
+            let range_end = end + 3;
+            if !candidates.iter().any(|candidate| {
+                candidate
+                    .raw_range
+                    .as_ref()
+                    .is_some_and(|range| range.byte_start == start && range.byte_end == range_end)
+            }) {
+                let body = text[body_start..end].trim();
+                if let Ok(parsed) = parse_jsonish_value_with_repairs(body) {
+                    let mut candidate = base_candidate(
+                        candidates.len(),
+                        CandidateGrammar::FencedJson,
+                        Some(SourceRange::new(start, range_end, index)),
+                    );
+                    candidate.value = Some(parsed.value);
+                    candidate.normalizations = vec!["extracted_nested_markdown_fence".into()];
+                    candidate.normalizations.extend(parsed.normalizations);
+                    if candidate.normalizations.len() > 1 {
+                        candidate.status = CandidateStatus::Recovered;
+                    }
+                    classify_json_tool_shape(&mut candidate);
+                    candidates.push(candidate);
+                }
+            }
+            search = range_end;
+        }
+    }
 }
 
 pub struct StreamingModelOutputParser {
@@ -1176,6 +1220,12 @@ fn fix_jsonish_with_normalizations(input: &str) -> (String, Vec<String>) {
     apply_repair(
         &mut out,
         &mut normalizations,
+        remove_redundant_object_openers,
+        "removed_redundant_object_opener",
+    );
+    apply_repair(
+        &mut out,
+        &mut normalizations,
         quote_single_quoted_strings,
         "quoted_single_quoted_strings",
     );
@@ -1210,6 +1260,63 @@ fn fix_jsonish_with_normalizations(input: &str) -> (String, Vec<String>) {
         "closed_unterminated_object",
     );
     (out, normalizations)
+}
+
+/// Removes the common model slip `{ { "key": ... }` while leaving braces in
+/// strings alone. The repair is deliberately narrow: the second object must
+/// begin with a quoted or identifier-like key.
+fn remove_redundant_object_openers(input: &str) -> String {
+    let bytes = input.as_bytes();
+    let mut out = String::with_capacity(input.len());
+    let mut i = 0;
+    let mut in_string = false;
+    let mut escape = false;
+    while i < bytes.len() {
+        let ch = bytes[i] as char;
+        if in_string {
+            out.push(ch);
+            if escape {
+                escape = false;
+            } else if ch == '\\' {
+                escape = true;
+            } else if ch == '"' {
+                in_string = false;
+            }
+            i += 1;
+            continue;
+        }
+        if ch == '"' {
+            in_string = true;
+            out.push(ch);
+            i += 1;
+            continue;
+        }
+        if ch == '{' {
+            let mut second = i + 1;
+            while second < bytes.len() && (bytes[second] as char).is_whitespace() {
+                second += 1;
+            }
+            if second < bytes.len() && bytes[second] == b'{' {
+                let mut key = second + 1;
+                while key < bytes.len() && (bytes[key] as char).is_whitespace() {
+                    key += 1;
+                }
+                if key < bytes.len()
+                    && (bytes[key] == b'"'
+                        || bytes[key] == b'\''
+                        || (bytes[key] as char).is_ascii_alphabetic()
+                        || bytes[key] == b'_')
+                {
+                    // Drop the first opener and its intervening whitespace.
+                    i = second;
+                    continue;
+                }
+            }
+        }
+        out.push(ch);
+        i += 1;
+    }
+    out
 }
 
 fn apply_repair(
@@ -1839,6 +1946,46 @@ mod tests {
             candidate.raw_text.as_deref(),
             Some("{\"narration_text\": \"Aim for sixty seconds.\" \"target_words\": 130}")
         );
+    }
+
+    #[test]
+    fn repairs_redundant_object_opener_in_array() {
+        let report = parse_model_output(
+            r#"[{"title":"The Speed Limit Contradiction"}, {{"title":"Fusion of Dimensions"}]"#,
+            SourceInfo::stdin("model.txt"),
+            &ModelOutputOptions::default(),
+        );
+        let candidate = &report.payload.candidates[0];
+        assert_eq!(candidate.status, CandidateStatus::Recovered);
+        assert_eq!(
+            candidate.value.as_ref().unwrap()[1]["title"],
+            "Fusion of Dimensions"
+        );
+        assert!(
+            candidate
+                .normalizations
+                .contains(&"removed_redundant_object_opener".to_string())
+        );
+    }
+
+    #[test]
+    fn extracts_json_fence_nested_in_markdown_fence() {
+        let report = parse_model_output(
+            "````markdown\nresult:\n```json\n{\"ok\": true}\n```\n````",
+            SourceInfo::stdin("model.txt"),
+            &ModelOutputOptions::default(),
+        );
+        let candidate = report
+            .payload
+            .candidates
+            .iter()
+            .find(|candidate| {
+                candidate
+                    .normalizations
+                    .contains(&"extracted_nested_markdown_fence".to_string())
+            })
+            .unwrap();
+        assert_eq!(candidate.value.as_ref().unwrap()["ok"], true);
     }
 
     #[test]
