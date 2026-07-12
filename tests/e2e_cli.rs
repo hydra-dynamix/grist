@@ -357,6 +357,16 @@ fn cli_repairs_redundant_object_opener_and_selects_json_value() {
 }
 
 #[test]
+fn cli_preserves_latex_commands_with_single_backslashes() {
+    let input = r#""Explain how $\lambda_{obs} = \lambda_{emit} \frac{a(t_{obs})}{a(t_{emit})}$.""#;
+    let value = run_stdin(&["parse", "model-output", "-", "--json-value"], input);
+    assert_eq!(
+        value,
+        "Explain how $\\lambda_{obs} = \\lambda_{emit} \\frac{a(t_{obs})}{a(t_{emit})}$."
+    );
+}
+
+#[test]
 fn cli_ingests_repo_with_filters_and_external_artifacts() {
     let repo = temp_dir("repo");
     fs::create_dir_all(repo.join("src")).unwrap();

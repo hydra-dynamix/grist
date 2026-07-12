@@ -1238,6 +1238,12 @@ fn fix_jsonish_with_normalizations(input: &str) -> (String, Vec<String>) {
     apply_repair(
         &mut out,
         &mut normalizations,
+        preserve_backslash_commands_in_strings,
+        "preserved_backslash_command",
+    );
+    apply_repair(
+        &mut out,
+        &mut normalizations,
         escape_unescaped_string_boundary_quotes,
         "escaped_unescaped_string_quote",
     );
@@ -1260,6 +1266,57 @@ fn fix_jsonish_with_normalizations(input: &str) -> (String, Vec<String>) {
         "closed_unterminated_object",
     );
     (out, normalizations)
+}
+
+/// Turns model-emitted command text such as `\lambda`, `\Delta`, and `\frac`
+/// into valid JSON string content. A multi-letter ASCII command is treated as
+/// literal backslash text even when its first letter (`b`, `f`, `n`, `r`, or
+/// `t`) is also a valid one-character JSON escape.
+fn preserve_backslash_commands_in_strings(input: &str) -> String {
+    let chars: Vec<char> = input.chars().collect();
+    let mut out = String::with_capacity(input.len());
+    let mut in_string = false;
+    let mut i = 0;
+    while i < chars.len() {
+        let ch = chars[i];
+        if ch == '"' {
+            in_string = !in_string;
+            out.push(ch);
+            i += 1;
+            continue;
+        }
+        if in_string && ch == '\\' {
+            let Some(&next) = chars.get(i + 1) else {
+                out.push(ch);
+                i += 1;
+                continue;
+            };
+            if next == '\\' || next == '"' || next == '/' {
+                out.push(ch);
+                out.push(next);
+                i += 2;
+                continue;
+            }
+            let command_len = chars[i + 1..]
+                .iter()
+                .take_while(|candidate| candidate.is_ascii_alphabetic())
+                .count();
+            let valid_unicode_escape = next == 'u'
+                && chars
+                    .get(i + 2..i + 6)
+                    .is_some_and(|digits| digits.iter().all(|digit| digit.is_ascii_hexdigit()));
+            let invalid_single_escape = !matches!(next, 'b' | 'f' | 'n' | 'r' | 't' | 'u');
+            if !valid_unicode_escape && (command_len > 1 || invalid_single_escape) {
+                out.push('\\');
+            }
+            out.push(ch);
+            i += 1;
+            continue;
+        }
+        out.push(ch);
+        i += 1;
+    }
+    out
 }
 
 /// Removes the common model slip `{ { "key": ... }` while leaving braces in
@@ -1966,6 +2023,34 @@ mod tests {
                 .normalizations
                 .contains(&"removed_redundant_object_opener".to_string())
         );
+    }
+
+    #[test]
+    fn preserves_latex_commands_as_literal_backslashes() {
+        let report = parse_model_output(
+            r#"["$\Delta \lambda$", "$\frac{a(t_{obs})}{a(t_{emit})}$"]"#,
+            SourceInfo::stdin("model.txt"),
+            &ModelOutputOptions::default(),
+        );
+        let candidate = &report.payload.candidates[0];
+        assert_eq!(candidate.status, CandidateStatus::Recovered);
+        assert_eq!(candidate.value.as_ref().unwrap()[0], "$\\Delta \\lambda$");
+        assert_eq!(
+            candidate.value.as_ref().unwrap()[1],
+            "$\\frac{a(t_{obs})}{a(t_{emit})}$"
+        );
+        assert!(
+            candidate
+                .normalizations
+                .contains(&"preserved_backslash_command".to_string())
+        );
+    }
+
+    #[test]
+    fn leaves_real_json_escapes_and_unicode_escapes_unchanged() {
+        let parsed = parse_jsonish_value_with_repairs(r#""line\nfeed \u0394""#).unwrap();
+        assert_eq!(parsed.value, "line\nfeed Δ");
+        assert!(parsed.normalizations.is_empty());
     }
 
     #[test]
