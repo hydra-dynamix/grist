@@ -1,0 +1,13 @@
+% Synthetic Apache-2.0 bibliography promotion fixture.
+@string{venue = "Proceedings of " # series}
+@string{series = {GristConf}}
+@xdata{shared, publisher = {Example Press}, location = {Vancouver}}
+@proceedings{parent, title = venue, year = 2026}
+@inproceedings{child,
+  author = {Doe, Jane and Roe, Richard},
+  title = "Safe " # {Parsing},
+  crossref = {parent},
+  xdata = {shared},
+  month = jan
+}
+@comment{retained exactly}

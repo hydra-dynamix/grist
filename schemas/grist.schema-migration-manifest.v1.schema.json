@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "MigrationDescriptor": {
+      "properties": {
+        "family": {
+          "type": "string"
+        },
+        "from_version": {
+          "type": "string"
+        },
+        "to_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "family",
+        "from_version",
+        "to_version"
+      ],
+      "type": "object"
+    },
+    "RegisteredSchemaVersion": {
+      "properties": {
+        "family": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "family",
+        "version"
+      ],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "migrations": {
+      "items": {
+        "$ref": "#/definitions/MigrationDescriptor"
+      },
+      "type": "array"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "versions": {
+      "items": {
+        "$ref": "#/definitions/RegisteredSchemaVersion"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "migrations",
+    "schema_version",
+    "versions"
+  ],
+  "title": "MigrationManifest",
+  "type": "object"
+}

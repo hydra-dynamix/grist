@@ -161,7 +161,9 @@ pub struct TypeScriptSyntaxDetail {
     pub node_count: usize,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
 pub enum TypeScriptDetailMode {
     #[default]
     Semantic,
@@ -169,10 +171,16 @@ pub enum TypeScriptDetailMode {
     SyntaxDebug,
 }
 
-#[derive(Debug, Clone)]
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
 pub struct TypeScriptIngestOptions {
     pub dialect: TypeScriptDialect,
     pub detail: TypeScriptDetailMode,
+}
+
+impl crate::core::FormatOptions for TypeScriptIngestOptions {
+    const FORMAT: &'static str = "typescript";
 }
 
 impl Default for TypeScriptIngestOptions {
@@ -201,13 +209,16 @@ pub fn parse_typescript(
         .expect("tree-sitter TypeScript language should load");
     let line_index = LineIndex::new(text);
     let Some(tree) = parser.parse(text, None) else {
-        return Envelope::new(
+        return Envelope::without_payload(
+            crate::core::OperationKind::Parse,
             ArtifactKind::TypeScriptCode,
+            crate::core::OperationStatus::Failed,
             source,
             ParserInfo::new("tree-sitter-typescript"),
+            crate::core::options_digest(options).expect("TypeScript options must serialize"),
             SchemaVersion::TYPESCRIPT_CODE_V1,
-            empty_file(options.dialect),
         )
+        .expect("failed envelope status is valid")
         .with_hashes(Hashes::for_bytes(text.as_bytes(), Some(text)))
         .with_diagnostics(vec![Diagnostic::error(
             "tree-sitter-typescript",
@@ -279,6 +290,9 @@ pub fn parse_typescript(
         },
     )
     .with_hashes(Hashes::for_bytes(text.as_bytes(), Some(text)))
+    .with_options_digest(
+        crate::core::options_digest(options).expect("TypeScript options must serialize"),
+    )
     .with_diagnostics(diagnostics)
 }
 
@@ -652,22 +666,6 @@ impl TypeScriptCollector<'_, '_> {
     }
 }
 
-fn empty_file(dialect: TypeScriptDialect) -> TypeScriptFile {
-    TypeScriptFile {
-        schema_version: SchemaVersion::TYPESCRIPT_CODE_V1.to_string(),
-        dialect,
-        symbols: Vec::new(),
-        imports: Vec::new(),
-        exports: Vec::new(),
-        assignments: Vec::new(),
-        returns: Vec::new(),
-        calls: Vec::new(),
-        branches: Vec::new(),
-        parse_errors: Vec::new(),
-        detail: None,
-    }
-}
-
 fn is_parent_symbol(kind: &str) -> bool {
     matches!(
         kind,
@@ -873,6 +871,8 @@ mod tests {
         assert!(
             report
                 .payload
+                .as_ref()
+                .expect("complete operation payload")
                 .symbols
                 .iter()
                 .any(|symbol| symbol.name == "Shape")
@@ -880,14 +880,26 @@ mod tests {
         assert!(
             report
                 .payload
+                .as_ref()
+                .expect("complete operation payload")
                 .symbols
                 .iter()
                 .any(|symbol| symbol.qualified_name == "Box.area")
         );
-        assert_eq!(report.payload.imports.len(), 1);
+        assert_eq!(
+            report
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .imports
+                .len(),
+            1
+        );
         assert!(
             report
                 .payload
+                .as_ref()
+                .expect("complete operation payload")
                 .imports
                 .iter()
                 .any(|import| import.module == "react")
@@ -895,6 +907,8 @@ mod tests {
         assert!(
             report
                 .payload
+                .as_ref()
+                .expect("complete operation payload")
                 .branches
                 .iter()
                 .any(|branch| branch.kind == "if_statement")
@@ -902,6 +916,8 @@ mod tests {
         assert!(
             report
                 .payload
+                .as_ref()
+                .expect("complete operation payload")
                 .calls
                 .iter()
                 .any(|call| call.target == "memo")
@@ -919,8 +935,22 @@ mod tests {
                 detail: TypeScriptDetailMode::SyntaxDebug,
             },
         );
-        assert_eq!(report.payload.dialect, TypeScriptDialect::Tsx);
-        assert!(report.payload.detail.is_some());
+        assert_eq!(
+            report
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .dialect,
+            TypeScriptDialect::Tsx
+        );
+        assert!(
+            report
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .detail
+                .is_some()
+        );
         assert!(report.diagnostics.is_empty());
     }
 
@@ -935,10 +965,19 @@ mod tests {
                 detail: TypeScriptDetailMode::SyntaxDebug,
             },
         );
-        assert_eq!(report.payload.dialect, TypeScriptDialect::Jsx);
+        assert_eq!(
+            report
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .dialect,
+            TypeScriptDialect::Jsx
+        );
         assert!(
             report
                 .payload
+                .as_ref()
+                .expect("complete operation payload")
                 .symbols
                 .iter()
                 .any(|symbol| symbol.name == "View" && symbol.language == "jsx")
@@ -957,23 +996,41 @@ mod tests {
                 ..Default::default()
             },
         );
-        assert!(report.payload.symbols.iter().any(|symbol| {
-            symbol.name == "Service"
-                && symbol
-                    .decorators
-                    .iter()
-                    .any(|decorator| decorator == "@sealed")
-        }));
-        assert!(report.payload.symbols.iter().any(|symbol| {
-            symbol.qualified_name == "Service.run"
-                && symbol
-                    .decorators
-                    .iter()
-                    .any(|decorator| decorator == "@trace")
-        }));
         assert!(
             report
                 .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .symbols
+                .iter()
+                .any(|symbol| {
+                    symbol.name == "Service"
+                        && symbol
+                            .decorators
+                            .iter()
+                            .any(|decorator| decorator == "@sealed")
+                })
+        );
+        assert!(
+            report
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .symbols
+                .iter()
+                .any(|symbol| {
+                    symbol.qualified_name == "Service.run"
+                        && symbol
+                            .decorators
+                            .iter()
+                            .any(|decorator| decorator == "@trace")
+                })
+        );
+        assert!(
+            report
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
                 .symbols
                 .iter()
                 .any(|symbol| symbol.name == "Shape"
@@ -981,7 +1038,7 @@ mod tests {
         );
         assert!(
             report
-                .payload
+                .payload.as_ref().expect("complete operation payload")
                 .symbols
                 .iter()
                 .any(|symbol| symbol.name == "Id" && symbol.kind == TypeScriptSymbolKind::TypeAlias)
@@ -989,18 +1046,28 @@ mod tests {
         assert!(
             report
                 .payload
+                .as_ref()
+                .expect("complete operation payload")
                 .symbols
                 .iter()
                 .any(|symbol| symbol.name == "Mode" && symbol.kind == TypeScriptSymbolKind::Enum)
         );
         assert!(
-            report.payload.symbols.iter().any(
-                |symbol| symbol.name == "make" && symbol.kind == TypeScriptSymbolKind::Function
-            )
+            report
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .symbols
+                .iter()
+                .any(
+                    |symbol| symbol.name == "make" && symbol.kind == TypeScriptSymbolKind::Function
+                )
         );
         assert!(
             report
                 .payload
+                .as_ref()
+                .expect("complete operation payload")
                 .imports
                 .iter()
                 .any(|import| import.default.as_deref() == Some("DefaultThing")
@@ -1009,6 +1076,8 @@ mod tests {
         assert!(
             report
                 .payload
+                .as_ref()
+                .expect("complete operation payload")
                 .exports
                 .iter()
                 .any(|export| export.source.as_deref() == Some("pkg")

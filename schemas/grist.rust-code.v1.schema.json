@@ -1,1 +1,268 @@
-{"$schema":"http://json-schema.org/draft-07/schema#","definitions":{"RustImport":{"properties":{"alias":{"type":["string","null"]},"id":{"type":"string"},"path":{"type":"string"},"range":{"$ref":"#/definitions/SourceRange"},"visibility":{"$ref":"#/definitions/RustVisibility"}},"required":["id","path","range","visibility"],"type":"object"},"RustParseError":{"properties":{"node_kind":{"type":"string"},"range":{"$ref":"#/definitions/SourceRange"}},"required":["node_kind","range"],"type":"object"},"RustSymbol":{"properties":{"attributes":{"items":{"type":"string"},"type":"array"},"doc":{"type":["string","null"]},"id":{"type":"string"},"kind":{"$ref":"#/definitions/RustSymbolKind"},"language":{"type":"string"},"name":{"type":"string"},"parent":{"type":["string","null"]},"path":{"type":["string","null"]},"range":{"$ref":"#/definitions/SourceRange"},"syntax":{"anyOf":[{"$ref":"#/definitions/RustSyntaxSummary"},{"type":"null"}]},"visibility":{"$ref":"#/definitions/RustVisibility"}},"required":["attributes","id","kind","language","name","range","visibility"],"type":"object"},"RustSymbolKind":{"enum":["module","function","method","struct","enum","union","trait","impl","const","static","type_alias","macro_definition","macro_invocation","unknown"],"type":"string"},"RustSyntaxDetail":{"properties":{"node_count":{"format":"uint","minimum":0.0,"type":"integer"},"root_kind":{"type":"string"},"root_named_child_count":{"format":"uint","minimum":0.0,"type":"integer"}},"required":["node_count","root_kind","root_named_child_count"],"type":"object"},"RustSyntaxSummary":{"properties":{"named_child_count":{"format":"uint","minimum":0.0,"type":"integer"},"node_kind":{"type":"string"}},"required":["named_child_count","node_kind"],"type":"object"},"RustVisibility":{"enum":["public","crate","restricted","private","unknown"],"type":"string"},"SourceRange":{"properties":{"byte_end":{"format":"uint","minimum":0.0,"type":"integer"},"byte_start":{"format":"uint","minimum":0.0,"type":"integer"},"end_column":{"format":"uint","minimum":0.0,"type":"integer"},"end_line":{"format":"uint","minimum":0.0,"type":"integer"},"start_column":{"format":"uint","minimum":0.0,"type":"integer"},"start_line":{"format":"uint","minimum":0.0,"type":"integer"}},"required":["byte_end","byte_start","end_column","end_line","start_column","start_line"],"type":"object"}},"properties":{"detail":{"anyOf":[{"$ref":"#/definitions/RustSyntaxDetail"},{"type":"null"}]},"imports":{"items":{"$ref":"#/definitions/RustImport"},"type":"array"},"parse_errors":{"items":{"$ref":"#/definitions/RustParseError"},"type":"array"},"schema_version":{"type":"string"},"symbols":{"items":{"$ref":"#/definitions/RustSymbol"},"type":"array"}},"required":["imports","parse_errors","schema_version","symbols"],"title":"RustFile","type":"object"}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "RustImport": {
+      "properties": {
+        "alias": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "visibility": {
+          "$ref": "#/definitions/RustVisibility"
+        }
+      },
+      "required": [
+        "id",
+        "path",
+        "range",
+        "visibility"
+      ],
+      "type": "object"
+    },
+    "RustParseError": {
+      "properties": {
+        "node_kind": {
+          "type": "string"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        }
+      },
+      "required": [
+        "node_kind",
+        "range"
+      ],
+      "type": "object"
+    },
+    "RustSymbol": {
+      "properties": {
+        "attributes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "doc": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/RustSymbolKind"
+        },
+        "language": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "syntax": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RustSyntaxSummary"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "visibility": {
+          "$ref": "#/definitions/RustVisibility"
+        }
+      },
+      "required": [
+        "attributes",
+        "id",
+        "kind",
+        "language",
+        "name",
+        "range",
+        "visibility"
+      ],
+      "type": "object"
+    },
+    "RustSymbolKind": {
+      "enum": [
+        "module",
+        "function",
+        "method",
+        "struct",
+        "enum",
+        "union",
+        "trait",
+        "impl",
+        "const",
+        "static",
+        "type_alias",
+        "macro_definition",
+        "macro_invocation",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "RustSyntaxDetail": {
+      "properties": {
+        "node_count": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "root_kind": {
+          "type": "string"
+        },
+        "root_named_child_count": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "node_count",
+        "root_kind",
+        "root_named_child_count"
+      ],
+      "type": "object"
+    },
+    "RustSyntaxSummary": {
+      "properties": {
+        "named_child_count": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "node_kind": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "named_child_count",
+        "node_kind"
+      ],
+      "type": "object"
+    },
+    "RustVisibility": {
+      "enum": [
+        "public",
+        "crate",
+        "restricted",
+        "private",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "SourceRange": {
+      "properties": {
+        "byte_end": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "byte_start": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "end_column": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "end_line": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "start_column": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "start_line": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "byte_end",
+        "byte_start",
+        "end_column",
+        "end_line",
+        "start_column",
+        "start_line"
+      ],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "detail": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/RustSyntaxDetail"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "imports": {
+      "items": {
+        "$ref": "#/definitions/RustImport"
+      },
+      "type": "array"
+    },
+    "parse_errors": {
+      "items": {
+        "$ref": "#/definitions/RustParseError"
+      },
+      "type": "array"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "symbols": {
+      "items": {
+        "$ref": "#/definitions/RustSymbol"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "imports",
+    "parse_errors",
+    "schema_version",
+    "symbols"
+  ],
+  "title": "RustFile",
+  "type": "object"
+}

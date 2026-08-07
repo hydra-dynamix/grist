@@ -1,0 +1,3029 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "AggregateContentIdentity": {
+      "description": "Content identity for a compound input.\n\nMembers are sorted by member index, then path and identity fields. `sha256` hashes canonical JSON v1 of `schema_version`, `canonicalization`, and the sorted `members` array. Summary fields and the digest itself are excluded.",
+      "properties": {
+        "canonicalization": {
+          "$ref": "#/definitions/CanonicalJsonVersion"
+        },
+        "manifest_byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "member_count": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "members": {
+          "items": {
+            "$ref": "#/definitions/AggregateMemberIdentity"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "total_byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "canonicalization",
+        "manifest_byte_length",
+        "member_count",
+        "members",
+        "schema_version",
+        "sha256",
+        "total_byte_length"
+      ],
+      "type": "object"
+    },
+    "AggregateMemberIdentity": {
+      "description": "Stable member summary used in a compound-input aggregate manifest.",
+      "properties": {
+        "aggregate_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "canonical_payload_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "decoded_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "format": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/FormatIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "member_index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "member_path": {
+          "type": "string"
+        },
+        "raw_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "byte_length",
+        "member_path"
+      ],
+      "type": "object"
+    },
+    "ArtifactContent": {
+      "description": "Storage representation is deliberately outside the stable artifact identity.",
+      "oneOf": [
+        {
+          "description": "Inline representation with its caller-selected threshold made explicit.",
+          "properties": {
+            "bytes": {
+              "items": {
+                "format": "uint8",
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "inline_threshold_bytes": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "storage": {
+              "enum": [
+                "inline"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "bytes",
+            "inline_threshold_bytes",
+            "storage"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "inline_threshold_bytes": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "reference": {
+              "$ref": "#/definitions/ContentAddressedArtifactReference"
+            },
+            "storage": {
+              "enum": [
+                "content_addressed"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "inline_threshold_bytes",
+            "reference",
+            "storage"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "ArtifactDisposition": {
+      "description": "Content-disposition semantics, independent of storage or safety policy.",
+      "enum": [
+        "attachment",
+        "inline",
+        "related",
+        "alternative",
+        "package_part",
+        "unspecified"
+      ],
+      "type": "string"
+    },
+    "ArtifactExtraction": {
+      "description": "Machine-readable extraction result for one child.",
+      "properties": {
+        "diagnostic_codes": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "message": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "$ref": "#/definitions/ArtifactExtractionStatus"
+        },
+        "status_code": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "status_code"
+      ],
+      "type": "object"
+    },
+    "ArtifactExtractionStatus": {
+      "description": "Terminal extraction states retained even when no child bytes are available.",
+      "enum": [
+        "extracted",
+        "quarantined",
+        "inventory_only",
+        "skipped",
+        "encrypted",
+        "unsupported",
+        "rejected",
+        "budget_limited",
+        "failed"
+      ],
+      "type": "string"
+    },
+    "ArtifactIdentity": {
+      "description": "Stable child identity. It excludes filename, disposition, status, and storage mode.",
+      "properties": {
+        "artifact_id": {
+          "type": "string"
+        },
+        "content": {
+          "$ref": "#/definitions/ContentIdentity"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "content"
+      ],
+      "type": "object"
+    },
+    "ArtifactParent": {
+      "description": "The parent is retained structurally rather than flattened into a path.",
+      "properties": {
+        "identity": {
+          "$ref": "#/definitions/ContentIdentity"
+        },
+        "relationship": {
+          "$ref": "#/definitions/ArtifactRelationship"
+        }
+      },
+      "required": [
+        "identity",
+        "relationship"
+      ],
+      "type": "object"
+    },
+    "ArtifactRelationship": {
+      "description": "How the source relates the child to its immediate parent.",
+      "enum": [
+        "attachment_of",
+        "embedded_in",
+        "inline_resource_of",
+        "alternative_representation_of",
+        "package_part_of",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "ArtifactSafety": {
+      "description": "Auditable, deterministic safety result. Classifiers only inspect supplied metadata and bytes.",
+      "properties": {
+        "classification": {
+          "$ref": "#/definitions/ArtifactSafetyClassification"
+        },
+        "evidence": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/ArtifactSafetyEvidence"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "classification"
+      ],
+      "type": "object"
+    },
+    "ArtifactSafetyClassification": {
+      "description": "Security classification used to decide whether materialization is allowed.",
+      "enum": [
+        "passive",
+        "encrypted",
+        "active_content",
+        "script",
+        "macro",
+        "executable",
+        "suspicious",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "ArtifactSafetyEvidence": {
+      "description": "Why a safety class was selected.",
+      "properties": {
+        "classification": {
+          "$ref": "#/definitions/ArtifactSafetyClassification"
+        },
+        "source": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "classification",
+        "source",
+        "value"
+      ],
+      "type": "object"
+    },
+    "BoundingBox": {
+      "description": "A rectangle in a declared coordinate system.",
+      "properties": {
+        "height": {
+          "format": "double",
+          "type": "number"
+        },
+        "origin": {
+          "$ref": "#/definitions/CoordinateOrigin"
+        },
+        "unit": {
+          "$ref": "#/definitions/CoordinateUnit"
+        },
+        "width": {
+          "format": "double",
+          "type": "number"
+        },
+        "x": {
+          "format": "double",
+          "type": "number"
+        },
+        "y": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "height",
+        "origin",
+        "unit",
+        "width",
+        "x",
+        "y"
+      ],
+      "type": "object"
+    },
+    "CanonicalJsonVersion": {
+      "description": "Canonical JSON compatibility boundary.\n\nNew algorithms require new enum variants. Changing `V1` would change payload and aggregate identities and is an incompatible change.",
+      "enum": [
+        "grist/canonical-json/v1"
+      ],
+      "type": "string"
+    },
+    "CanonicalPayloadIdentity": {
+      "description": "SHA-256 of the exact canonical JSON bytes of an authoritative payload.",
+      "properties": {
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "canonicalization": {
+          "$ref": "#/definitions/CanonicalJsonVersion"
+        },
+        "payload_schema_version": {
+          "$ref": "#/definitions/SchemaVersion"
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "byte_length",
+        "canonicalization",
+        "payload_schema_version",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "CellAddress": {
+      "description": "A sheet cell address with explicit row and column bases.",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/IndexBase"
+        },
+        "column": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "row": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "column",
+        "row"
+      ],
+      "type": "object"
+    },
+    "ContentAddressedArtifactReference": {
+      "description": "Digest-keyed external reference. Grist does not prescribe persistence policy.",
+      "properties": {
+        "algorithm": {
+          "type": "string"
+        },
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "digest": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "algorithm",
+        "byte_length",
+        "digest"
+      ],
+      "type": "object"
+    },
+    "ContentIdentity": {
+      "description": "Complete singular or compound content identity retained by an envelope.",
+      "properties": {
+        "aggregate": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/AggregateContentIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "canonical_payload": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CanonicalPayloadIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "decoded": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DecodedContentIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "detection_candidates": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/DetectionCandidate"
+          },
+          "type": "array"
+        },
+        "format": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/FormatIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "raw": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RawContentIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "CoordinateOrigin": {
+      "description": "Coordinate-system origin for rectangular source regions.",
+      "enum": [
+        "top_left",
+        "bottom_left"
+      ],
+      "type": "string"
+    },
+    "CoordinateUnit": {
+      "description": "Units used by rectangular source regions.",
+      "enum": [
+        "points",
+        "pixels",
+        "normalized"
+      ],
+      "type": "string"
+    },
+    "DecodedContentIdentity": {
+      "description": "SHA-256 of decoded text's UTF-8 bytes, including replacements when lossy.\n\nEncoding, loss state, and diagnostics are metadata outside the hashed bytes.",
+      "properties": {
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "encoding": {
+          "type": "string"
+        },
+        "lossy": {
+          "type": "boolean"
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "byte_length",
+        "encoding",
+        "lossy",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "DerivedNodeReference": {
+      "description": "A reference from derived content back to the nodes and declared transforms that produced it.",
+      "properties": {
+        "derivation_steps": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "source_node_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "derivation_steps",
+        "source_node_ids"
+      ],
+      "type": "object"
+    },
+    "DetectionCandidate": {
+      "description": "A ranked format candidate with all evidence retained.",
+      "properties": {
+        "confidence": {
+          "format": "float",
+          "type": "number"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/definitions/DetectionEvidence"
+          },
+          "type": "array"
+        },
+        "identity": {
+          "$ref": "#/definitions/FormatIdentity"
+        },
+        "parser_availability": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/ParserAvailability"
+            }
+          ],
+          "default": "unregistered"
+        },
+        "parser_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rank": {
+          "description": "One-based rank; lower ranks are preferred.",
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "confidence",
+        "evidence",
+        "identity",
+        "rank"
+      ],
+      "type": "object"
+    },
+    "DetectionEvidence": {
+      "description": "One retained reason for a ranked detection candidate.",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/DetectionEvidenceKind"
+        }
+      },
+      "required": [
+        "description",
+        "kind"
+      ],
+      "type": "object"
+    },
+    "DetectionEvidenceKind": {
+      "description": "Signal family that contributed to a detection candidate.",
+      "enum": [
+        "magic_bytes",
+        "declared_media_type",
+        "extension",
+        "filename",
+        "container_manifest",
+        "charset",
+        "structure",
+        "shebang",
+        "grammar_probe",
+        "fallback"
+      ],
+      "type": "string"
+    },
+    "EmbeddedArtifact": {
+      "description": "Complete artifact inventory record.",
+      "properties": {
+        "content": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ArtifactContent"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "declared_filename": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "disposition": {
+          "$ref": "#/definitions/ArtifactDisposition"
+        },
+        "extraction": {
+          "$ref": "#/definitions/ArtifactExtraction"
+        },
+        "identity": {
+          "$ref": "#/definitions/ArtifactIdentity"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "media_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parent": {
+          "$ref": "#/definitions/ArtifactParent"
+        },
+        "safety": {
+          "$ref": "#/definitions/ArtifactSafety"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "disposition",
+        "extraction",
+        "identity",
+        "locator",
+        "parent",
+        "safety",
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "FormatIdentity": {
+      "description": "Detected parser-format name paired with an Internet media type when known.",
+      "properties": {
+        "format": {
+          "type": "string"
+        },
+        "media_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "format"
+      ],
+      "type": "object"
+    },
+    "IndexBase": {
+      "description": "Whether an ordinal is counted from zero or one.\n\nEvery format component carrying a page, slide, cell, frame, token, output, member, track, or record ordinal uses this type rather than relying on an undocumented convention.",
+      "enum": [
+        "zero",
+        "one"
+      ],
+      "type": "string"
+    },
+    "IndexPosition": {
+      "description": "One explicitly based ordinal.",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/IndexBase"
+        },
+        "value": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "value"
+      ],
+      "type": "object"
+    },
+    "IndexRange": {
+      "description": "A half-open range of ordinals using one declared base.",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/IndexBase"
+        },
+        "end": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "start": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "end",
+        "start"
+      ],
+      "type": "object"
+    },
+    "LocationComponent": {
+      "description": "One location inside its immediately preceding parent component.",
+      "oneOf": [
+        {
+          "properties": {
+            "byte_end": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "byte_start": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "end_column": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "end_line": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "start_column": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "start_line": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "type": {
+              "enum": [
+                "text_range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "byte_end",
+            "byte_start",
+            "end_column",
+            "end_line",
+            "start_column",
+            "start_line",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "bbox": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/BoundingBox"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "page": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "rotation_degrees": {
+              "format": "int16",
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "tokens": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexRange"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "enum": [
+                "pdf_region"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "page",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "column": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "object_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "paragraph": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "part": {
+              "type": "string"
+            },
+            "row": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "run": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "table": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "enum": [
+                "ooxml_part"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "part",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "bbox": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/BoundingBox"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "shape_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "slide": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "type": {
+              "enum": [
+                "slide_region"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "slide",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "end_cell": {
+              "$ref": "#/definitions/CellAddress"
+            },
+            "sheet": {
+              "type": "string"
+            },
+            "start_cell": {
+              "$ref": "#/definitions/CellAddress"
+            },
+            "type": {
+              "enum": [
+                "sheet_range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "end_cell",
+            "sheet",
+            "start_cell",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "cell_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "index": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "output_index": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "enum": [
+                "notebook_cell"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "index",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "header": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "message_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "mime_path": {
+              "items": {
+                "$ref": "#/definitions/IndexPosition"
+              },
+              "type": "array"
+            },
+            "type": {
+              "enum": [
+                "email_part"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "member_index": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "member_path": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "archive_member"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "member_index",
+            "member_path",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "bbox": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/BoundingBox"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "frame": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "type": {
+              "enum": [
+                "image_region"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "frame",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "end_ms": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "start_ms": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "track": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "enum": [
+                "media_time"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "end_ms",
+            "start_ms",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "collection": {
+              "type": "string"
+            },
+            "field": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "records": {
+              "$ref": "#/definitions/IndexRange"
+            },
+            "type": {
+              "enum": [
+                "record_range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "collection",
+            "records",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "pointer": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "json_pointer"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "pointer",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "xml_path"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "type"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "LocatorConfidence": {
+      "format": "double",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "type": "number"
+    },
+    "OdfPresentationAnimation": {
+      "properties": {
+        "attribute_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "attributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "begin": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "duration": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "qualified_name": {
+          "type": "string"
+        },
+        "raw_xml": {
+          "type": "string"
+        },
+        "target_element": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "text": {
+          "type": "string"
+        },
+        "values": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "attributes",
+        "index",
+        "locator",
+        "qualified_name",
+        "raw_xml",
+        "text"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationChart": {
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "class": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "href": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "resolved_members": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "series": {
+          "items": {
+            "$ref": "#/definitions/OdfPresentationChartSeries"
+          },
+          "type": "array"
+        },
+        "shape_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "attributes",
+        "href",
+        "locator",
+        "resolved_members",
+        "series",
+        "shape_id"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationChartSeries": {
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "categories_range": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "class": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "label_cell": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "values_range": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "attributes",
+        "index",
+        "locator"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationComment": {
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "created_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "creator": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "attributes",
+        "locator",
+        "text"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationEmbeddedObject": {
+      "properties": {
+        "artifact_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "attributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "href": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "kind": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "media_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "resolved_members": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "shape_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_ids",
+        "attributes",
+        "kind",
+        "locator",
+        "resolved_members",
+        "shape_id"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationGeometry": {
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "bbox_points": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/BoundingBox"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "height": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "points": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rotation_angle": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "transform": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "view_box": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "width": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "x": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "y": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "attributes"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationImage": {
+      "properties": {
+        "alt_description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "alt_title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "artifact_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "attributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "href": {
+          "type": "string"
+        },
+        "identity": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ContentIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "media_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "resolved_member": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "shape_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_ids",
+        "attributes",
+        "href",
+        "locator",
+        "shape_id"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationLink": {
+      "properties": {
+        "action": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "attributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "external": {
+          "type": "boolean"
+        },
+        "href": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "resolved_member": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "show": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_run": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "source_shape_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "attributes",
+        "external",
+        "href",
+        "locator",
+        "text"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationManifestEntry": {
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "checksum": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "checksum_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "encrypted": {
+          "type": "boolean"
+        },
+        "full_path": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "media_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "size": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "attributes",
+        "encrypted",
+        "full_path",
+        "locator"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationMasterPage": {
+      "properties": {
+        "display_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "page_layout_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "presentation_page_layout_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "raw_elements": {
+          "items": {
+            "$ref": "#/definitions/OdfPresentationXmlMetadata"
+          },
+          "type": "array"
+        },
+        "shapes": {
+          "items": {
+            "$ref": "#/definitions/OdfPresentationShape"
+          },
+          "type": "array"
+        },
+        "style_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "locator",
+        "raw_elements",
+        "shapes"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationNote": {
+      "properties": {
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "shapes": {
+          "items": {
+            "$ref": "#/definitions/OdfPresentationShape"
+          },
+          "type": "array"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "locator",
+        "shapes",
+        "text"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationPackageKind": {
+      "enum": [
+        "presentation",
+        "template"
+      ],
+      "type": "string"
+    },
+    "OdfPresentationPageLayout": {
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "orientation": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "page_height": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "page_width": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "placeholders": {
+          "items": {
+            "$ref": "#/definitions/OdfPresentationPlaceholder"
+          },
+          "type": "array"
+        },
+        "print_orientation": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "attributes",
+        "locator",
+        "placeholders"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationPart": {
+      "properties": {
+        "compressed_size": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "compression": {
+          "type": "string"
+        },
+        "crc32": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "identity": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ContentIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "media_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "package_index": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        },
+        "rejection_code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "$ref": "#/definitions/OdfPresentationPartStatus"
+        },
+        "uncompressed_size": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "compressed_size",
+        "compression",
+        "crc32",
+        "locator",
+        "package_index",
+        "path",
+        "status",
+        "uncompressed_size"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationPartStatus": {
+      "enum": [
+        "available",
+        "directory",
+        "encrypted",
+        "rejected"
+      ],
+      "type": "string"
+    },
+    "OdfPresentationPlaceholder": {
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "geometry": {
+          "$ref": "#/definitions/OdfPresentationGeometry"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "object": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "presentation_class": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "attributes",
+        "geometry",
+        "locator"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationProperty": {
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "qualified_name": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "attributes",
+        "locator",
+        "qualified_name",
+        "value"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationReadingOrder": {
+      "properties": {
+        "confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "entries": {
+          "items": {
+            "$ref": "#/definitions/OdfPresentationReadingOrderEntry"
+          },
+          "type": "array"
+        },
+        "method": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "confidence",
+        "entries",
+        "method"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationReadingOrderEntry": {
+      "properties": {
+        "confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "evidence": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "rank": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "shape_id": {
+          "type": "string"
+        },
+        "source_z_order": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "confidence",
+        "evidence",
+        "locator",
+        "rank",
+        "shape_id",
+        "source_z_order"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationShape": {
+      "properties": {
+        "alt_description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "alt_title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "attributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "geometry": {
+          "$ref": "#/definitions/OdfPresentationGeometry"
+        },
+        "kind": {
+          "$ref": "#/definitions/OdfPresentationShapeKind"
+        },
+        "layer": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parent_shape_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "presentation_class": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "qualified_name": {
+          "type": "string"
+        },
+        "raw_xml": {
+          "type": "string"
+        },
+        "shape_id": {
+          "type": "string"
+        },
+        "style_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "text": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/OdfPresentationTextBody"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "text_style_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "z_order": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "attributes",
+        "geometry",
+        "kind",
+        "locator",
+        "qualified_name",
+        "raw_xml",
+        "shape_id",
+        "z_order"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationShapeKind": {
+      "enum": [
+        "frame",
+        "group",
+        "rectangle",
+        "ellipse",
+        "line",
+        "connector",
+        "custom_shape",
+        "polygon",
+        "polyline",
+        "path",
+        "caption",
+        "measure",
+        "control",
+        "page_thumbnail",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "OdfPresentationSlide": {
+      "properties": {
+        "animations": {
+          "items": {
+            "$ref": "#/definitions/OdfPresentationAnimation"
+          },
+          "type": "array"
+        },
+        "attributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "charts": {
+          "items": {
+            "$ref": "#/definitions/OdfPresentationChart"
+          },
+          "type": "array"
+        },
+        "comments": {
+          "items": {
+            "$ref": "#/definitions/OdfPresentationComment"
+          },
+          "type": "array"
+        },
+        "embedded_objects": {
+          "items": {
+            "$ref": "#/definitions/OdfPresentationEmbeddedObject"
+          },
+          "type": "array"
+        },
+        "images": {
+          "items": {
+            "$ref": "#/definitions/OdfPresentationImage"
+          },
+          "type": "array"
+        },
+        "links": {
+          "items": {
+            "$ref": "#/definitions/OdfPresentationLink"
+          },
+          "type": "array"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "master_page_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "notes": {
+          "items": {
+            "$ref": "#/definitions/OdfPresentationNote"
+          },
+          "type": "array"
+        },
+        "order": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "presentation_page_layout_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "raw_elements": {
+          "items": {
+            "$ref": "#/definitions/OdfPresentationXmlMetadata"
+          },
+          "type": "array"
+        },
+        "reading_order": {
+          "$ref": "#/definitions/OdfPresentationReadingOrder"
+        },
+        "shapes": {
+          "items": {
+            "$ref": "#/definitions/OdfPresentationShape"
+          },
+          "type": "array"
+        },
+        "slide_id": {
+          "type": "string"
+        },
+        "style_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tables": {
+          "items": {
+            "$ref": "#/definitions/OdfPresentationTable"
+          },
+          "type": "array"
+        },
+        "transition": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/OdfPresentationTransition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "visible": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "animations",
+        "attributes",
+        "charts",
+        "comments",
+        "embedded_objects",
+        "images",
+        "links",
+        "locator",
+        "notes",
+        "order",
+        "raw_elements",
+        "reading_order",
+        "shapes",
+        "slide_id",
+        "tables",
+        "visible"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationStyle": {
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "display_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "family": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "page_layout_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parent_style_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "presentation_page_layout_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "properties": {
+          "additionalProperties": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "type": "object"
+        },
+        "qualified_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "attributes",
+        "locator",
+        "properties",
+        "qualified_name"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationTable": {
+      "properties": {
+        "columns": {
+          "items": {
+            "$ref": "#/definitions/OdfPresentationTableColumn"
+          },
+          "type": "array"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rows": {
+          "items": {
+            "$ref": "#/definitions/OdfPresentationTableRow"
+          },
+          "type": "array"
+        },
+        "shape_id": {
+          "type": "string"
+        },
+        "style_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "columns",
+        "locator",
+        "rows",
+        "shape_id"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationTableCell": {
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "column": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "column_span": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "covered": {
+          "type": "boolean"
+        },
+        "formula": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "repeated": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "row": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "row_span": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        },
+        "value": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "value_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "attributes",
+        "column",
+        "column_span",
+        "covered",
+        "locator",
+        "repeated",
+        "row",
+        "row_span",
+        "text"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationTableColumn": {
+      "properties": {
+        "index": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "repeated": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "style_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "index",
+        "locator",
+        "repeated"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationTableRow": {
+      "properties": {
+        "cells": {
+          "items": {
+            "$ref": "#/definitions/OdfPresentationTableCell"
+          },
+          "type": "array"
+        },
+        "index": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "repeated": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "cells",
+        "index",
+        "locator",
+        "repeated"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationTextBody": {
+      "properties": {
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "paragraphs": {
+          "items": {
+            "$ref": "#/definitions/OdfPresentationTextParagraph"
+          },
+          "type": "array"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "locator",
+        "paragraphs",
+        "text"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationTextParagraph": {
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "index": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "level": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "runs": {
+          "items": {
+            "$ref": "#/definitions/OdfPresentationTextRun"
+          },
+          "type": "array"
+        },
+        "style_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "attributes",
+        "index",
+        "kind",
+        "locator",
+        "runs",
+        "text"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationTextRun": {
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "href": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "style_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "attributes",
+        "index",
+        "kind",
+        "locator",
+        "text"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationTransition": {
+      "properties": {
+        "advance_after": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "advance_on_click": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "attributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "direction": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "duration": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "speed": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "style": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "subtype": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "attributes",
+        "locator"
+      ],
+      "type": "object"
+    },
+    "OdfPresentationXmlMetadata": {
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "qualified_name": {
+          "type": "string"
+        },
+        "raw_xml": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "attributes",
+        "locator",
+        "qualified_name",
+        "raw_xml",
+        "text"
+      ],
+      "type": "object"
+    },
+    "ParserAvailability": {
+      "description": "Whether a ranked candidate can be interpreted by the active registry.",
+      "enum": [
+        "available",
+        "unavailable",
+        "unregistered"
+      ],
+      "type": "string"
+    },
+    "RawContentIdentity": {
+      "description": "SHA-256 of exactly the original input bytes, without a prefix or suffix.",
+      "properties": {
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "byte_length",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "SchemaVersion": {
+      "type": "string"
+    },
+    "SourceLocator": {
+      "description": "An outermost-to-innermost containment chain.\n\nComponent `n` is interpreted relative to component `n - 1`. For example, `[archive_member, email_part, ooxml_part, text_range]` identifies text in an OOXML part attached to an email stored in an archive without flattening any parent coordinate system.",
+      "oneOf": [
+        {
+          "properties": {
+            "derived_from": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/DerivedNodeReference"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "precision": {
+              "enum": [
+                "exact"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "precision"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "confidence": {
+              "$ref": "#/definitions/LocatorConfidence"
+            },
+            "derived_from": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/DerivedNodeReference"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "precision": {
+              "enum": [
+                "approximate"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "confidence",
+            "precision"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "confidence": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/LocatorConfidence"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "derived_from": {
+              "$ref": "#/definitions/DerivedNodeReference"
+            },
+            "precision": {
+              "enum": [
+                "synthetic"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "derived_from",
+            "precision"
+          ],
+          "type": "object"
+        }
+      ],
+      "properties": {
+        "components": {
+          "items": {
+            "$ref": "#/definitions/LocationComponent"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "components"
+      ],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "embedded_artifacts": {
+      "items": {
+        "$ref": "#/definitions/EmbeddedArtifact"
+      },
+      "type": "array"
+    },
+    "manifest": {
+      "items": {
+        "$ref": "#/definitions/OdfPresentationManifestEntry"
+      },
+      "type": "array"
+    },
+    "master_pages": {
+      "items": {
+        "$ref": "#/definitions/OdfPresentationMasterPage"
+      },
+      "type": "array"
+    },
+    "metadata": {
+      "items": {
+        "$ref": "#/definitions/OdfPresentationProperty"
+      },
+      "type": "array"
+    },
+    "package_kind": {
+      "$ref": "#/definitions/OdfPresentationPackageKind"
+    },
+    "package_media_type": {
+      "type": "string"
+    },
+    "page_layouts": {
+      "items": {
+        "$ref": "#/definitions/OdfPresentationPageLayout"
+      },
+      "type": "array"
+    },
+    "parts": {
+      "items": {
+        "$ref": "#/definitions/OdfPresentationPart"
+      },
+      "type": "array"
+    },
+    "raw_elements": {
+      "items": {
+        "$ref": "#/definitions/OdfPresentationXmlMetadata"
+      },
+      "type": "array"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "settings": {
+      "items": {
+        "$ref": "#/definitions/OdfPresentationProperty"
+      },
+      "type": "array"
+    },
+    "slides": {
+      "items": {
+        "$ref": "#/definitions/OdfPresentationSlide"
+      },
+      "type": "array"
+    },
+    "styles": {
+      "items": {
+        "$ref": "#/definitions/OdfPresentationStyle"
+      },
+      "type": "array"
+    },
+    "version": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "embedded_artifacts",
+    "manifest",
+    "master_pages",
+    "metadata",
+    "package_kind",
+    "package_media_type",
+    "page_layouts",
+    "parts",
+    "raw_elements",
+    "schema_version",
+    "settings",
+    "slides",
+    "styles"
+  ],
+  "title": "OdfPresentationDocument",
+  "type": "object"
+}

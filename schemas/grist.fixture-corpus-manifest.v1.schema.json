@@ -1,0 +1,463 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "BuilderKind": {
+      "enum": [
+        "maximum_complexity",
+        "nested_container",
+        "synthetic_bytes",
+        "provider_recording"
+      ],
+      "type": "string"
+    },
+    "CanonicalJsonVersion": {
+      "description": "Canonical JSON compatibility boundary.\n\nNew algorithms require new enum variants. Changing `V1` would change payload and aggregate identities and is an incompatible change.",
+      "enum": [
+        "grist/canonical-json/v1"
+      ],
+      "type": "string"
+    },
+    "CorpusPolicy": {
+      "properties": {
+        "active_content_execution_allowed": {
+          "type": "boolean"
+        },
+        "canonicalization": {
+          "$ref": "#/definitions/CanonicalJsonVersion"
+        },
+        "checked_in_data_classification": {
+          "type": "string"
+        },
+        "expected_output_policy": {
+          "type": "string"
+        },
+        "implicit_network_allowed": {
+          "type": "boolean"
+        },
+        "required_classes": {
+          "items": {
+            "$ref": "#/definitions/FixtureClass"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "active_content_execution_allowed",
+        "canonicalization",
+        "checked_in_data_classification",
+        "expected_output_policy",
+        "implicit_network_allowed",
+        "required_classes"
+      ],
+      "type": "object"
+    },
+    "ExpectedNormalization": {
+      "oneOf": [
+        {
+          "description": "No value is removed or rewritten.",
+          "properties": {
+            "kind": {
+              "enum": [
+                "exact"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "Remove one explicitly named caller-supplied timestamp.",
+          "properties": {
+            "json_pointer": {
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "remove_caller_timestamp"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "json_pointer",
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "Replace a host-dependent path with the literal `$FIXTURE_ROOT`.",
+          "properties": {
+            "json_pointer": {
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "replace_fixture_root"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "json_pointer",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "ExpectedOutput": {
+      "properties": {
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "canonical_sha256": {
+          "type": "string"
+        },
+        "canonicalization": {
+          "$ref": "#/definitions/CanonicalJsonVersion"
+        },
+        "normalization": {
+          "description": "Explicit even when exact; there is no implicit volatile-field list.",
+          "items": {
+            "$ref": "#/definitions/ExpectedNormalization"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "surface": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "byte_length",
+        "canonical_sha256",
+        "canonicalization",
+        "normalization",
+        "path",
+        "schema_version",
+        "sha256",
+        "surface"
+      ],
+      "type": "object"
+    },
+    "FixtureBuilder": {
+      "properties": {
+        "command": {
+          "description": "Argument vector relative to the repository root. It is never executed through a shell.",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "generator_version": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/BuilderKind"
+        },
+        "recipe_path": {
+          "type": "string"
+        },
+        "seed": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "command",
+        "generator_version",
+        "kind",
+        "recipe_path",
+        "seed"
+      ],
+      "type": "object"
+    },
+    "FixtureCase": {
+      "properties": {
+        "builder": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/FixtureBuilder"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "classes": {
+          "items": {
+            "$ref": "#/definitions/FixtureClass"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "expected": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/ExpectedOutput"
+          },
+          "type": "array"
+        },
+        "handling": {
+          "$ref": "#/definitions/FixtureHandling"
+        },
+        "id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "input": {
+          "$ref": "#/definitions/FixtureFile"
+        },
+        "provenance": {
+          "$ref": "#/definitions/FixtureProvenance"
+        }
+      },
+      "required": [
+        "classes",
+        "handling",
+        "id",
+        "input",
+        "provenance"
+      ],
+      "type": "object"
+    },
+    "FixtureClass": {
+      "description": "Section 16.1 fixture classes. This is deliberately exhaustive so adding a parser cannot silently reinterpret a generic `other` bucket.",
+      "enum": [
+        "minimal_valid",
+        "representative_real_world",
+        "maximum_complexity",
+        "empty",
+        "truncated",
+        "malformed",
+        "adversarial",
+        "encrypted",
+        "oversized",
+        "deeply_nested",
+        "mixed_encoding",
+        "invalid_text",
+        "nested_attachments",
+        "nested_containers",
+        "unsupported_construct",
+        "provider_recording",
+        "malicious_active_content",
+        "downstream_regression"
+      ],
+      "type": "string"
+    },
+    "FixtureFile": {
+      "properties": {
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "media_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "path": {
+          "description": "Path relative to `fixtures/`. Omitted for metadata-only/private intake.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "byte_length",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "FixtureFormat": {
+      "properties": {
+        "cases": {
+          "items": {
+            "$ref": "#/definitions/FixtureCase"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "format": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "cases",
+        "format"
+      ],
+      "type": "object"
+    },
+    "FixtureHandling": {
+      "properties": {
+        "data_classification": {
+          "description": "Only `public` fixtures may be checked in. Other labels document private intake records whose bytes remain outside the repository.",
+          "type": "string"
+        },
+        "execution_allowed": {
+          "type": "boolean"
+        },
+        "inert_only": {
+          "type": "boolean"
+        },
+        "network_allowed": {
+          "type": "boolean"
+        },
+        "storage": {
+          "$ref": "#/definitions/FixtureStorage"
+        }
+      },
+      "required": [
+        "data_classification",
+        "execution_allowed",
+        "inert_only",
+        "network_allowed",
+        "storage"
+      ],
+      "type": "object"
+    },
+    "FixtureLicense": {
+      "properties": {
+        "copyright": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expression": {
+          "description": "SPDX expression, or `LicenseRef-...` paired with `license_file`.",
+          "minLength": 1,
+          "type": "string"
+        },
+        "license_file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "redistribution": {
+          "$ref": "#/definitions/Redistribution"
+        }
+      },
+      "required": [
+        "expression",
+        "redistribution"
+      ],
+      "type": "object"
+    },
+    "FixtureOrigin": {
+      "enum": [
+        "synthetic",
+        "licensed",
+        "malicious",
+        "provider_recording",
+        "downstream_regression"
+      ],
+      "type": "string"
+    },
+    "FixtureProvenance": {
+      "properties": {
+        "issue_uri": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "license": {
+          "$ref": "#/definitions/FixtureLicense"
+        },
+        "origin": {
+          "$ref": "#/definitions/FixtureOrigin"
+        },
+        "original_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "source_project": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_uri": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "license",
+        "origin",
+        "source"
+      ],
+      "type": "object"
+    },
+    "FixtureStorage": {
+      "enum": [
+        "checked_in",
+        "external_only"
+      ],
+      "type": "string"
+    },
+    "Redistribution": {
+      "enum": [
+        "permitted",
+        "metadata_only",
+        "prohibited"
+      ],
+      "type": "string"
+    }
+  },
+  "properties": {
+    "formats": {
+      "additionalProperties": {
+        "$ref": "#/definitions/FixtureFormat"
+      },
+      "description": "Stable format key to independently maintained fixture registrations.",
+      "type": "object"
+    },
+    "policy": {
+      "$ref": "#/definitions/CorpusPolicy"
+    },
+    "schema_version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "formats",
+    "policy",
+    "schema_version"
+  ],
+  "title": "FixtureCorpusManifest",
+  "type": "object"
+}

@@ -1,0 +1,168 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "PdfOcrMode": {
+      "oneOf": [
+        {
+          "enum": [
+            "disabled"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "OCR pages without usable native text and raster regions on hybrid pages.",
+          "enum": [
+            "auto"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "OCR every complete page, even when native text is usable.",
+          "enum": [
+            "all_pages"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "PdfOcrOptions": {
+      "additionalProperties": false,
+      "properties": {
+        "duplicate_overlap": {
+          "default": 0.5,
+          "format": "double",
+          "type": "number"
+        },
+        "duplicate_text_similarity": {
+          "default": 0.9,
+          "format": "double",
+          "type": "number"
+        },
+        "language_hints": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "max_scopes": {
+          "default": 100000,
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "mode": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/PdfOcrMode"
+            }
+          ],
+          "default": "auto"
+        },
+        "recognize_tables": {
+          "default": true,
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "properties": {
+    "max_content_operations": {
+      "default": 5000000,
+      "format": "uint64",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_decoded_stream_bytes": {
+      "default": 67108864,
+      "format": "uint64",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_embedded_bytes": {
+      "default": 268435456,
+      "format": "uint64",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_embedded_depth": {
+      "default": 16,
+      "format": "uint16",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_embedded_files": {
+      "default": 10000,
+      "format": "uint64",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_interactive_objects": {
+      "default": 1000000,
+      "format": "uint64",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_native_glyphs": {
+      "default": 10000000,
+      "format": "uint64",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_object_depth": {
+      "default": 128,
+      "format": "uint16",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_objects": {
+      "default": 500000,
+      "format": "uint32",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_page_label_nodes": {
+      "default": 100000,
+      "format": "uint32",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_page_tree_depth": {
+      "default": 256,
+      "format": "uint16",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_pages": {
+      "default": 100000,
+      "format": "uint32",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_semantic_graphics": {
+      "default": 1000000,
+      "format": "uint64",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "ocr": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/PdfOcrOptions"
+        }
+      ],
+      "default": {
+        "duplicate_overlap": 0.5,
+        "duplicate_text_similarity": 0.9,
+        "language_hints": [],
+        "max_scopes": 100000,
+        "mode": "auto",
+        "recognize_tables": true
+      }
+    }
+  },
+  "title": "PdfOptions",
+  "type": "object"
+}

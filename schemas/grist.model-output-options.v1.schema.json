@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "AliasRule": {
+      "properties": {
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "type": "object"
+    },
+    "AliasRules": {
+      "properties": {
+        "argument_aliases": {
+          "items": {
+            "$ref": "#/definitions/AliasRule"
+          },
+          "type": "array"
+        },
+        "command_aliases": {
+          "items": {
+            "$ref": "#/definitions/AliasRule"
+          },
+          "type": "array"
+        },
+        "field_aliases": {
+          "items": {
+            "$ref": "#/definitions/AliasRule"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "argument_aliases",
+        "command_aliases",
+        "field_aliases"
+      ],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "accepted_arguments": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "accepted_commands": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "aliases": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/AliasRules"
+        }
+      ],
+      "default": {
+        "argument_aliases": [],
+        "command_aliases": [],
+        "field_aliases": []
+      }
+    },
+    "parse_python_style_commands": {
+      "default": false,
+      "description": "Enable legacy Python-style command calls such as `Namespace.Command(arg={...})`.\n\nJSON-oriented output is the default primary model-output path. Callers that still need Python-style command parsing can opt in with this flag and, preferably, explicit accepted command/argument names.",
+      "type": "boolean"
+    },
+    "schema": {
+      "default": null
+    },
+    "strip_think_blocks": {
+      "default": false,
+      "type": "boolean"
+    }
+  },
+  "title": "ModelOutputOptions",
+  "type": "object"
+}

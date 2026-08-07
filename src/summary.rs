@@ -42,7 +42,9 @@ pub enum SummaryProfile {
     DynamicEventDataset,
 }
 
-#[derive(Debug, Clone, Default)]
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[serde(default, deny_unknown_fields)]
 pub struct SummaryOptions {
     pub profile: Option<SummaryProfile>,
     pub source_diagnostics: Vec<Diagnostic>,

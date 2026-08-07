@@ -1,0 +1,104 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "IsolationPolicy": {
+      "properties": {
+        "active_content_execution": {
+          "type": "boolean"
+        },
+        "host_filesystem_access": {
+          "default": false,
+          "type": "boolean"
+        },
+        "inherit_environment": {
+          "default": false,
+          "type": "boolean"
+        },
+        "max_memory_bytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "max_processes": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "max_temporary_storage_bytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "max_wall_time_millis": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "network_access": {
+          "$ref": "#/definitions/NetworkAccess"
+        },
+        "private_temporary_filesystem": {
+          "type": "boolean"
+        },
+        "read_only_input": {
+          "type": "boolean"
+        },
+        "temporary_retention": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/TemporaryRetentionPolicy"
+            }
+          ],
+          "default": "delete_on_drop"
+        }
+      },
+      "required": [
+        "active_content_execution",
+        "max_memory_bytes",
+        "max_processes",
+        "max_temporary_storage_bytes",
+        "max_wall_time_millis",
+        "network_access",
+        "private_temporary_filesystem",
+        "read_only_input"
+      ],
+      "type": "object"
+    },
+    "NetworkAccess": {
+      "description": "Whether a selected provider may access the network for this request.",
+      "enum": [
+        "denied",
+        "allowed"
+      ],
+      "type": "string"
+    },
+    "TemporaryRetentionPolicy": {
+      "enum": [
+        "delete_on_drop",
+        "retain_until_explicit_cleanup"
+      ],
+      "type": "string"
+    }
+  },
+  "properties": {
+    "backend_options": {
+      "default": null
+    },
+    "format": {
+      "type": "string"
+    },
+    "isolation": {
+      "$ref": "#/definitions/IsolationPolicy"
+    },
+    "output_schema_version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "format",
+    "isolation",
+    "output_schema_version"
+  ],
+  "title": "IsolatedBackendOptions",
+  "type": "object"
+}

@@ -26,9 +26,14 @@ pub struct LdgrProjectionDocument {
 
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default, deny_unknown_fields)]
 pub struct LdgrProjectionOptions {
     pub strict: bool,
     pub include_markdown_trace: bool,
+}
+
+impl crate::core::FormatOptions for LdgrProjectionOptions {
+    const FORMAT: &'static str = "ldgr_projection";
 }
 
 impl Default for LdgrProjectionOptions {
@@ -431,9 +436,13 @@ pub fn parse_ldgr_projection(
     options: LdgrProjectionOptions,
 ) -> LdgrProjectionEnvelope {
     let markdown = parse_markdown(text, source.clone());
+    let markdown_payload = markdown
+        .payload
+        .as_ref()
+        .expect("complete Markdown parse envelope");
     let mut diagnostics = markdown.diagnostics.clone();
     let metadata = parse_metadata(
-        markdown.payload.frontmatter.as_ref().map(|fm| &fm.value),
+        markdown_payload.frontmatter.as_ref().map(|fm| &fm.value),
         &mut diagnostics,
     );
     let mut machine_blocks = parse_machine_blocks(&markdown, &options, &mut diagnostics);
@@ -442,8 +451,7 @@ pub fn parse_ldgr_projection(
     let trace = options
         .include_markdown_trace
         .then(|| MarkdownProjectionTrace {
-            frontmatter_range: markdown
-                .payload
+            frontmatter_range: markdown_payload
                 .frontmatter
                 .as_ref()
                 .map(|fm| fm.range.clone()),
@@ -483,6 +491,9 @@ pub fn parse_ldgr_projection(
         document,
     )
     .with_hashes(Hashes::for_bytes(text.as_bytes(), Some(text)))
+    .with_options_digest(
+        crate::core::options_digest(&options).expect("LDGR projection options must serialize"),
+    )
     .with_diagnostics(diagnostics)
 }
 
@@ -637,7 +648,11 @@ fn parse_machine_blocks(
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<LdgrMachineBlock> {
     let mut blocks = Vec::new();
-    for node in &markdown.payload.nodes {
+    let payload = markdown
+        .payload
+        .as_ref()
+        .expect("complete Markdown parse envelope");
+    for node in &payload.nodes {
         if node.kind != MarkdownNodeKind::CodeFence {
             continue;
         }
@@ -1305,8 +1320,21 @@ mod tests {
                 .iter()
                 .all(|d| d.severity != crate::core::Severity::Error)
         );
-        assert_eq!(report.payload.metadata.extra["extra"], "kept");
-        match &report.payload.typed {
+        assert_eq!(
+            report
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .metadata
+                .extra["extra"],
+            "kept"
+        );
+        match &report
+            .payload
+            .as_ref()
+            .expect("complete operation payload")
+            .typed
+        {
             LdgrDocument::Ticket(ticket) => assert_eq!(ticket.title, "Ready"),
             other => panic!("unexpected typed doc: {other:?}"),
         }
@@ -1325,7 +1353,12 @@ mod tests {
         let graph = parse(
             "---\nldgr_doc: 1\nkind: graph\nid: graph.a\nschema: ldgr.graph.v1\n---\n```ldgr-graph yaml\nnodes:\n  - id: first\n    artifact: artifact:1\n    work_item: work:first\n  - id: second\nedges:\n  - dependency: first\n    dependent: second\n    kind: blocks\n```\n",
         );
-        match &graph.payload.typed {
+        match &graph
+            .payload
+            .as_ref()
+            .expect("complete operation payload")
+            .typed
+        {
             LdgrDocument::Graph(doc) => {
                 assert_eq!(doc.edges[0].dependency, "first");
                 assert_eq!(doc.edges[0].dependent, "second");
@@ -1342,7 +1375,12 @@ mod tests {
                 .iter()
                 .all(|d| d.severity != crate::core::Severity::Error)
         );
-        match &index.payload.typed {
+        match &index
+            .payload
+            .as_ref()
+            .expect("complete operation payload")
+            .typed
+        {
             LdgrDocument::TicketIndex(doc) => assert_eq!(doc.tickets[0].artifact.kind, "artifact"),
             other => panic!("unexpected typed doc: {other:?}"),
         }
@@ -1359,7 +1397,12 @@ mod tests {
                 .iter()
                 .all(|d| d.severity != crate::core::Severity::Error)
         );
-        match &batch.payload.typed {
+        match &batch
+            .payload
+            .as_ref()
+            .expect("complete operation payload")
+            .typed
+        {
             LdgrDocument::BatchState(doc) => {
                 assert_eq!(doc.current_wave.as_deref(), Some("wave-1"))
             }
@@ -1369,7 +1412,12 @@ mod tests {
         let validation = parse(
             "---\nldgr_doc: 1\nkind: validation\nid: validation.1\nschema: ldgr.validation.v1\n---\n```ldgr-validation yaml\nvalidator: conduct.final-validator\nstatus: accepted\ntargets:\n  - graph: graph.a\nevidence:\n  - artifact:44\nfindings:\n  - id: finding.covered\n    status: passed\n    text: Covered\n```\n",
         );
-        match &validation.payload.typed {
+        match &validation
+            .payload
+            .as_ref()
+            .expect("complete operation payload")
+            .typed
+        {
             LdgrDocument::Validation(doc) => assert_eq!(doc.evidence[0].kind, "artifact"),
             other => panic!("unexpected typed doc: {other:?}"),
         }
@@ -1413,7 +1461,7 @@ mod tests {
             "---\nldgr_doc: 1\nkind: ticket\nid: ticket.a\nschema: ldgr.ticket.v1\n---\n```ldgr-contract yaml\ntitle: Ready\ndescription: Do work.\nrequirements:\n  - id: req.a\n    text: A requirement\nvalidation_instructions:\n  - inspect output\n```\n",
         );
         let rendered = render_ldgr_projection(
-            &report.payload,
+            report.payload.as_ref().expect("complete operation payload"),
             LdgrProjectionRenderOptions {
                 include_title: true,
                 contextual_prose: None,
@@ -1421,7 +1469,31 @@ mod tests {
         )
         .unwrap();
         let reparsed = parse(&rendered);
-        assert_eq!(report.payload.metadata.id, reparsed.payload.metadata.id);
-        assert_eq!(report.payload.typed, reparsed.payload.typed);
+        assert_eq!(
+            report
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .metadata
+                .id,
+            reparsed
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .metadata
+                .id
+        );
+        assert_eq!(
+            report
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .typed,
+            reparsed
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .typed
+        );
     }
 }

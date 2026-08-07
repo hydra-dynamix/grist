@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "CompatibilityChangeKind": {
+      "enum": [
+        "optional_field_added",
+        "required_field_added",
+        "field_removed",
+        "type_changed",
+        "enum_value_added",
+        "enum_value_removed",
+        "meaning_changed",
+        "canonicalization_changed",
+        "locator_changed",
+        "behavior_changed"
+      ],
+      "type": "string"
+    },
+    "ReleaseClass": {
+      "enum": [
+        "patch",
+        "minor",
+        "major"
+      ],
+      "type": "string"
+    },
+    "SemanticChange": {
+      "properties": {
+        "detail": {
+          "type": "string"
+        },
+        "instance_path": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/CompatibilityChangeKind"
+        }
+      },
+      "required": [
+        "detail",
+        "instance_path",
+        "kind"
+      ],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "release": {
+      "$ref": "#/definitions/ReleaseClass"
+    },
+    "semantic_changes": {
+      "default": [],
+      "items": {
+        "$ref": "#/definitions/SemanticChange"
+      },
+      "type": "array"
+    },
+    "unknown_enum_recovery": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "release",
+    "unknown_enum_recovery"
+  ],
+  "title": "CompatibilityPolicy",
+  "type": "object"
+}

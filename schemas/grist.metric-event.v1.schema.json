@@ -1,0 +1,268 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "BudgetUsage": {
+      "description": "Auditable shared consumption at a checkpoint or terminal event.",
+      "properties": {
+        "archive_expansion_ratio": {
+          "format": "double",
+          "type": "number"
+        },
+        "archive_members": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "cells": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "child_artifacts": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "decoded_characters": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "input_bytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "memory_bytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "nesting_depth": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "nodes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "output_bytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "pages": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "parse_millis": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "provider_millis": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "records": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "temporary_storage_bytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "archive_expansion_ratio",
+        "archive_members",
+        "cells",
+        "child_artifacts",
+        "decoded_characters",
+        "input_bytes",
+        "memory_bytes",
+        "nesting_depth",
+        "nodes",
+        "output_bytes",
+        "pages",
+        "parse_millis",
+        "provider_millis",
+        "records",
+        "temporary_storage_bytes"
+      ],
+      "type": "object"
+    },
+    "MetricPhase": {
+      "description": "A fixed operation phase. Arbitrary labels are deliberately unsupported.",
+      "enum": [
+        "detection",
+        "parser",
+        "provider",
+        "cache",
+        "parallelism",
+        "complete"
+      ],
+      "type": "string"
+    },
+    "MetricValues": {
+      "description": "Numeric measurements safe for the default metrics boundary.\n\nThis record cannot carry source text, names, paths, addresses, prompts, or document metadata. Backends may attach deployment-level labels outside Grist after receiving it.",
+      "properties": {
+        "cache_hits": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "cache_misses": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "cells": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "children": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "completed_units": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "input_bytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "nodes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "pages": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "parser_elapsed_micros": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "peak_in_flight": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "provider_elapsed_micros": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "records": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "repairs": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "warnings": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "cache_hits",
+        "cache_misses",
+        "cells",
+        "children",
+        "completed_units",
+        "input_bytes",
+        "nodes",
+        "pages",
+        "parser_elapsed_micros",
+        "peak_in_flight",
+        "provider_elapsed_micros",
+        "records",
+        "repairs",
+        "warnings"
+      ],
+      "type": "object"
+    },
+    "OperationKind": {
+      "description": "The public operation that produced an envelope.",
+      "enum": [
+        "parse",
+        "ingest",
+        "transform",
+        "render",
+        "segment",
+        "validate"
+      ],
+      "type": "string"
+    },
+    "OperationStatus": {
+      "description": "Whether an operation satisfied its requested contract.",
+      "enum": [
+        "complete",
+        "partial",
+        "failed",
+        "unsupported",
+        "encrypted",
+        "ambiguous",
+        "cancelled"
+      ],
+      "type": "string"
+    }
+  },
+  "description": "One backend-neutral metrics event.",
+  "properties": {
+    "budget_usage": {
+      "$ref": "#/definitions/BudgetUsage"
+    },
+    "operation": {
+      "$ref": "#/definitions/OperationKind"
+    },
+    "phase": {
+      "$ref": "#/definitions/MetricPhase"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "status": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/OperationStatus"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "values": {
+      "$ref": "#/definitions/MetricValues"
+    }
+  },
+  "required": [
+    "budget_usage",
+    "operation",
+    "phase",
+    "schema_version",
+    "values"
+  ],
+  "title": "MetricEvent",
+  "type": "object"
+}

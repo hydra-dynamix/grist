@@ -119,6 +119,54 @@ fn cli_parses_markdown_rich_structures_end_to_end() {
 }
 
 #[test]
+fn cli_parses_restructured_text_inertly_end_to_end() {
+    let output = run_stdin(
+        &["parse", "restructured-text", "-"],
+        "Title\n=====\n\nSee :doc:`Guide <guide>`, guide_, and [note]_.\n\n.. _guide: guide.html\n\n.. [note] A note.\n\n.. include:: child.rst\n\n.. custom-tool:: never runs\n",
+    );
+    validate_with_schema(&output, "restructured-text-envelope");
+    assert_eq!(output["kind"], "restructured_text");
+    assert_eq!(output["status"], "partial");
+
+    let nodes = output["payload"]["nodes"].as_array().unwrap();
+    assert!(nodes.iter().any(|node| node["kind"] == "heading"));
+    assert!(nodes.iter().any(|node| node["kind"] == "cross_reference"));
+    let include = nodes.iter().find(|node| node["kind"] == "include").unwrap();
+    assert_eq!(include["include"]["status"], "reference_only");
+    let unknown = nodes
+        .iter()
+        .find(|node| node["name"] == "custom-tool")
+        .unwrap();
+    assert_eq!(unknown["kind"], "directive");
+    assert_eq!(unknown["name"], "custom-tool");
+    assert!(unknown.get("known_syntax").is_none());
+}
+
+#[test]
+fn cli_parses_asciidoc_inertly_end_to_end() {
+    let output = run_stdin(
+        &["parse", "asciidoc", "-"],
+        "= Title\n:toc: left\n\nSee <<guide>>, footnote:id[A note], and [.lead]#role#.\n\n[[guide]]\ninclude::child.adoc[]\n\ncustom-tool::never[runs]\n",
+    );
+    validate_with_schema(&output, "asciidoc-envelope");
+    assert_eq!(output["kind"], "ascii_doc");
+    assert_eq!(output["status"], "partial");
+
+    let nodes = output["payload"]["nodes"].as_array().unwrap();
+    assert!(nodes.iter().any(|node| node["kind"] == "heading"));
+    assert!(nodes.iter().any(|node| node["kind"] == "attribute"));
+    assert!(nodes.iter().any(|node| node["kind"] == "cross_reference"));
+    assert!(nodes.iter().any(|node| node["kind"] == "role"));
+    let include = nodes.iter().find(|node| node["kind"] == "include").unwrap();
+    assert_eq!(include["include"]["status"], "reference_only");
+    let unknown = nodes
+        .iter()
+        .find(|node| node["name"] == "custom-tool")
+        .unwrap();
+    assert_eq!(unknown["kind"], "raw_block");
+    assert!(unknown.get("known_syntax").is_none());
+}
+#[test]
 fn cli_parses_ldgr_projection_ticket_end_to_end() {
     let output = run_stdin(
         &["parse", "ldgr-projection", "-"],
@@ -720,9 +768,10 @@ fn cli_transforms_documents_through_document_graph() {
         "graph",
         "--extract-obligations",
     ]);
-    validate_with_schema(&graph, "document-graph");
+    validate_with_schema(&graph, "graph-transform-envelope");
+    assert_eq!(graph["operation"], "transform");
     assert!(
-        graph["nodes"]
+        graph["payload"]["graph"]["nodes"]
             .as_array()
             .unwrap()
             .iter()
@@ -754,6 +803,23 @@ fn cli_transforms_documents_through_document_graph() {
             .contains("\\section{Rules}")
     );
 
+    let manifest_path = dir.join("rules.transform.json");
+    let manifest_output = dir.join("rules.manifest.tex");
+    run_text(&[
+        "transform",
+        markdown.to_str().unwrap(),
+        "--to",
+        "latex",
+        "--output",
+        manifest_output.to_str().unwrap(),
+        "--manifest",
+        manifest_path.to_str().unwrap(),
+    ]);
+    let manifest: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(manifest_path).unwrap()).unwrap();
+    validate_with_schema(&manifest, "cli-text-output-manifest");
+    assert!(manifest["graph_transform_source_map"]["entries"].is_array());
+
     let output_graph = dir.join("rules.json");
     let stdout = run_text(&[
         "transform",
@@ -766,7 +832,17 @@ fn cli_transforms_documents_through_document_graph() {
     assert!(stdout.is_empty());
     let graph_file: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(&output_graph).unwrap()).unwrap();
-    validate_with_schema(&graph_file, "document-graph");
+    validate_with_schema(&graph_file, "graph-transform-envelope");
+    assert_eq!(
+        graph_file["payload"]["source_map"]["entries"]
+            .as_array()
+            .unwrap()
+            .len(),
+        graph_file["payload"]["graph"]["nodes"]
+            .as_array()
+            .unwrap()
+            .len()
+    );
 
     let tex = dir.join("paper.tex");
     fs::write(&tex, "\\section{Intro}\nHello.\n").unwrap();

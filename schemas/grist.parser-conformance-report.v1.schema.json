@@ -1,0 +1,389 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "ArtifactKind": {
+      "enum": [
+        "markdown",
+        "restructured_text",
+        "ascii_doc",
+        "html",
+        "epub",
+        "pdf",
+        "word_ooxml",
+        "presentation_ooxml",
+        "presentation_odf",
+        "odf_word",
+        "rtf",
+        "xml",
+        "csv",
+        "rust_code",
+        "python_code",
+        "typescript_code",
+        "latex",
+        "bibliography",
+        "serialization",
+        "model_output",
+        "repo_ingest",
+        "file_ingest",
+        "text",
+        "ldgr_projection",
+        "detection",
+        "document_graph",
+        "graph_transform_result",
+        "render_result",
+        "reconstruction_result",
+        "segment_collection",
+        "schema_validation",
+        "container_traversal",
+        "capabilities",
+        "unsupported"
+      ],
+      "type": "string"
+    },
+    "Capability": {
+      "enum": [
+        "native_extraction",
+        "typed_payload",
+        "document_graph_projection",
+        "streaming",
+        "embedded_artifacts",
+        "provider_derived_content",
+        "isolated_backend"
+      ],
+      "type": "string"
+    },
+    "FormatMetadata": {
+      "properties": {
+        "aliases": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "artifact_kind": {
+          "$ref": "#/definitions/ArtifactKind"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "extensions": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "id": {
+          "type": "string"
+        },
+        "media_types": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "artifact_kind",
+        "display_name",
+        "id"
+      ],
+      "type": "object"
+    },
+    "GateStatus": {
+      "enum": [
+        "passed",
+        "failed"
+      ],
+      "type": "string"
+    },
+    "OptionsMetadata": {
+      "properties": {
+        "default": true,
+        "schema": {
+          "$ref": "#/definitions/SchemaMetadata"
+        }
+      },
+      "required": [
+        "default",
+        "schema"
+      ],
+      "type": "object"
+    },
+    "ParserDescriptor": {
+      "properties": {
+        "allowed_providers": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/ProviderKind"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "capabilities": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Capability"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "format": {
+          "$ref": "#/definitions/FormatMetadata"
+        },
+        "id": {
+          "type": "string"
+        },
+        "options": {
+          "$ref": "#/definitions/OptionsMetadata"
+        },
+        "origin": {
+          "$ref": "#/definitions/ParserOrigin"
+        },
+        "parser": {
+          "$ref": "#/definitions/ParserInfo"
+        },
+        "payload_schema": {
+          "$ref": "#/definitions/SchemaMetadata"
+        },
+        "priority": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "required_features": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "required_providers": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/ProviderKind"
+          },
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "format",
+        "id",
+        "options",
+        "origin",
+        "parser",
+        "payload_schema",
+        "priority"
+      ],
+      "type": "object"
+    },
+    "ParserInfo": {
+      "description": "Parser and backend identity used to interpret an input.\n\n`version` is the Grist crate version retained under its v1 JSON name.",
+      "properties": {
+        "build_identity": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "enabled_feature": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "grammar_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "implementation": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "implementation_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "type": "object"
+    },
+    "ParserOrigin": {
+      "enum": [
+        "built_in",
+        "caller"
+      ],
+      "type": "string"
+    },
+    "PromotionCheck": {
+      "properties": {
+        "case_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "passed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "passed"
+      ],
+      "type": "object"
+    },
+    "PromotionGate": {
+      "enum": [
+        "detection",
+        "construct_preservation",
+        "source_locators",
+        "operation_statuses",
+        "determinism",
+        "document_graph_projection",
+        "segmentation",
+        "public_surfaces",
+        "hostile_input_safety",
+        "fixture_coverage",
+        "enabled_feature_ci"
+      ],
+      "type": "string"
+    },
+    "PromotionGateResult": {
+      "properties": {
+        "checks": {
+          "items": {
+            "$ref": "#/definitions/PromotionCheck"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "gate": {
+          "$ref": "#/definitions/PromotionGate"
+        },
+        "gate_number": {
+          "format": "uint8",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "status": {
+          "$ref": "#/definitions/GateStatus"
+        }
+      },
+      "required": [
+        "checks",
+        "gate",
+        "gate_number",
+        "status"
+      ],
+      "type": "object"
+    },
+    "ProviderKind": {
+      "description": "Provider capabilities selectable by a parse request.",
+      "enum": [
+        "ocr",
+        "transcription",
+        "decryption",
+        "isolated_parser_backend"
+      ],
+      "type": "string"
+    },
+    "SchemaMetadata": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "eligible_for_promotion": {
+      "type": "boolean"
+    },
+    "format": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "gates": {
+      "items": {
+        "$ref": "#/definitions/PromotionGateResult"
+      },
+      "maxItems": 11,
+      "minItems": 11,
+      "type": "array"
+    },
+    "harness_version": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "parser": {
+      "$ref": "#/definitions/ParserDescriptor"
+    },
+    "passed_gate_count": {
+      "format": "uint8",
+      "maximum": 11.0,
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "suite_digest": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "suite_version": {
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "eligible_for_promotion",
+    "format",
+    "gates",
+    "harness_version",
+    "parser",
+    "passed_gate_count",
+    "schema_version",
+    "suite_digest",
+    "suite_version"
+  ],
+  "title": "ParserConformanceReport",
+  "type": "object"
+}

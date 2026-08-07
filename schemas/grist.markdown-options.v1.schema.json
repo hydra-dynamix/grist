@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "definition_lists": {
+      "default": true,
+      "type": "boolean"
+    },
+    "encoding": {
+      "default": null,
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "footnotes": {
+      "default": true,
+      "type": "boolean"
+    },
+    "frontmatter": {
+      "default": true,
+      "type": "boolean"
+    },
+    "gfm": {
+      "default": true,
+      "type": "boolean"
+    },
+    "heading_attributes": {
+      "default": true,
+      "type": "boolean"
+    },
+    "math": {
+      "default": true,
+      "type": "boolean"
+    },
+    "retain_extensions": {
+      "default": true,
+      "type": "boolean"
+    },
+    "strikethrough": {
+      "default": true,
+      "type": "boolean"
+    },
+    "tables": {
+      "default": true,
+      "type": "boolean"
+    },
+    "task_lists": {
+      "default": true,
+      "type": "boolean"
+    }
+  },
+  "title": "MarkdownOptions",
+  "type": "object"
+}

@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "ReconstructionFidelity": {
+      "enum": [
+        "lossy",
+        "semantic_equivalent",
+        "package_equivalent",
+        "byte_identical"
+      ],
+      "type": "string"
+    }
+  },
+  "properties": {
+    "expected_package_sha256": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "required_fidelity": {
+      "$ref": "#/definitions/ReconstructionFidelity"
+    }
+  },
+  "required": [
+    "required_fidelity"
+  ],
+  "title": "ReconstructionOptions",
+  "type": "object"
+}

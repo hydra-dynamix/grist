@@ -97,7 +97,9 @@ pub struct RustSyntaxDetail {
     pub node_count: usize,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
 pub enum RustDetailMode {
     #[default]
     Semantic,
@@ -105,9 +107,15 @@ pub enum RustDetailMode {
     SyntaxDebug,
 }
 
-#[derive(Debug, Clone, Default)]
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
 pub struct RustIngestOptions {
     pub detail: RustDetailMode,
+}
+
+impl crate::core::FormatOptions for RustIngestOptions {
+    const FORMAT: &'static str = "rust";
 }
 
 pub type RustEnvelope = Envelope<RustFile>;
@@ -120,19 +128,16 @@ pub fn parse_rust(text: &str, source: SourceInfo, options: &RustIngestOptions) -
         .expect("tree-sitter Rust language should load");
     let line_index = LineIndex::new(text);
     let Some(tree) = parser.parse(text, None) else {
-        return Envelope::new(
+        return Envelope::without_payload(
+            crate::core::OperationKind::Parse,
             ArtifactKind::RustCode,
+            crate::core::OperationStatus::Failed,
             source,
             ParserInfo::new("tree-sitter-rust"),
+            crate::core::options_digest(options).expect("Rust options must serialize"),
             SchemaVersion::RUST_CODE_V1,
-            RustFile {
-                schema_version: SchemaVersion::RUST_CODE_V1.to_string(),
-                symbols: Vec::new(),
-                imports: Vec::new(),
-                parse_errors: Vec::new(),
-                detail: None,
-            },
         )
+        .expect("failed envelope status is valid")
         .with_hashes(Hashes::for_bytes(text.as_bytes(), Some(text)))
         .with_diagnostics(vec![Diagnostic::error(
             "tree-sitter-rust",
@@ -191,6 +196,7 @@ pub fn parse_rust(text: &str, source: SourceInfo, options: &RustIngestOptions) -
         },
     )
     .with_hashes(Hashes::for_bytes(text.as_bytes(), Some(text)))
+    .with_options_digest(crate::core::options_digest(options).expect("Rust options must serialize"))
     .with_diagnostics(diagnostics)
 }
 
@@ -442,8 +448,32 @@ mod tests {
                 detail: RustDetailMode::SemanticWithSyntax,
             },
         );
-        assert!(report.payload.symbols.iter().any(|s| s.name == "Thing"));
-        assert!(report.payload.symbols.iter().any(|s| s.name == "run"));
-        assert_eq!(report.payload.imports.len(), 1);
+        assert!(
+            report
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .symbols
+                .iter()
+                .any(|s| s.name == "Thing")
+        );
+        assert!(
+            report
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .symbols
+                .iter()
+                .any(|s| s.name == "run")
+        );
+        assert_eq!(
+            report
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .imports
+                .len(),
+            1
+        );
     }
 }

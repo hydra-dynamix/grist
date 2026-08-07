@@ -1,0 +1,154 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "ActiveContentPolicy": {
+      "enum": [
+        "escape"
+      ],
+      "type": "string"
+    },
+    "ArchiveSecurityPolicy": {
+      "properties": {
+        "max_path_bytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "max_path_components": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_path_bytes",
+        "max_path_components"
+      ],
+      "type": "object"
+    },
+    "DiagnosticOptions": {
+      "properties": {
+        "include_details": {
+          "type": "boolean"
+        },
+        "include_info": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "include_details",
+        "include_info"
+      ],
+      "type": "object"
+    },
+    "ExecutionPolicy": {
+      "oneOf": [
+        {
+          "description": "Active constructs are retained as data and can never be invoked.",
+          "enum": [
+            "preserve_inert"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "InputMetadataPolicy": {
+      "enum": [
+        "caller_directed_only"
+      ],
+      "type": "string"
+    },
+    "NetworkPolicy": {
+      "oneOf": [
+        {
+          "description": "Only an explicitly selected provider receives a caller's per-request permission. Core parsing never performs network I/O.",
+          "enum": [
+            "explicit_providers_only"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "RecoveryMode": {
+      "description": "Recovery behavior shared by every parser.",
+      "enum": [
+        "strict",
+        "recover"
+      ],
+      "type": "string"
+    },
+    "SecurityPolicy": {
+      "description": "Serializable security behavior carried by every parse request. Its closed enums intentionally provide no unsafe execution or implicit-network mode.",
+      "properties": {
+        "active_rendering": {
+          "$ref": "#/definitions/ActiveContentPolicy"
+        },
+        "archive": {
+          "$ref": "#/definitions/ArchiveSecurityPolicy"
+        },
+        "execution": {
+          "$ref": "#/definitions/ExecutionPolicy"
+        },
+        "input_metadata": {
+          "$ref": "#/definitions/InputMetadataPolicy"
+        },
+        "network": {
+          "$ref": "#/definitions/NetworkPolicy"
+        },
+        "temporary_retention": {
+          "$ref": "#/definitions/TemporaryRetentionPolicy"
+        },
+        "xml": {
+          "$ref": "#/definitions/XmlSecurityPolicy"
+        }
+      },
+      "required": [
+        "active_rendering",
+        "archive",
+        "execution",
+        "input_metadata",
+        "network",
+        "temporary_retention",
+        "xml"
+      ],
+      "type": "object"
+    },
+    "TemporaryRetentionPolicy": {
+      "enum": [
+        "delete_on_drop",
+        "retain_until_explicit_cleanup"
+      ],
+      "type": "string"
+    },
+    "XmlSecurityPolicy": {
+      "enum": [
+        "reject_active_references"
+      ],
+      "type": "string"
+    }
+  },
+  "description": "Options whose meaning is identical for every parser.\n\nFormat-specific configuration is carried separately by the generic option parameter on [`super::ParseRequest`].",
+  "properties": {
+    "diagnostics": {
+      "$ref": "#/definitions/DiagnosticOptions"
+    },
+    "recovery": {
+      "$ref": "#/definitions/RecoveryMode"
+    },
+    "security": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/SecurityPolicy"
+        }
+      ],
+      "description": "Universal hostile-input policy. Format options cannot weaken its no-execution and no-implicit-network invariants."
+    }
+  },
+  "required": [
+    "diagnostics",
+    "recovery",
+    "security"
+  ],
+  "title": "ParseOptions",
+  "type": "object"
+}

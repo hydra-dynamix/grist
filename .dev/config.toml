@@ -18,11 +18,20 @@ commands = [["cargo", "check", "--workspace", "--features", "cli"]]
 [tasks.rust_test]
 commands = [["cargo", "test", "--workspace", "--features", "cli"]]
 
+[tasks.parser_promotion_minimal]
+commands = [["cargo", "test", "--workspace", "--no-default-features", "--test", "parser_promotion_harness"]]
+
+[tasks.schema_drift]
+commands = [["cargo", "run", "--example", "schema_codegen", "--features", "ldgr-projection,latex,basin", "--", "--check"]]
+
+[tasks.rust_doc]
+commands = [["cargo", "doc", "--workspace", "--no-deps", "--features", "cli"]]
+
 [tasks.rust_build]
 commands = [["cargo", "build", "--workspace", "--features", "cli"]]
 
 [tasks.rust_check]
-commands = ["rust_fmt_check", "rust_lint", "rust_type", "rust_test"]
+commands = ["rust_fmt_check", "rust_lint", "rust_type", "rust_test", "parser_promotion_minimal", "schema_drift", "rust_doc"]
 
 [tasks.rust_ci]
 commands = ["rust_check", "rust_build"]

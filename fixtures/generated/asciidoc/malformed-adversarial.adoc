@@ -1,0 +1,12 @@
+= Malformed
+
+include::../../outside-project.adoc[]
+include::https://network.invalid/never[]
+
+[unknown
+
+[source,rust]
+----
+fn never() { /* unclosed and inert */ }
+
+unknown::../../escape[https://network.invalid/never]

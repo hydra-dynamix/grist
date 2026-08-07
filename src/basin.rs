@@ -395,7 +395,9 @@ pub struct CodeEdge {
 }
 
 /// Walk extraction parameters. Defaults mirror the research harness.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default, deny_unknown_fields)]
 pub struct WalkOptions {
     pub max_depth: usize,
     pub max_walks: usize,
@@ -413,20 +415,46 @@ impl Default for WalkOptions {
 /// Build a typed basin graph from a normalized `DocumentGraph`.
 pub fn graph_from_document_graph(document: &DocumentGraph) -> CodeGraph {
     let mut graph = CodeGraph::new(document.id.clone());
+    let labels = document
+        .nodes
+        .iter()
+        .map(|node| {
+            let semantic = node
+                .qualified_name
+                .as_ref()
+                .map(|name| name.replace('.', "_"))
+                .or_else(|| node.name.clone())
+                .unwrap_or_else(|| node.id.clone());
+            let suffix = node.id.rsplit(':').next().unwrap_or(&node.id);
+            (node.id.as_str(), format!("{semantic} [{suffix}]"))
+        })
+        .collect::<BTreeMap<_, _>>();
 
     for node in &document.nodes {
-        graph.nodes.insert(node.id.clone());
+        let label = labels
+            .get(node.id.as_str())
+            .cloned()
+            .unwrap_or_else(|| node.id.clone());
+        graph.nodes.insert(label.clone());
         if matches!(
             node.kind,
             DocumentNodeKind::Function | DocumentNodeKind::Method | DocumentNodeKind::Constructor
         ) {
-            graph.roots.insert(node.id.clone());
+            graph.roots.insert(label);
         }
     }
 
     for edge in &document.edges {
         if let Some(relation) = basin_relation(&edge.relation) {
-            graph.add_edge(edge.source.clone(), relation, edge.target.clone());
+            let source = labels
+                .get(edge.source.as_str())
+                .cloned()
+                .unwrap_or_else(|| edge.source.clone());
+            let target = labels
+                .get(edge.target.as_str())
+                .cloned()
+                .unwrap_or_else(|| edge.target.clone());
+            graph.add_edge(source, relation, target);
         }
     }
 
@@ -621,7 +649,10 @@ def helper():
                 detail: PythonDetailMode::Semantic,
             },
         );
-        let graph = graph_from_python_file("repo:forms", &parsed.payload);
+        let graph = graph_from_python_file(
+            "repo:forms",
+            parsed.payload.as_ref().expect("complete operation payload"),
+        );
 
         assert!(graph.edges.iter().any(|edge| {
             edge.relation == "INHERITS" && edge.src.contains("Form") && edge.dst == "Base"
@@ -637,6 +668,8 @@ def helper():
 
         let document = parsed
             .payload
+            .as_ref()
+            .expect("complete operation payload")
             .to_document_graph(crate::document_graph::DocumentGraphContext::new(
                 "repo:forms",
             ))

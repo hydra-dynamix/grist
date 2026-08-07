@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "DecodeContext": {
+      "description": "The syntax whose encoding declaration rules apply to an input.",
+      "enum": [
+        "auto",
+        "plain_text",
+        "html",
+        "xml"
+      ],
+      "type": "string"
+    }
+  },
+  "description": "Caller-controlled decoding evidence. A BOM always has higher precedence.",
+  "properties": {
+    "context": {
+      "$ref": "#/definitions/DecodeContext"
+    },
+    "transport_encoding": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "context"
+  ],
+  "title": "DecodeOptions",
+  "type": "object"
+}

@@ -52,6 +52,12 @@ logs/
 .coverage/
 coverage/
 htmlcov/
+__pycache__/
+*.py[cod]
+
+# Fixture intake containing sensitive or non-redistributable bytes
+/fixtures/private/
+/fixtures/intake-staging/
 
 
 # Added by cargo

@@ -133,7 +133,9 @@ pub struct PythonSyntaxDetail {
     pub node_count: usize,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
 pub enum PythonDetailMode {
     #[default]
     Semantic,
@@ -141,9 +143,15 @@ pub enum PythonDetailMode {
     SyntaxDebug,
 }
 
-#[derive(Debug, Clone, Default)]
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
 pub struct PythonIngestOptions {
     pub detail: PythonDetailMode,
+}
+
+impl crate::core::FormatOptions for PythonIngestOptions {
+    const FORMAT: &'static str = "python";
 }
 
 pub type PythonEnvelope = Envelope<PythonFile>;
@@ -160,23 +168,16 @@ pub fn parse_python(
         .expect("tree-sitter Python language should load");
     let line_index = LineIndex::new(text);
     let Some(tree) = parser.parse(text, None) else {
-        return Envelope::new(
+        return Envelope::without_payload(
+            crate::core::OperationKind::Parse,
             ArtifactKind::PythonCode,
+            crate::core::OperationStatus::Failed,
             source,
             ParserInfo::new("tree-sitter-python"),
+            crate::core::options_digest(options).expect("Python options must serialize"),
             SchemaVersion::PYTHON_CODE_V1,
-            PythonFile {
-                schema_version: SchemaVersion::PYTHON_CODE_V1.to_string(),
-                symbols: Vec::new(),
-                imports: Vec::new(),
-                assignments: Vec::new(),
-                returns: Vec::new(),
-                calls: Vec::new(),
-                branches: Vec::new(),
-                parse_errors: Vec::new(),
-                detail: None,
-            },
         )
+        .expect("failed envelope status is valid")
         .with_hashes(Hashes::for_bytes(text.as_bytes(), Some(text)))
         .with_diagnostics(vec![Diagnostic::error(
             "tree-sitter-python",
@@ -244,6 +245,9 @@ pub fn parse_python(
         },
     )
     .with_hashes(Hashes::for_bytes(text.as_bytes(), Some(text)))
+    .with_options_digest(
+        crate::core::options_digest(options).expect("Python options must serialize"),
+    )
     .with_diagnostics(diagnostics)
 }
 
@@ -621,6 +625,8 @@ mod tests {
         );
         let form = report
             .payload
+            .as_ref()
+            .expect("complete operation payload")
             .symbols
             .iter()
             .find(|s| s.name == "Form")
@@ -632,30 +638,62 @@ mod tests {
         assert!(
             report
                 .payload
+                .as_ref()
+                .expect("complete operation payload")
                 .symbols
                 .iter()
                 .any(|s| s.qualified_name == "Form.create")
         );
-        assert_eq!(report.payload.imports.len(), 2);
+        assert_eq!(
+            report
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .imports
+                .len(),
+            2
+        );
         assert!(
             report
                 .payload
+                .as_ref()
+                .expect("complete operation payload")
                 .imports
                 .iter()
                 .any(|import| import.level == 1)
         );
-        assert!(report.payload.assignments.iter().any(|a| a.lhs == "value"));
         assert!(
             report
                 .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .assignments
+                .iter()
+                .any(|a| a.lhs == "value")
+        );
+        assert!(
+            report
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
                 .returns
                 .iter()
                 .any(|r| r.expression.as_deref() == Some("value"))
         );
-        assert!(report.payload.calls.iter().any(|c| c.target == "cls"));
         assert!(
             report
                 .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .calls
+                .iter()
+                .any(|c| c.target == "cls")
+        );
+        assert!(
+            report
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
                 .branches
                 .iter()
                 .any(|b| b.kind == "if_statement")

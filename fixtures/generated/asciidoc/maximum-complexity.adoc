@@ -1,0 +1,24 @@
+= Maximum complexity
+:toc: left
+:source-highlighter: none
+
+== Section
+
+Paragraph with _emphasis_, *strong*, `literal`, [.lead]#role#, https://example.invalid/[link], <<target>>, footnote:id[Located footnote], footnote:id[], {toc}, and widget:thing[].
+
+[[target]]
+image::figure.png[Alt text]
+unknown-extension::opaque[retained]
+
+[source,rust,linenums]
+----
+fn inert() { /* never executed */ }
+----
+
+|===
+|Name |Value
+|alpha |1
+|===
+
+1. ordered
+2. retained

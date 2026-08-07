@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "BibliographyDialect": {
+      "enum": [
+        "auto",
+        "bibtex",
+        "biblatex"
+      ],
+      "type": "string"
+    }
+  },
+  "properties": {
+    "dialect": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/BibliographyDialect"
+        }
+      ],
+      "default": "auto"
+    },
+    "encoding": {
+      "default": null,
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "max_crossref_depth": {
+      "default": 32,
+      "format": "uint16",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_entries": {
+      "default": 100000,
+      "format": "uint32",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_expanded_characters": {
+      "default": 16777216,
+      "format": "uint64",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_fields_per_entry": {
+      "default": 4096,
+      "format": "uint32",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_string_depth": {
+      "default": 32,
+      "format": "uint16",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_string_expansions": {
+      "default": 100000,
+      "format": "uint32",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_value_parts": {
+      "default": 4096,
+      "format": "uint32",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "retain_comments": {
+      "default": true,
+      "type": "boolean"
+    }
+  },
+  "title": "BibliographyOptions",
+  "type": "object"
+}

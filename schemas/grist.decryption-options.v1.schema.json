@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "expected_media_type": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "key_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "scheme": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "scheme"
+  ],
+  "title": "DecryptionOptions",
+  "type": "object"
+}

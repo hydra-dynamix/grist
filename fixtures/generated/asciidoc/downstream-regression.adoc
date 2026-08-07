@@ -1,0 +1,6 @@
+= Regression
+
+[[stable-label]]
+== Stable section
+
+Use <<stable-label,stable label>>, footnote:case[Citation-like footnote], footnote:case[], and {.missing-role}#retained#.

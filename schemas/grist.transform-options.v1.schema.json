@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Options controlling graph rendering/projection behavior.",
+  "properties": {
+    "allow_lossy": {
+      "type": "boolean"
+    },
+    "allow_raw_fallback": {
+      "type": "boolean"
+    },
+    "fail_on_warning": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "allow_lossy",
+    "allow_raw_fallback",
+    "fail_on_warning"
+  ],
+  "title": "TransformOptions",
+  "type": "object"
+}

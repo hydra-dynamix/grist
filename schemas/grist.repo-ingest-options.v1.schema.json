@@ -1,0 +1,117 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "Limits": {
+      "properties": {
+        "max_file_bytes": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "max_model_output_bytes": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "max_parse_depth": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "max_repo_files": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_file_bytes",
+        "max_model_output_bytes",
+        "max_parse_depth",
+        "max_repo_files"
+      ],
+      "type": "object"
+    },
+    "SubmodulePolicy": {
+      "enum": [
+        "skip",
+        "traverse"
+      ],
+      "type": "string"
+    },
+    "SymlinkPolicy": {
+      "enum": [
+        "skip",
+        "follow_files_within_root"
+      ],
+      "type": "string"
+    }
+  },
+  "properties": {
+    "exclude_globs": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "external_artifact_dir": {
+      "default": null,
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "honor_ignore": {
+      "default": true,
+      "type": "boolean"
+    },
+    "include_globs": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "include_ignored": {
+      "default": false,
+      "type": "boolean"
+    },
+    "inline_artifacts": {
+      "default": true,
+      "type": "boolean"
+    },
+    "limits": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Limits"
+        }
+      ],
+      "default": {
+        "max_file_bytes": 67108864,
+        "max_model_output_bytes": 134217728,
+        "max_parse_depth": 4096,
+        "max_repo_files": 250000
+      }
+    },
+    "submodule_policy": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/SubmodulePolicy"
+        }
+      ],
+      "default": "skip"
+    },
+    "symlink_policy": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/SymlinkPolicy"
+        }
+      ],
+      "default": "skip"
+    }
+  },
+  "title": "RepoIngestOptions",
+  "type": "object"
+}

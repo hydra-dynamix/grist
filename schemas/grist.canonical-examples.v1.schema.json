@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "CanonicalExample": {
+      "properties": {
+        "canonical_sha256": {
+          "type": "string"
+        },
+        "schema_name": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "value": true
+      },
+      "required": [
+        "canonical_sha256",
+        "schema_name",
+        "schema_version",
+        "value"
+      ],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "examples": {
+      "additionalProperties": {
+        "$ref": "#/definitions/CanonicalExample"
+      },
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "examples",
+    "schema_version"
+  ],
+  "title": "CanonicalExampleManifest",
+  "type": "object"
+}

@@ -43,9 +43,15 @@ pub struct SchemaValidationResult {
     pub diagnostics: Vec<Diagnostic>,
 }
 
-#[derive(Debug, Clone, Default)]
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
 pub struct SerializationOptions {
     pub schema: Option<Value>,
+}
+
+impl crate::core::FormatOptions for SerializationOptions {
+    const FORMAT: &'static str = "structured_text";
 }
 
 pub type SerializationEnvelope = Envelope<SerializationPayload>;
@@ -156,14 +162,39 @@ pub fn parse_serialization_with_options(
         diagnostics.extend(validation_diagnostics);
     }
 
-    Envelope::new(
+    let operation = if options.schema.is_some() {
+        crate::core::OperationKind::Validate
+    } else {
+        crate::core::OperationKind::Parse
+    };
+    let options_digest =
+        crate::core::options_digest(options).expect("serialization options must serialize");
+    let hashes = Hashes::for_bytes(text.as_bytes(), Some(text));
+    if payload.value.is_none() {
+        return Envelope::without_payload(
+            operation,
+            ArtifactKind::Serialization,
+            crate::core::OperationStatus::Failed,
+            source,
+            ParserInfo::new("grist.serialization"),
+            options_digest,
+            SchemaVersion::SERIALIZATION_V1,
+        )
+        .expect("failed envelope status is valid")
+        .with_hashes(hashes)
+        .with_diagnostics(diagnostics);
+    }
+
+    Envelope::complete(
+        operation,
         ArtifactKind::Serialization,
         source,
         ParserInfo::new("grist.serialization"),
+        options_digest,
         SchemaVersion::SERIALIZATION_V1,
         payload,
     )
-    .with_hashes(Hashes::for_bytes(text.as_bytes(), Some(text)))
+    .with_hashes(hashes)
     .with_diagnostics(diagnostics)
 }
 
@@ -212,7 +243,15 @@ mod tests {
             SerializationFormat::Jsonl,
             SourceInfo::stdin("input.jsonl"),
         );
-        assert_eq!(report.payload.jsonl_records.len(), 3);
+        assert_eq!(
+            report
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .jsonl_records
+                .len(),
+            3
+        );
         assert_eq!(report.diagnostics.len(), 1);
     }
 
@@ -231,7 +270,16 @@ mod tests {
                 schema: Some(schema),
             },
         );
-        assert!(!report.payload.validation.unwrap().valid);
+        assert!(
+            !report
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .validation
+                .as_ref()
+                .expect("schema validation result")
+                .valid
+        );
         assert!(!report.diagnostics.is_empty());
     }
 }
