@@ -177,7 +177,9 @@ pub fn parse_model_output(
         }
     }
 
-    let index = LineIndex::new(&working);
+    // Think-block stripping deliberately preserves byte offsets, so all candidate
+    // ranges and raw text continue to address the caller's original input.
+    let index = LineIndex::new(text);
     let mut candidates = Vec::new();
     let mut diagnostics = Vec::new();
     let mut failures = Vec::new();
@@ -198,6 +200,11 @@ pub fn parse_model_output(
         }
     }
 
+    candidates = expand_compound_json_candidates(candidates, text, &index);
+    for (id, candidate) in candidates.iter_mut().enumerate() {
+        candidate.id = format!("candidate-{id}");
+    }
+
     for candidate in candidates.iter_mut() {
         candidate
             .normalizations
@@ -207,7 +214,7 @@ pub fn parse_model_output(
             candidate.raw_text = candidate
                 .raw_range
                 .as_ref()
-                .and_then(|range| working.get(range.byte_start..range.byte_end))
+                .and_then(|range| text.get(range.byte_start..range.byte_end))
                 .map(str::to_string);
         }
         if let (Some(value), Some(schema)) = (candidate.value.as_ref(), options.schema.as_ref()) {
@@ -218,7 +225,7 @@ pub fn parse_model_output(
             });
             candidate.diagnostics.extend(validation_diagnostics);
         }
-        for mut failure in failures_from_candidate(candidate, &working) {
+        for mut failure in failures_from_candidate(candidate, text) {
             failure.id = format!("failure-{}", failures.len());
             failures.push(failure);
         }
@@ -254,7 +261,7 @@ pub fn parse_model_output(
     };
 
     let selected_candidate_id = select_candidate_id(&candidates, options);
-    let raw_text_sha256 = crate::core::sha256_hex(working.as_bytes());
+    let raw_text_sha256 = crate::core::sha256_hex(text.as_bytes());
     let report = ModelOutputReport {
         schema_version: SchemaVersion::MODEL_OUTPUT_V1.to_string(),
         candidates,
@@ -803,47 +810,23 @@ fn extract_json_candidates(
         candidates.push(candidate);
         return;
     }
-    if trimmed.starts_with('{') || trimmed.starts_with('[') {
-        let has_embedded_complete_candidates = first_balanced_json_value(trimmed)
-            .map(|(_, end)| {
-                trimmed[end..].trim_start().starts_with('{')
-                    || trimmed[end..].trim_start().starts_with('[')
-            })
-            .unwrap_or(false);
-        if !has_embedded_complete_candidates {
-            let start = text.find(trimmed).unwrap_or(0);
-            let mut candidate = base_candidate(
-                candidates.len(),
-                CandidateGrammar::RawJson,
-                Some(SourceRange::new(start, start + trimmed.len(), index)),
-            );
-            candidate.status = CandidateStatus::Incomplete;
-            candidate.confidence = 0.4;
-            candidate
-                .normalizations
-                .push("preserved_incomplete_raw_json".into());
-            candidate.diagnostics.push(
-                Diagnostic::warning(
-                    "grist.model_output.json",
-                    "json.incomplete",
-                    "raw JSON-like output started but did not parse as a complete value",
-                )
-                .partial(),
-            );
-            candidates.push(candidate);
-            return;
-        }
-    }
-    let mut search = 0;
-    while let Some((start, end)) = first_balanced_json_value(&text[search..]) {
-        let absolute_start = search + start;
-        let absolute_end = search + end;
-        if is_contained_in_existing_candidate(absolute_start, absolute_end, candidates) {
-            search = absolute_end;
+    let initial_candidate_count = candidates.len();
+    let mut covered_until = 0usize;
+    for (absolute_start, absolute_end) in balanced_json_spans(text) {
+        if absolute_start < covered_until {
             continue;
         }
         let slice = &text[absolute_start..absolute_end];
         if let Ok(parsed) = parse_jsonish_value_with_repairs(slice) {
+            if is_duplicate_of_existing_candidate(
+                absolute_start,
+                absolute_end,
+                &parsed.value,
+                candidates,
+            ) {
+                covered_until = absolute_end;
+                continue;
+            }
             let mut candidate = json_candidate(
                 candidates.len(),
                 CandidateGrammar::JsonObjectInText,
@@ -859,27 +842,55 @@ fn extract_json_candidates(
             }
             classify_json_tool_shape(&mut candidate);
             candidates.push(candidate);
+            // Match the previous outermost-candidate behavior: once a complete
+            // container parses, do not also emit each nested container.
+            covered_until = absolute_end;
         }
-        search = absolute_end;
+    }
+    if candidates.len() == initial_candidate_count
+        && (trimmed.starts_with('{') || trimmed.starts_with('['))
+    {
+        let start = text.find(trimmed).unwrap_or(0);
+        let mut candidate = base_candidate(
+            candidates.len(),
+            CandidateGrammar::RawJson,
+            Some(SourceRange::new(start, start + trimmed.len(), index)),
+        );
+        candidate.status = CandidateStatus::Incomplete;
+        candidate.confidence = 0.4;
+        candidate
+            .normalizations
+            .push("preserved_incomplete_raw_json".into());
+        candidate.diagnostics.push(
+            Diagnostic::warning(
+                "grist.model_output.json",
+                "json.incomplete",
+                "raw JSON-like output started but did not parse as a complete value",
+            )
+            .partial(),
+        );
+        candidates.push(candidate);
     }
 }
 
-fn is_contained_in_existing_candidate(
+fn is_duplicate_of_existing_candidate(
     start: usize,
     end: usize,
+    value: &Value,
     candidates: &[ModelOutputCandidate],
 ) -> bool {
     candidates.iter().any(|candidate| {
-        candidate.raw_range.as_ref().is_some_and(|range| {
-            range.byte_start <= start
-                && end <= range.byte_end
-                && (range.byte_start != start || range.byte_end != end)
-        })
+        candidate.value.as_ref() == Some(value)
+            && candidate.raw_range.as_ref().is_some_and(|range| {
+                range.byte_start <= start
+                    && end <= range.byte_end
+                    && (range.byte_start != start || range.byte_end != end)
+            })
     })
 }
 
 fn classify_json_tool_shape(candidate: &mut ModelOutputCandidate) {
-    let Some(value) = candidate.value.as_ref() else {
+    let Some(value) = candidate.value.clone() else {
         return;
     };
     if value.get("jsonrpc").is_some() && value.get("method").is_some() {
@@ -888,47 +899,24 @@ fn classify_json_tool_shape(candidate: &mut ModelOutputCandidate) {
             .get("method")
             .and_then(Value::as_str)
             .map(str::to_string);
+        if let Some(params) = value.get("params").cloned() {
+            candidate.argument_name = Some("params".into());
+            candidate.value = Some(params);
+        }
     } else if let Some(function) = value.get("function") {
+        apply_openai_call(candidate, function, "parsed_stringified_arguments");
+    } else if let Some(tool_calls) = openai_tool_calls(&value) {
         candidate.grammar = CandidateGrammar::OpenAiToolCall;
-        candidate.command_name = function
-            .get("name")
-            .and_then(Value::as_str)
-            .map(str::to_string);
-        if let Some(arguments) = function.get("arguments") {
-            candidate.argument_name = Some("arguments".into());
-            if let Some(arguments_str) = arguments.as_str() {
-                if let Ok(parsed) = parse_jsonish_value(arguments_str) {
-                    candidate.value = Some(parsed);
-                    candidate
-                        .normalizations
-                        .push("parsed_stringified_arguments".into());
-                }
+        if tool_calls.len() == 1 {
+            if let Some(first_call) = tool_calls.first() {
+                let function = first_call.get("function").unwrap_or(first_call);
+                apply_openai_call(candidate, function, "parsed_first_tool_call_arguments");
             }
         }
-    } else if let Some(tool_calls) = value.get("tool_calls").and_then(Value::as_array) {
-        candidate.grammar = CandidateGrammar::OpenAiToolCall;
-        if let Some(first_call) = tool_calls.first() {
-            let function = first_call.get("function").unwrap_or(first_call);
-            candidate.command_name = function
-                .get("name")
-                .and_then(Value::as_str)
-                .map(str::to_string);
-            if let Some(arguments) = function.get("arguments") {
-                candidate.argument_name = Some("arguments".into());
-                if let Some(arguments_str) = arguments.as_str() {
-                    if let Ok(parsed) = parse_jsonish_value(arguments_str) {
-                        candidate.value = Some(parsed);
-                        candidate
-                            .normalizations
-                            .push("parsed_first_tool_call_arguments".into());
-                    }
-                }
-            }
-        }
-    } else if let Some(content) = openai_chat_content(value).map(str::to_string) {
+    } else if let Some(content) = openai_chat_content(&value).map(str::to_string) {
         candidate.grammar = CandidateGrammar::OpenAiChatContent;
         candidate.argument_name = Some("content".into());
-        if let Ok(parsed) = parse_jsonish_value(&content) {
+        if let Ok(parsed) = parse_nested_jsonish_value(&content) {
             candidate.value = Some(parsed);
             candidate
                 .normalizations
@@ -942,25 +930,254 @@ fn classify_json_tool_shape(candidate: &mut ModelOutputCandidate) {
             }
         }
     } else if value.get("name").is_some() && value.get("arguments").is_some() {
-        candidate.grammar = CandidateGrammar::OpenAiToolCall;
-        candidate.command_name = value
-            .get("name")
-            .and_then(Value::as_str)
-            .map(str::to_string);
+        apply_openai_call(candidate, &value, "parsed_root_stringified_arguments");
+    } else {
+        unwrap_stringified_json(candidate);
+    }
+}
+
+fn openai_tool_calls(value: &Value) -> Option<&Vec<Value>> {
+    value
+        .get("tool_calls")
+        .and_then(Value::as_array)
+        .or_else(|| {
+            value
+                .get("choices")
+                .and_then(Value::as_array)
+                .and_then(|choices| choices.first())
+                .and_then(|choice| choice.get("message").or_else(|| choice.get("delta")))
+                .and_then(|message| message.get("tool_calls"))
+                .and_then(Value::as_array)
+        })
+}
+
+fn apply_openai_call(
+    candidate: &mut ModelOutputCandidate,
+    call: &Value,
+    stringified_normalization: &str,
+) {
+    candidate.grammar = CandidateGrammar::OpenAiToolCall;
+    candidate.command_name = call.get("name").and_then(Value::as_str).map(str::to_string);
+    if let Some(arguments) = call.get("arguments") {
         candidate.argument_name = Some("arguments".into());
-        if let Some(arguments) = value.get("arguments") {
-            if let Some(arguments_str) = arguments.as_str() {
-                if let Ok(parsed) = parse_jsonish_value(arguments_str) {
-                    candidate.value = Some(parsed);
-                    candidate
-                        .normalizations
-                        .push("parsed_root_stringified_arguments".into());
-                }
+        candidate.value = Some(arguments.clone());
+        if let Some(arguments_str) = arguments.as_str() {
+            if let Ok(parsed) = parse_nested_jsonish_value(arguments_str) {
+                candidate.value = Some(parsed);
+                candidate
+                    .normalizations
+                    .push(stringified_normalization.into());
             }
         }
     }
 }
 
+fn expand_compound_json_candidates(
+    candidates: Vec<ModelOutputCandidate>,
+    source_text: &str,
+    index: &LineIndex,
+) -> Vec<ModelOutputCandidate> {
+    let mut expanded = Vec::new();
+    for candidate in candidates {
+        let Some(value) = candidate.value.as_ref() else {
+            expanded.push(candidate);
+            continue;
+        };
+        let calls = compound_json_calls(value);
+        if calls.is_empty() {
+            expanded.push(candidate);
+            continue;
+        }
+        let parent_start = candidate
+            .raw_range
+            .as_ref()
+            .map_or(0, |range| range.byte_start);
+        let parent_text = candidate
+            .raw_range
+            .as_ref()
+            .and_then(|range| source_text.get(range.byte_start..range.byte_end));
+        let mut call_search_start = 0usize;
+        for (grammar, call) in calls {
+            let mut item = candidate.clone();
+            if let Some((start, end)) =
+                parent_text.and_then(|text| find_json_value_span(text, call, call_search_start))
+            {
+                let absolute_start = parent_start + start;
+                let absolute_end = parent_start + end;
+                item.raw_range = Some(SourceRange::new(absolute_start, absolute_end, index));
+                item.raw_text = source_text
+                    .get(absolute_start..absolute_end)
+                    .map(str::to_string);
+                call_search_start = end;
+            } else {
+                item.diagnostics.push(
+                    Diagnostic::warning(
+                        "grist.model_output.json",
+                        "json.compound_candidate_range",
+                        "compound JSON candidate retained with its enclosing source range",
+                    )
+                    .partial(),
+                );
+            }
+            match grammar {
+                CandidateGrammar::McpJsonRpc => {
+                    item.grammar = CandidateGrammar::McpJsonRpc;
+                    item.command_name = call
+                        .get("method")
+                        .and_then(Value::as_str)
+                        .map(str::to_string);
+                    if let Some(params) = call.get("params") {
+                        item.argument_name = Some("params".into());
+                        item.value = Some(params.clone());
+                    } else {
+                        item.value = Some(call.clone());
+                    }
+                    item.normalizations.push("extracted_mcp_batch_item".into());
+                }
+                CandidateGrammar::OpenAiToolCall => {
+                    let function = call.get("function").unwrap_or(call);
+                    apply_openai_call(&mut item, function, "parsed_stringified_arguments");
+                    item.normalizations
+                        .push("extracted_openai_tool_call".into());
+                }
+                _ => unreachable!("compound call grammars are closed"),
+            }
+            expanded.push(item);
+        }
+    }
+    expanded
+}
+
+fn find_json_value_span(text: &str, target: &Value, search_start: usize) -> Option<(usize, usize)> {
+    balanced_json_spans(text)
+        .into_iter()
+        .filter(|(start, _)| *start >= search_start)
+        .find(|(start, end)| {
+            parse_jsonish_value_with_repairs(&text[*start..*end])
+                .map(|parsed| parsed.value == *target)
+                .unwrap_or(false)
+        })
+}
+
+/// Return every balanced JSON object/array span in source order, with enclosing
+/// containers ordered before nested containers that begin at the same byte.
+///
+/// This is a single pass over hostile input. In particular, an arbitrarily long
+/// prefix of unmatched opening delimiters cannot hide a later balanced value or
+/// force the quadratic rescanning that a fixed probe limit was preventing.
+fn balanced_json_spans(text: &str) -> Vec<(usize, usize)> {
+    let mut stack = Vec::<(u8, usize)>::new();
+    let mut spans = Vec::new();
+    let mut in_string = false;
+    let mut escaped = false;
+
+    for (offset, byte) in text.bytes().enumerate() {
+        if in_string {
+            if escaped {
+                escaped = false;
+            } else if byte == b'\\' {
+                escaped = true;
+            } else if byte == b'"' {
+                in_string = false;
+            }
+            continue;
+        }
+
+        match byte {
+            b'"' => in_string = true,
+            b'{' | b'[' => stack.push((byte, offset)),
+            b'}' | b']' => {
+                let expected = if byte == b'}' { b'{' } else { b'[' };
+                if let Some(position) = stack.iter().rposition(|(open, _)| *open == expected) {
+                    let start = stack[position].1;
+                    stack.truncate(position);
+                    spans.push((start, offset + 1));
+                }
+            }
+            _ => {}
+        }
+    }
+
+    spans.sort_by(|left, right| left.0.cmp(&right.0).then_with(|| right.1.cmp(&left.1)));
+    spans
+}
+
+fn compound_json_calls(value: &Value) -> Vec<(CandidateGrammar, &Value)> {
+    if let Some(items) = value.as_array() {
+        let calls = items
+            .iter()
+            .filter_map(|item| {
+                if item.get("jsonrpc").is_some() && item.get("method").is_some() {
+                    Some((CandidateGrammar::McpJsonRpc, item))
+                } else if item.get("function").is_some()
+                    || (item.get("name").is_some() && item.get("arguments").is_some())
+                {
+                    Some((CandidateGrammar::OpenAiToolCall, item))
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+        if !calls.is_empty() && calls.len() == items.len() {
+            return calls;
+        }
+    }
+    if let Some(items) = value.get("output").and_then(Value::as_array) {
+        let calls = items
+            .iter()
+            .filter(|item| {
+                item.get("type").and_then(Value::as_str) == Some("function_call")
+                    || (item.get("name").is_some() && item.get("arguments").is_some())
+            })
+            .map(|item| (CandidateGrammar::OpenAiToolCall, item))
+            .collect::<Vec<_>>();
+        if !calls.is_empty() {
+            return calls;
+        }
+    }
+    openai_tool_calls(value)
+        .filter(|calls| !calls.is_empty())
+        .map(|calls| {
+            calls
+                .iter()
+                .map(|call| (CandidateGrammar::OpenAiToolCall, call))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn parse_nested_jsonish_value(text: &str) -> Result<Value, serde_json::Error> {
+    let mut value = parse_jsonish_value(text)?;
+    for _ in 0..8 {
+        let Value::String(nested) = &value else {
+            break;
+        };
+        let trimmed = nested.trim();
+        if !(trimmed.starts_with('{') || trimmed.starts_with('[') || trimmed.starts_with('"')) {
+            break;
+        }
+        value = parse_jsonish_value(trimmed)?;
+    }
+    Ok(value)
+}
+
+fn unwrap_stringified_json(candidate: &mut ModelOutputCandidate) {
+    let Some(Value::String(text)) = candidate.value.as_ref() else {
+        return;
+    };
+    let Ok(value) = parse_nested_jsonish_value(text) else {
+        return;
+    };
+    if matches!(value, Value::String(_)) {
+        return;
+    }
+    candidate.value = Some(value);
+    candidate
+        .normalizations
+        .push("parsed_stringified_json".into());
+    candidate.status = CandidateStatus::Recovered;
+    classify_json_tool_shape(candidate);
+}
 fn parse_command_arg(call: &str, arg_name: &str) -> Result<(Value, String, Vec<String>), String> {
     let Some(start) = find_argument_value_start(call, arg_name) else {
         return Err("missing arg".into());
@@ -1030,8 +1247,14 @@ fn select_candidate_id(
                         .unwrap_or(false)
             })
             .collect::<Vec<_>>();
-        if let Some(candidate) = select_highest_priority_candidate(&valid) {
-            return Some(candidate.id.clone());
+        match valid.as_slice() {
+            [candidate] => return Some(candidate.id.clone()),
+            [] => {}
+            _ if candidates_are_duplicate_interpretations(&valid) => {
+                return select_highest_priority_candidate(&valid)
+                    .map(|candidate| candidate.id.clone());
+            }
+            _ => return None,
         }
     }
     if candidates.len() == 1 {
@@ -1047,9 +1270,29 @@ fn select_candidate_id(
                 )
         })
         .collect::<Vec<_>>();
-    select_highest_priority_candidate(&complete).map(|candidate| candidate.id.clone())
+    match complete.as_slice() {
+        [candidate] => Some(candidate.id.clone()),
+        _ if candidates_are_duplicate_interpretations(&complete) => {
+            select_highest_priority_candidate(&complete).map(|candidate| candidate.id.clone())
+        }
+        _ => None,
+    }
 }
 
+fn candidates_are_duplicate_interpretations(candidates: &[&ModelOutputCandidate]) -> bool {
+    let Some(first) = candidates.first() else {
+        return false;
+    };
+    let Some(first_range) = first.raw_range.as_ref() else {
+        return false;
+    };
+    candidates.iter().skip(1).all(|candidate| {
+        candidate.value == first.value
+            && candidate.raw_range.as_ref().is_some_and(|range| {
+                range.byte_start < first_range.byte_end && first_range.byte_start < range.byte_end
+            })
+    })
+}
 fn select_highest_priority_candidate<'a>(
     candidates: &[&'a ModelOutputCandidate],
 ) -> Option<&'a ModelOutputCandidate> {
@@ -1769,24 +2012,24 @@ fn is_plausible_command_name(name: &str) -> bool {
 }
 
 fn strip_think_blocks(text: &str) -> String {
-    let mut output = String::new();
-    let mut rest = text;
-    loop {
-        let Some(start) = rest.find("<think>") else {
-            output.push_str(rest);
-            break;
-        };
-        output.push_str(&rest[..start]);
-        let after = &rest[start + "<think>".len()..];
-        if let Some(end) = after.find("</think>") {
-            rest = &after[end + "</think>".len()..];
-        } else {
-            break;
+    let mut output = text.as_bytes().to_vec();
+    let mut search = 0;
+    while let Some(relative_start) = text[search..].find("<think>") {
+        let start = search + relative_start;
+        let after_start = start + "<think>".len();
+        let end = text[after_start..]
+            .find("</think>")
+            .map(|relative_end| after_start + relative_end + "</think>".len())
+            .unwrap_or(text.len());
+        for byte in &mut output[start..end] {
+            if !matches!(*byte, b'\r' | b'\n') {
+                *byte = b' ';
+            }
         }
+        search = end;
     }
-    output
+    String::from_utf8(output).expect("masking UTF-8 with ASCII spaces stays valid UTF-8")
 }
-
 fn looks_like_candidate_start(text: &str) -> bool {
     text.contains("```")
         || text.contains("function")
