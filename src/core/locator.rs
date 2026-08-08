@@ -459,6 +459,12 @@ impl LocatorPrecision {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum LocationComponent {
+    /// A zero-based half-open byte range relative to the immediately preceding
+    /// component, or to the source when this is the outermost component.
+    ByteRange {
+        byte_start: usize,
+        byte_end: usize,
+    },
     TextRange {
         byte_start: usize,
         byte_end: usize,
@@ -585,6 +591,18 @@ impl LocationComponent {
     fn validate(&self, index: usize) -> Result<(), SourceLocatorError> {
         let field = |suffix: &str| format!("components[{index}].{suffix}");
         match self {
+            Self::ByteRange {
+                byte_start,
+                byte_end,
+            } => {
+                if byte_end < byte_start {
+                    return Err(SourceLocatorError::ReversedRange {
+                        field: field("byte"),
+                        start: *byte_start as u64,
+                        end: *byte_end as u64,
+                    });
+                }
+            }
             Self::TextRange { .. } => {
                 self.as_text_range()
                     .expect("text range variant")

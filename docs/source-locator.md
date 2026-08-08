@@ -20,14 +20,16 @@ the archive. Reordering or removing a parent changes the locator's meaning.
 
 The tagged component set is:
 
-- `text_range`, `pdf_region`, `ooxml_part`, `slide_region`;
+- `byte_range`, `text_range`, `pdf_region`, `ooxml_part`, `slide_region`;
 - `sheet_range`, `notebook_cell`, `email_part`, `archive_member`;
 - `image_region`, `media_time`, `record_range`;
 - `json_pointer` and `xml_path`.
 
 ## Ranges and index bases
 
-Text byte offsets are zero-based offsets into UTF-8 and form a half-open
+Binary byte ranges are zero-based, half-open offsets relative to their parent
+component (or the source when outermost). They do not imply a character
+encoding. Text byte offsets are zero-based offsets into UTF-8 and form a half-open
 `byte_start..byte_end` interval. Human line and column positions are one-based
 and half-open. Columns count Unicode scalar values, so a multibyte scalar
 advances the byte offset by its UTF-8 width but the column by one.

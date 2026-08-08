@@ -1,0 +1,1225 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "BoundingBox": {
+      "description": "A rectangle in a declared coordinate system.",
+      "properties": {
+        "height": {
+          "format": "double",
+          "type": "number"
+        },
+        "origin": {
+          "$ref": "#/definitions/CoordinateOrigin"
+        },
+        "unit": {
+          "$ref": "#/definitions/CoordinateUnit"
+        },
+        "width": {
+          "format": "double",
+          "type": "number"
+        },
+        "x": {
+          "format": "double",
+          "type": "number"
+        },
+        "y": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "height",
+        "origin",
+        "unit",
+        "width",
+        "x",
+        "y"
+      ],
+      "type": "object"
+    },
+    "CellAddress": {
+      "description": "A sheet cell address with explicit row and column bases.",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/IndexBase"
+        },
+        "column": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "row": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "column",
+        "row"
+      ],
+      "type": "object"
+    },
+    "CoordinateOrigin": {
+      "description": "Coordinate-system origin for rectangular source regions.",
+      "enum": [
+        "top_left",
+        "bottom_left"
+      ],
+      "type": "string"
+    },
+    "CoordinateUnit": {
+      "description": "Units used by rectangular source regions.",
+      "enum": [
+        "points",
+        "pixels",
+        "normalized"
+      ],
+      "type": "string"
+    },
+    "CsvCell": {
+      "properties": {
+        "column_index": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "empty": {
+          "type": "boolean"
+        },
+        "header": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "quote_closed": {
+          "type": "boolean"
+        },
+        "quoted": {
+          "type": "boolean"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "raw": {
+          "description": "Exact source lexeme, including quote and escape spelling.",
+          "type": "string"
+        },
+        "text": {
+          "description": "Field text after dialect-level unquoting only.",
+          "type": "string"
+        },
+        "typed_candidates": {
+          "items": {
+            "$ref": "#/definitions/CsvScalarCandidate"
+          },
+          "type": "array"
+        },
+        "value": {
+          "description": "Compatibility-selected scalar; `typed_candidates` is authoritative."
+        },
+        "value_range": {
+          "$ref": "#/definitions/SourceRange"
+        }
+      },
+      "required": [
+        "column_index",
+        "empty",
+        "locator",
+        "quote_closed",
+        "quoted",
+        "range",
+        "raw",
+        "text",
+        "typed_candidates",
+        "value",
+        "value_range"
+      ],
+      "type": "object"
+    },
+    "CsvDelimiter": {
+      "enum": [
+        "auto",
+        "comma",
+        "tab",
+        "semicolon",
+        "pipe"
+      ],
+      "type": "string"
+    },
+    "CsvDialect": {
+      "properties": {
+        "candidates": {
+          "items": {
+            "$ref": "#/definitions/CsvDialectCandidate"
+          },
+          "type": "array"
+        },
+        "delimiter": {
+          "$ref": "#/definitions/CsvDelimiter"
+        },
+        "delimiter_text": {
+          "type": "string"
+        },
+        "double_quote": {
+          "type": "boolean"
+        },
+        "escape": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "quote": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "$ref": "#/definitions/CsvDialectSource"
+        }
+      },
+      "required": [
+        "candidates",
+        "delimiter",
+        "delimiter_text",
+        "double_quote",
+        "source"
+      ],
+      "type": "object"
+    },
+    "CsvDialectCandidate": {
+      "properties": {
+        "consistent_records": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "delimiter": {
+          "$ref": "#/definitions/CsvDelimiter"
+        },
+        "malformed_records": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "modal_width": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "sampled_records": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "score": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "consistent_records",
+        "delimiter",
+        "malformed_records",
+        "modal_width",
+        "sampled_records",
+        "score"
+      ],
+      "type": "object"
+    },
+    "CsvDialectSource": {
+      "enum": [
+        "detected",
+        "declared"
+      ],
+      "type": "string"
+    },
+    "CsvHeader": {
+      "properties": {
+        "column_index": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "name": {
+          "type": "string"
+        },
+        "quoted": {
+          "type": "boolean"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "raw": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "column_index",
+        "locator",
+        "name",
+        "quoted",
+        "range",
+        "raw"
+      ],
+      "type": "object"
+    },
+    "CsvNewlineFidelity": {
+      "properties": {
+        "cr_count": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "crlf_count": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "final_record_terminated": {
+          "type": "boolean"
+        },
+        "lf_count": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "mixed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "cr_count",
+        "crlf_count",
+        "final_record_terminated",
+        "lf_count",
+        "mixed"
+      ],
+      "type": "object"
+    },
+    "CsvParseIssue": {
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "range"
+      ],
+      "type": "object"
+    },
+    "CsvRecordRole": {
+      "enum": [
+        "header",
+        "data"
+      ],
+      "type": "string"
+    },
+    "CsvRecordTerminator": {
+      "enum": [
+        "lf",
+        "cr_lf",
+        "cr",
+        "end_of_input"
+      ],
+      "type": "string"
+    },
+    "CsvRow": {
+      "properties": {
+        "cells": {
+          "items": {
+            "$ref": "#/definitions/CsvCell"
+          },
+          "type": "array"
+        },
+        "full_range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "index": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "issues": {
+          "items": {
+            "$ref": "#/definitions/CsvParseIssue"
+          },
+          "type": "array"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "malformed": {
+          "type": "boolean"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "raw": {
+          "description": "Exact logical-record text, excluding its terminator.",
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/definitions/CsvRecordRole"
+        },
+        "source_line": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "source_record_index": {
+          "description": "One-based logical record index, including the header.",
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "terminator": {
+          "$ref": "#/definitions/CsvRecordTerminator"
+        },
+        "width": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "cells",
+        "full_range",
+        "index",
+        "issues",
+        "locator",
+        "malformed",
+        "range",
+        "raw",
+        "role",
+        "source_line",
+        "source_record_index",
+        "terminator",
+        "width"
+      ],
+      "type": "object"
+    },
+    "CsvScalarCandidate": {
+      "properties": {
+        "confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "evidence": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/CsvScalarKind"
+        },
+        "normalized": {
+          "type": "boolean"
+        },
+        "value": true
+      },
+      "required": [
+        "confidence",
+        "evidence",
+        "kind",
+        "normalized",
+        "value"
+      ],
+      "type": "object"
+    },
+    "CsvScalarKind": {
+      "enum": [
+        "null",
+        "boolean",
+        "integer",
+        "decimal",
+        "date",
+        "date_time",
+        "text"
+      ],
+      "type": "string"
+    },
+    "DerivedNodeReference": {
+      "description": "A reference from derived content back to the nodes and declared transforms that produced it.",
+      "properties": {
+        "derivation_steps": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "source_node_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "derivation_steps",
+        "source_node_ids"
+      ],
+      "type": "object"
+    },
+    "IndexBase": {
+      "description": "Whether an ordinal is counted from zero or one.\n\nEvery format component carrying a page, slide, cell, frame, token, output, member, track, or record ordinal uses this type rather than relying on an undocumented convention.",
+      "enum": [
+        "zero",
+        "one"
+      ],
+      "type": "string"
+    },
+    "IndexPosition": {
+      "description": "One explicitly based ordinal.",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/IndexBase"
+        },
+        "value": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "value"
+      ],
+      "type": "object"
+    },
+    "IndexRange": {
+      "description": "A half-open range of ordinals using one declared base.",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/IndexBase"
+        },
+        "end": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "start": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "end",
+        "start"
+      ],
+      "type": "object"
+    },
+    "LocationComponent": {
+      "description": "One location inside its immediately preceding parent component.",
+      "oneOf": [
+        {
+          "description": "A zero-based half-open byte range relative to the immediately preceding component, or to the source when this is the outermost component.",
+          "properties": {
+            "byte_end": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "byte_start": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "type": {
+              "enum": [
+                "byte_range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "byte_end",
+            "byte_start",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "byte_end": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "byte_start": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "end_column": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "end_line": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "start_column": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "start_line": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "type": {
+              "enum": [
+                "text_range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "byte_end",
+            "byte_start",
+            "end_column",
+            "end_line",
+            "start_column",
+            "start_line",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "bbox": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/BoundingBox"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "page": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "rotation_degrees": {
+              "format": "int16",
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "tokens": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexRange"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "enum": [
+                "pdf_region"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "page",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "column": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "object_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "paragraph": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "part": {
+              "type": "string"
+            },
+            "row": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "run": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "table": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "enum": [
+                "ooxml_part"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "part",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "bbox": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/BoundingBox"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "shape_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "slide": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "type": {
+              "enum": [
+                "slide_region"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "slide",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "end_cell": {
+              "$ref": "#/definitions/CellAddress"
+            },
+            "sheet": {
+              "type": "string"
+            },
+            "start_cell": {
+              "$ref": "#/definitions/CellAddress"
+            },
+            "type": {
+              "enum": [
+                "sheet_range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "end_cell",
+            "sheet",
+            "start_cell",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "cell_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "index": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "output_index": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "enum": [
+                "notebook_cell"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "index",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "header": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "message_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "mime_path": {
+              "items": {
+                "$ref": "#/definitions/IndexPosition"
+              },
+              "type": "array"
+            },
+            "type": {
+              "enum": [
+                "email_part"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "member_index": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "member_path": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "archive_member"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "member_index",
+            "member_path",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "bbox": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/BoundingBox"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "frame": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "type": {
+              "enum": [
+                "image_region"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "frame",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "end_ms": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "start_ms": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "track": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "enum": [
+                "media_time"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "end_ms",
+            "start_ms",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "collection": {
+              "type": "string"
+            },
+            "field": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "records": {
+              "$ref": "#/definitions/IndexRange"
+            },
+            "type": {
+              "enum": [
+                "record_range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "collection",
+            "records",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "pointer": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "json_pointer"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "pointer",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "xml_path"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "type"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "LocatorConfidence": {
+      "format": "double",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "type": "number"
+    },
+    "SourceLocator": {
+      "description": "An outermost-to-innermost containment chain.\n\nComponent `n` is interpreted relative to component `n - 1`. For example, `[archive_member, email_part, ooxml_part, text_range]` identifies text in an OOXML part attached to an email stored in an archive without flattening any parent coordinate system.",
+      "oneOf": [
+        {
+          "properties": {
+            "derived_from": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/DerivedNodeReference"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "precision": {
+              "enum": [
+                "exact"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "precision"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "confidence": {
+              "$ref": "#/definitions/LocatorConfidence"
+            },
+            "derived_from": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/DerivedNodeReference"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "precision": {
+              "enum": [
+                "approximate"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "confidence",
+            "precision"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "confidence": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/LocatorConfidence"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "derived_from": {
+              "$ref": "#/definitions/DerivedNodeReference"
+            },
+            "precision": {
+              "enum": [
+                "synthetic"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "derived_from",
+            "precision"
+          ],
+          "type": "object"
+        }
+      ],
+      "properties": {
+        "components": {
+          "items": {
+            "$ref": "#/definitions/LocationComponent"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "components"
+      ],
+      "type": "object"
+    },
+    "SourceRange": {
+      "properties": {
+        "byte_end": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "byte_start": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "end_column": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "end_line": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "start_column": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "start_line": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "byte_end",
+        "byte_start",
+        "end_column",
+        "end_line",
+        "start_column",
+        "start_line"
+      ],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "column_count": {
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "complete": {
+      "type": "boolean"
+    },
+    "dialect": {
+      "$ref": "#/definitions/CsvDialect"
+    },
+    "has_headers": {
+      "type": "boolean"
+    },
+    "header_record": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/CsvRow"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "headers": {
+      "items": {
+        "$ref": "#/definitions/CsvHeader"
+      },
+      "type": "array"
+    },
+    "newline_fidelity": {
+      "$ref": "#/definitions/CsvNewlineFidelity"
+    },
+    "record_count": {
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "rows": {
+      "items": {
+        "$ref": "#/definitions/CsvRow"
+      },
+      "type": "array"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "source_record_count": {
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "column_count",
+    "complete",
+    "dialect",
+    "has_headers",
+    "headers",
+    "newline_fidelity",
+    "record_count",
+    "rows",
+    "schema_version",
+    "source_record_count"
+  ],
+  "title": "CsvDocument",
+  "type": "object"
+}

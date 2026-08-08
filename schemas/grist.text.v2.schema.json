@@ -852,6 +852,33 @@
       "description": "One location inside its immediately preceding parent component.",
       "oneOf": [
         {
+          "description": "A zero-based half-open byte range relative to the immediately preceding component, or to the source when this is the outermost component.",
+          "properties": {
+            "byte_end": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "byte_start": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "type": {
+              "enum": [
+                "byte_range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "byte_end",
+            "byte_start",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
           "properties": {
             "byte_end": {
               "format": "uint",

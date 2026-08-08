@@ -83,7 +83,7 @@ pub fn summarize_serialization_payload(
             ));
             RenderedSummary {
                 schema_version: RENDERED_SUMMARY_V1.to_string(),
-                source_schema_version: SchemaVersion::SERIALIZATION_V1.to_string(),
+                source_schema_version: SchemaVersion::STRUCTURED_TEXT_V2.to_string(),
                 title: "Serialization Summary".into(),
                 profile: profile_name(profile.as_ref()).map(str::to_string),
                 sections: vec![SummarySection {
@@ -150,7 +150,7 @@ fn summarize_generic_json(value: &Value, diagnostics: Vec<Diagnostic>) -> Render
 
     RenderedSummary {
         schema_version: RENDERED_SUMMARY_V1.to_string(),
-        source_schema_version: SchemaVersion::SERIALIZATION_V1.to_string(),
+        source_schema_version: SchemaVersion::STRUCTURED_TEXT_V2.to_string(),
         title: infer_title(value).unwrap_or_else(|| "Serialization Summary".into()),
         profile: None,
         sections,

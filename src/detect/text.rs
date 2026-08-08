@@ -128,6 +128,22 @@ fn structure_signals(text: &str) -> Vec<Signal> {
         .filter(|line| !line.trim().is_empty())
         .take(8)
         .collect::<Vec<_>>();
+    if looks_like_mbox(trimmed) {
+        signals.push(structure(
+            "mbox",
+            "application/mbox",
+            0.94,
+            "one or more plausible mbox envelope separators followed by RFC 5322 headers",
+        ));
+    }
+    if looks_like_email(trimmed) {
+        signals.push(structure(
+            "eml",
+            "message/rfc822",
+            0.88,
+            "RFC 5322 header block and message body separator",
+        ));
+    }
     if lines.len() >= 2
         && lines
             .iter()
@@ -152,19 +168,19 @@ fn structure_signals(text: &str) -> Vec<Signal> {
         signals.push(structure("xml", "application/xml", 0.84, "XML declaration"));
         add_declared_encoding_signal(&mut signals, "xml", "application/xml", trimmed);
     }
-    if looks_like_csv(&lines) {
+    if looks_like_delimited(trimmed, 44) {
         signals.push(structure(
             "csv",
             "text/csv",
-            0.66,
+            0.86,
             "consistent comma-delimited records",
         ));
     }
-    if looks_like_tsv(&lines) {
+    if looks_like_delimited(trimmed, 9) {
         signals.push(structure(
             "tsv",
             "text/tab-separated-values",
-            0.68,
+            0.86,
             "consistent tab-delimited records",
         ));
     }
@@ -248,6 +264,71 @@ fn structure_signals(text: &str) -> Vec<Signal> {
         ));
     }
     signals
+}
+
+fn looks_like_mbox(text: &str) -> bool {
+    let mut separators = 0;
+    for line in text.lines().take(10_000) {
+        let Some(rest) = line.strip_prefix("From ") else {
+            continue;
+        };
+        let fields = rest.split_ascii_whitespace().collect::<Vec<_>>();
+        if fields.len() >= 4
+            && fields[1..]
+                .iter()
+                .any(|field| field.bytes().any(|byte| byte.is_ascii_digit()))
+        {
+            separators += 1;
+        }
+    }
+    separators > 0
+        && text
+            .lines()
+            .skip(1)
+            .take(100)
+            .any(|line| line.starts_with("From:") || line.starts_with("Message-ID:"))
+}
+
+fn looks_like_email(text: &str) -> bool {
+    let header_block = text
+        .split_once("\r\n\r\n")
+        .or_else(|| text.split_once("\n\n"))
+        .map(|(headers, _)| headers)
+        .unwrap_or_default();
+    if header_block.is_empty() || header_block.len() > 256 * 1024 {
+        return false;
+    }
+    let mut recognized = 0;
+    let mut physical = 0;
+    for line in header_block.lines().take(100) {
+        if line.starts_with([' ', '\t']) {
+            continue;
+        }
+        physical += 1;
+        let Some((name, _)) = line.split_once(':') else {
+            return false;
+        };
+        if !name
+            .bytes()
+            .all(|byte| byte.is_ascii_graphic() && byte != b':')
+        {
+            return false;
+        }
+        if matches!(
+            name.to_ascii_lowercase().as_str(),
+            "from"
+                | "to"
+                | "subject"
+                | "date"
+                | "message-id"
+                | "mime-version"
+                | "content-type"
+                | "received"
+        ) {
+            recognized += 1;
+        }
+    }
+    physical >= 2 && recognized >= 2
 }
 
 fn add_declared_encoding_signal(signals: &mut Vec<Signal>, format: &str, media: &str, text: &str) {
@@ -361,28 +442,36 @@ fn looks_like_xml(text: &str) -> bool {
         || rest.contains("/>")
         || matches!(name, "article" | "book" | "root")
 }
-fn looks_like_csv(lines: &[&str]) -> bool {
-    let Some(first) = lines.first() else {
-        return false;
-    };
-    let columns = first.matches(',').count() + 1;
-    columns > 1
-        && lines.len() >= 2
-        && lines
-            .iter()
-            .all(|line| line.matches(',').count() + 1 == columns)
-}
-
-fn looks_like_tsv(lines: &[&str]) -> bool {
-    let Some(first) = lines.first() else {
-        return false;
-    };
-    let columns = first.matches(char::from(9)).count() + 1;
-    columns > 1
-        && lines.len() >= 2
-        && lines
-            .iter()
-            .all(|line| line.matches(char::from(9)).count() + 1 == columns)
+fn looks_like_delimited(text: &str, delimiter: u8) -> bool {
+    let bytes = text.as_bytes();
+    let mut widths = Vec::new();
+    let mut width = 1;
+    let mut quoted = false;
+    let mut cursor = 0;
+    while cursor < bytes.len() && widths.len() < 8 {
+        match bytes[cursor] {
+            34 if quoted && bytes.get(cursor + 1) == Some(&34) => cursor += 2,
+            34 => {
+                quoted = !quoted;
+                cursor += 1;
+            }
+            byte if byte == delimiter && !quoted => {
+                width += 1;
+                cursor += 1;
+            }
+            10 | 13 if !quoted => {
+                widths.push(width);
+                width = 1;
+                cursor +=
+                    usize::from(bytes[cursor] == 13 && bytes.get(cursor + 1) == Some(&10)) + 1;
+            }
+            _ => cursor += 1,
+        }
+    }
+    if cursor > 0 && !matches!(bytes.get(cursor.saturating_sub(1)), Some(10 | 13)) {
+        widths.push(width);
+    }
+    widths.len() >= 2 && widths[0] > 1 && widths.iter().all(|width| *width == widths[0])
 }
 
 fn looks_like_toml(lines: &[&str]) -> bool {

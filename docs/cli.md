@@ -55,6 +55,13 @@ grist parse python script.py --detail semantic
 grist parse typescript app.ts --dialect typescript
 grist parse typescript app.tsx --dialect tsx
 grist parse json config.toml --format toml
+grist parse cbor value.cbor
+grist parse messagepack events.msgpack
+grist parse protobuf person.pb --descriptor api.desc --message example.Person
+grist parse sqlite records.sqlite --options sqlite-options.json
+grist parse eml message.eml --options email-options.json
+grist parse mbox mailbox.mbox --options mbox-options.json
+grist parse msg message.msg --options outlook-msg-options.json
 grist parse model-output response.txt --json-value
 grist parse ldgr-projection ticket.md --strict
 ```
@@ -62,6 +69,27 @@ grist parse ldgr-projection ticket.md --strict
 All parser commands accept `-` for stdin. Use `parse auto - --filename NAME`
 and optionally `--mime TYPE` or `--kind FORMAT` when stdin needs detection
 context. Genuine ambiguity remains an `ambiguous` envelope.
+
+SQLite record extraction requires an options document with selected table names
+and positive `max_tables` and `max_rows_per_table` limits. Omitting
+`record_selection` performs schema-only inspection. See `docs/sqlite.md`.
+
+EML parsing preserves every source header and MIME entity, decodes RFC 2047/2231
+text and transfer encodings, inventories exact attachment identities, and may
+recursively parse only attachment bytes already present in the message. Remote
+HTML images, links, and `Content-Location` values are retained but never fetched.
+See `docs/email.md`.
+
+MBOX parsing emits ordered messages with stable decoded-content identities,
+source envelope separators and escaping evidence, mailbox-level thread links,
+and the same inert MIME and attachment behavior as EML. The public library also
+exposes a terminal-event stream for mailboxes too large to collect eagerly.
+
+Outlook MSG parsing traverses the compound file and MAPI property streams under
+explicit limits. It preserves recipients, all body alternatives, attachments,
+embedded messages, named and unknown properties, dates, message identifiers,
+and exact storage/stream locators without opening attachments or active HTML.
+See `docs/email.md`.
 
 The HTML selector also accepts registry aliases htm and xhtml. Raw-byte registry
 parsing honors HTML meta and XHTML XML encoding declarations. The XML selector also accepts jats and nxml aliases; `--dialect auto|xml|jats` controls structural interpretation without enabling entity, XInclude, schema, or network resolution. DOM, source-token,
@@ -131,7 +159,7 @@ grist render graph.json --to text --text-output output.txt --request-id render-7
 ```json
 {
   "schema_version": "grist/rendered-summary/v1",
-  "source_schema_version": "grist/serialization/v1",
+  "source_schema_version": "grist/structured-text/v2",
   "title": "Dynamic Event Dataset",
   "profile": "dynamic-event-dataset",
   "sections": [

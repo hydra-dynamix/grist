@@ -59,27 +59,44 @@ fn descriptor(
             | ArtifactKind::Pdf
             | ArtifactKind::WordOoxml
             | ArtifactKind::PresentationOoxml
+            | ArtifactKind::SpreadsheetOoxml
+            | ArtifactKind::SpreadsheetOdf
             | ArtifactKind::PresentationOdf
             | ArtifactKind::OdfWord
             | ArtifactKind::Rtf
             | ArtifactKind::Xml
             | ArtifactKind::Latex
             | ArtifactKind::Bibliography
+            | ArtifactKind::Serialization
+            | ArtifactKind::StructuredBinary
+            | ArtifactKind::Columnar
+            | ArtifactKind::Sqlite
+            | ArtifactKind::Email
+            | ArtifactKind::Mbox
+            | ArtifactKind::OutlookMsg
             | ArtifactKind::RustCode
             | ArtifactKind::PythonCode
             | ArtifactKind::TypeScriptCode
     ) {
         capabilities.insert(Capability::DocumentGraphProjection);
     }
-    if matches!(format.artifact_kind, ArtifactKind::ModelOutput) {
+    if matches!(
+        format.artifact_kind,
+        ArtifactKind::ModelOutput | ArtifactKind::Columnar | ArtifactKind::Mbox
+    ) {
         capabilities.insert(Capability::Streaming);
     }
     if matches!(
         format.artifact_kind,
         ArtifactKind::PresentationOoxml
+            | ArtifactKind::SpreadsheetOoxml
+            | ArtifactKind::SpreadsheetOdf
             | ArtifactKind::PresentationOdf
             | ArtifactKind::OdfWord
             | ArtifactKind::Rtf
+            | ArtifactKind::Email
+            | ArtifactKind::Mbox
+            | ArtifactKind::OutlookMsg
     ) {
         capabilities.insert(Capability::EmbeddedArtifacts);
     }
@@ -168,6 +185,8 @@ fn register_feature_parsers(registry: &mut ParserRegistry) -> Result<(), ParserR
     register_pdf(registry)?;
     register_word_ooxml(registry)?;
     register_presentation_ooxml(registry)?;
+    register_spreadsheet_ooxml(registry)?;
+    register_spreadsheet_odf(registry)?;
     register_presentation_odf(registry)?;
     register_odf_word(registry)?;
     register_rtf(registry)?;
@@ -179,6 +198,12 @@ fn register_feature_parsers(registry: &mut ParserRegistry) -> Result<(), ParserR
     register_python(registry)?;
     register_typescript(registry)?;
     register_serialization(registry)?;
+    register_columnar(registry)?;
+    register_sqlite(registry)?;
+    register_email(registry)?;
+    register_mbox(registry)?;
+    register_outlook_msg(registry)?;
+    register_structured_binary(registry)?;
     register_model_output(registry)?;
     register_ldgr_projection(registry)?;
     Ok(())
@@ -646,6 +671,128 @@ fn register_presentation_odf(registry: &mut ParserRegistry) -> Result<(), Parser
     Ok(())
 }
 
+#[cfg(feature = "spreadsheet-ooxml")]
+fn register_spreadsheet_ooxml(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    let definitions = [
+        (
+            "xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            crate::spreadsheet_ooxml::parse_xlsx_registered
+                as fn(&mut ParserContext<'_>) -> Result<ParserOutput, ParserError>,
+        ),
+        (
+            "xlsm",
+            "application/vnd.ms-excel.sheet.macroEnabled.12",
+            crate::spreadsheet_ooxml::parse_xlsm_registered,
+        ),
+    ];
+    for (id, media_type, parse) in definitions {
+        let format = FormatMetadata::new(id, ArtifactKind::SpreadsheetOoxml)
+            .with_media_types([media_type])
+            .with_extensions([id]);
+        register(
+            registry,
+            descriptor(
+                &format!("grist.{id}"),
+                format,
+                crate::spreadsheet_ooxml::parser_info(),
+                crate::core::SchemaVersion::SPREADSHEET_OOXML_V1,
+                Some("spreadsheet-ooxml"),
+                serde_json::to_value(crate::spreadsheet_ooxml::SpreadsheetOoxmlOptions::default())
+                    .unwrap_or_default(),
+            ),
+            parse,
+        )?;
+    }
+    Ok(())
+}
+
+#[cfg(feature = "spreadsheet-odf")]
+fn register_spreadsheet_odf(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    let definitions = [
+        (
+            "ods",
+            "application/vnd.oasis.opendocument.spreadsheet",
+            crate::spreadsheet_odf::parse_ods_registered
+                as fn(&mut ParserContext<'_>) -> Result<ParserOutput, ParserError>,
+        ),
+        (
+            "ots",
+            "application/vnd.oasis.opendocument.spreadsheet-template",
+            crate::spreadsheet_odf::parse_ots_registered,
+        ),
+    ];
+    for (id, media_type, parse) in definitions {
+        let format = FormatMetadata::new(id, ArtifactKind::SpreadsheetOdf)
+            .with_media_types([media_type])
+            .with_extensions([id]);
+        register(
+            registry,
+            descriptor(
+                &format!("grist.{id}"),
+                format,
+                crate::spreadsheet_odf::parser_info(),
+                crate::core::SchemaVersion::SPREADSHEET_ODF_V1,
+                Some("spreadsheet-odf"),
+                serde_json::to_value(crate::spreadsheet_odf::SpreadsheetOdfOptions::default())
+                    .unwrap_or_default(),
+            ),
+            parse,
+        )?;
+    }
+    Ok(())
+}
+
+#[cfg(not(feature = "spreadsheet-odf"))]
+fn register_spreadsheet_odf(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    for (id, media_type) in [
+        ("ods", "application/vnd.oasis.opendocument.spreadsheet"),
+        (
+            "ots",
+            "application/vnd.oasis.opendocument.spreadsheet-template",
+        ),
+    ] {
+        let format = FormatMetadata::new(id, ArtifactKind::SpreadsheetOdf)
+            .with_media_types([media_type])
+            .with_extensions([id]);
+        let metadata = descriptor(
+            &format!("grist.{id}"),
+            format,
+            ParserInfo::new("grist.spreadsheet_odf").with_feature("spreadsheet-odf"),
+            crate::core::SchemaVersion::SPREADSHEET_ODF_V1,
+            Some("spreadsheet-odf"),
+            serde_json::json!({}),
+        );
+        register_disabled(registry, metadata, "spreadsheet-odf")?;
+    }
+    Ok(())
+}
+
+#[cfg(not(feature = "spreadsheet-ooxml"))]
+fn register_spreadsheet_ooxml(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    for (id, media_type) in [
+        (
+            "xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ),
+        ("xlsm", "application/vnd.ms-excel.sheet.macroEnabled.12"),
+    ] {
+        let format = FormatMetadata::new(id, ArtifactKind::SpreadsheetOoxml)
+            .with_media_types([media_type])
+            .with_extensions([id]);
+        let metadata = descriptor(
+            &format!("grist.{id}"),
+            format,
+            ParserInfo::new("grist.spreadsheet_ooxml").with_feature("spreadsheet-ooxml"),
+            crate::core::SchemaVersion::SPREADSHEET_OOXML_V1,
+            Some("spreadsheet-ooxml"),
+            serde_json::json!({}),
+        );
+        register_disabled(registry, metadata, "spreadsheet-ooxml")?;
+    }
+    Ok(())
+}
+
 #[cfg(not(feature = "presentation-odf"))]
 fn register_presentation_odf(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
     for (id, media_type) in [
@@ -939,10 +1086,10 @@ fn register_csv(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError
             "grist.csv",
             format,
             ParserInfo::new("grist.csv")
-                .with_implementation("csv", "1.4.0")
+                .with_implementation("grist-delimited-scanner", crate::version())
                 .with_specification_version("RFC 4180-compatible")
                 .with_feature("csv"),
-            crate::core::SchemaVersion::CSV_V1,
+            crate::core::SchemaVersion::CSV_V2,
             Some("csv"),
             serde_json::to_value(crate::csv::CsvOptions::default()).unwrap_or_default(),
         ),
@@ -972,7 +1119,7 @@ fn register_csv(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError
         "grist.csv",
         format,
         ParserInfo::new("grist.csv").with_feature("csv"),
-        crate::core::SchemaVersion::CSV_V1,
+        crate::core::SchemaVersion::CSV_V2,
         Some("csv"),
         serde_json::json!({}),
     );
@@ -1272,12 +1419,402 @@ fn register_typescript(registry: &mut ParserRegistry) -> Result<(), ParserRegist
     Ok(())
 }
 
+#[cfg(feature = "columnar")]
+fn register_columnar(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    for (id, format, extensions, media, parser) in [
+        (
+            "arrow",
+            crate::columnar::ColumnarFormat::ArrowIpcStream,
+            vec!["arrow", "feather"],
+            vec![
+                "application/vnd.apache.arrow.stream",
+                "application/vnd.apache.arrow.file",
+            ],
+            parse_arrow as fn(&mut ParserContext<'_>) -> Result<ParserOutput, ParserError>,
+        ),
+        (
+            "parquet",
+            crate::columnar::ColumnarFormat::Parquet,
+            vec!["parquet"],
+            vec!["application/vnd.apache.parquet"],
+            parse_parquet,
+        ),
+    ] {
+        let metadata = FormatMetadata::new(id, ArtifactKind::Columnar)
+            .with_extensions(extensions)
+            .with_media_types(media);
+        register(
+            registry,
+            descriptor(
+                &format!("grist.columnar.{id}"),
+                metadata,
+                crate::columnar::parser_info(format),
+                crate::core::SchemaVersion::COLUMNAR_V1,
+                Some("columnar"),
+                serde_json::to_value(crate::columnar::ColumnarOptions::default())
+                    .unwrap_or_default(),
+            ),
+            parser,
+        )?;
+    }
+    Ok(())
+}
+
+#[cfg(feature = "sqlite")]
+fn register_sqlite(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    let format = FormatMetadata::new("sqlite", ArtifactKind::Sqlite)
+        .with_aliases(["sqlite3"])
+        .with_extensions(["sqlite", "sqlite3", "db"])
+        .with_media_types(["application/vnd.sqlite3", "application/x-sqlite3"]);
+    register(
+        registry,
+        descriptor(
+            "grist.sqlite",
+            format,
+            crate::sqlite::parser_info(),
+            crate::core::SchemaVersion::SQLITE_V1,
+            Some("sqlite"),
+            serde_json::to_value(crate::sqlite::SqliteOptions::default()).unwrap_or_default(),
+        ),
+        parse_sqlite,
+    )
+}
+
+#[cfg(feature = "sqlite")]
+fn parse_sqlite(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserError> {
+    let options = decode_options::<crate::sqlite::SqliteOptions>(context)?;
+    output(crate::sqlite::parse_sqlite_with_operation_control(
+        context.bytes(),
+        context.source().clone(),
+        &options,
+        context.control(),
+    ))
+}
+
+#[cfg(feature = "email-message")]
+fn register_email(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    let format = FormatMetadata::new("eml", ArtifactKind::Email)
+        .with_aliases(["email", "rfc5322", "message_rfc822"])
+        .with_extensions(["eml"])
+        .with_media_types(["message/rfc822"]);
+    register(
+        registry,
+        descriptor(
+            "grist.email",
+            format,
+            crate::email::parser_info(),
+            crate::core::SchemaVersion::EMAIL_V1,
+            Some("email-message"),
+            serde_json::to_value(crate::email::EmailOptions::default()).unwrap_or_default(),
+        ),
+        parse_email,
+    )
+}
+
+#[cfg(feature = "email-message")]
+fn parse_email(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserError> {
+    let options = decode_options::<crate::email::EmailOptions>(context)?;
+    output(crate::email::parse_email_with_operation_control(
+        context.bytes(),
+        context.source().clone(),
+        &options,
+        context.control(),
+    ))
+}
+
+#[cfg(feature = "email-message")]
+fn register_mbox(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    let format = FormatMetadata::new("mbox", ArtifactKind::Mbox)
+        .with_aliases(["mailbox", "application_mbox"])
+        .with_extensions(["mbox"])
+        .with_media_types(["application/mbox"]);
+    register(
+        registry,
+        descriptor(
+            "grist.mbox",
+            format,
+            crate::mbox::parser_info(),
+            crate::core::SchemaVersion::MBOX_V1,
+            Some("email-message"),
+            serde_json::to_value(crate::mbox::MboxOptions::default()).unwrap_or_default(),
+        ),
+        parse_mbox,
+    )
+}
+
+#[cfg(feature = "email-message")]
+fn parse_mbox(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserError> {
+    let options = decode_options::<crate::mbox::MboxOptions>(context)?;
+    output(crate::mbox::parse_mbox_with_operation_control(
+        context.bytes(),
+        context.source().clone(),
+        &options,
+        context.control(),
+    ))
+}
+
+#[cfg(feature = "email-message")]
+fn register_outlook_msg(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    let format = FormatMetadata::new("msg", ArtifactKind::OutlookMsg)
+        .with_aliases(["outlook_msg", "application_vnd_ms_outlook"])
+        .with_extensions(["msg"])
+        .with_media_types(["application/vnd.ms-outlook"]);
+    register(
+        registry,
+        descriptor(
+            "grist.outlook.msg",
+            format,
+            crate::outlook::parser_info(),
+            crate::core::SchemaVersion::OUTLOOK_MSG_V1,
+            Some("email-message"),
+            serde_json::to_value(crate::outlook::OutlookMsgOptions::default()).unwrap_or_default(),
+        ),
+        parse_outlook_msg,
+    )
+}
+
+#[cfg(feature = "email-message")]
+fn parse_outlook_msg(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserError> {
+    let options = decode_options::<crate::outlook::OutlookMsgOptions>(context)?;
+    output(crate::outlook::parse_outlook_msg_with_operation_control(
+        context.bytes(),
+        context.source().clone(),
+        &options,
+        context.control(),
+    ))
+}
+
+#[cfg(not(feature = "email-message"))]
+fn register_outlook_msg(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    let metadata = descriptor(
+        "grist.outlook.msg",
+        FormatMetadata::new("msg", ArtifactKind::OutlookMsg)
+            .with_aliases(["outlook_msg", "application_vnd_ms_outlook"])
+            .with_extensions(["msg"])
+            .with_media_types(["application/vnd.ms-outlook"]),
+        ParserInfo::new("grist.outlook.msg").with_feature("email-message"),
+        crate::core::SchemaVersion::OUTLOOK_MSG_V1,
+        Some("email-message"),
+        serde_json::json!({}),
+    );
+    register_disabled(registry, metadata, "email-message")
+}
+
+#[cfg(not(feature = "email-message"))]
+fn register_mbox(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    let metadata = descriptor(
+        "grist.mbox",
+        FormatMetadata::new("mbox", ArtifactKind::Mbox)
+            .with_aliases(["mailbox", "application_mbox"])
+            .with_extensions(["mbox"])
+            .with_media_types(["application/mbox"]),
+        ParserInfo::new("grist.mbox").with_feature("email-message"),
+        crate::core::SchemaVersion::MBOX_V1,
+        Some("email-message"),
+        serde_json::json!({}),
+    );
+    register_disabled(registry, metadata, "email-message")
+}
+
+#[cfg(not(feature = "email-message"))]
+fn register_email(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    let metadata = descriptor(
+        "grist.email",
+        FormatMetadata::new("eml", ArtifactKind::Email)
+            .with_aliases(["email", "rfc5322", "message_rfc822"])
+            .with_extensions(["eml"])
+            .with_media_types(["message/rfc822"]),
+        ParserInfo::new("grist.email").with_feature("email-message"),
+        crate::core::SchemaVersion::EMAIL_V1,
+        Some("email-message"),
+        serde_json::json!({}),
+    );
+    register_disabled(registry, metadata, "email-message")
+}
+
+#[cfg(not(feature = "sqlite"))]
+fn register_sqlite(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    let metadata = descriptor(
+        "grist.sqlite",
+        FormatMetadata::new("sqlite", ArtifactKind::Sqlite)
+            .with_aliases(["sqlite3"])
+            .with_extensions(["sqlite", "sqlite3", "db"]),
+        ParserInfo::new("grist.sqlite").with_feature("sqlite"),
+        crate::core::SchemaVersion::SQLITE_V1,
+        Some("sqlite"),
+        serde_json::json!({}),
+    );
+    register_disabled(registry, metadata, "sqlite")
+}
+#[cfg(feature = "columnar")]
+fn parse_arrow(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserError> {
+    let options = decode_options::<crate::columnar::ColumnarOptions>(context)?;
+    output(crate::columnar::parse_columnar_with_operation_control(
+        context.bytes(),
+        None,
+        context.source().clone(),
+        &options,
+        context.control(),
+    ))
+}
+#[cfg(feature = "columnar")]
+fn parse_parquet(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserError> {
+    let options = decode_options::<crate::columnar::ColumnarOptions>(context)?;
+    output(crate::columnar::parse_columnar_with_operation_control(
+        context.bytes(),
+        Some(crate::columnar::ColumnarFormat::Parquet),
+        context.source().clone(),
+        &options,
+        context.control(),
+    ))
+}
+#[cfg(not(feature = "columnar"))]
+fn register_columnar(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    for (id, extensions) in [
+        ("arrow", vec!["arrow", "feather"]),
+        ("parquet", vec!["parquet"]),
+    ] {
+        let metadata = descriptor(
+            &format!("grist.columnar.{id}"),
+            FormatMetadata::new(id, ArtifactKind::Columnar).with_extensions(extensions),
+            ParserInfo::new("grist.columnar").with_feature("columnar"),
+            crate::core::SchemaVersion::COLUMNAR_V1,
+            Some("columnar"),
+            serde_json::json!({}),
+        );
+        register_disabled(registry, metadata, "columnar")?;
+    }
+    Ok(())
+}
+
 #[cfg(feature = "serialization")]
 fn register_serialization(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
     register_serialization_format(registry, "json", "json", parse_json)?;
     register_serialization_format(registry, "jsonl", "jsonl", parse_jsonl)?;
     register_serialization_format(registry, "yaml", "yaml", parse_yaml)?;
     register_serialization_format(registry, "toml", "toml", parse_toml)?;
+    Ok(())
+}
+
+#[cfg(feature = "structured-binary")]
+fn register_structured_binary(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    let formats = [
+        (
+            "cbor",
+            FormatMetadata::new("cbor", ArtifactKind::StructuredBinary)
+                .with_media_types(["application/cbor"])
+                .with_extensions(["cbor"]),
+            crate::structured_binary::StructuredBinaryFormat::Cbor,
+        ),
+        (
+            "messagepack",
+            FormatMetadata::new("messagepack", ArtifactKind::StructuredBinary)
+                .with_aliases(["msgpack", "message-pack"])
+                .with_media_types(["application/msgpack", "application/x-msgpack"])
+                .with_extensions(["msgpack", "mpk"]),
+            crate::structured_binary::StructuredBinaryFormat::MessagePack,
+        ),
+        (
+            "protobuf",
+            FormatMetadata::new("protobuf", ArtifactKind::StructuredBinary)
+                .with_aliases(["protocol-buffers", "proto-binary"])
+                .with_media_types(["application/x-protobuf", "application/protobuf"])
+                .with_extensions(["pb", "protobuf"]),
+            crate::structured_binary::StructuredBinaryFormat::Protobuf,
+        ),
+    ];
+    for (id, format, binary_format) in formats {
+        let parse = match binary_format {
+            crate::structured_binary::StructuredBinaryFormat::Cbor => parse_cbor,
+            crate::structured_binary::StructuredBinaryFormat::MessagePack => parse_messagepack,
+            crate::structured_binary::StructuredBinaryFormat::Protobuf => parse_protobuf,
+        };
+        register(
+            registry,
+            descriptor(
+                &format!("grist.structured-binary.{id}"),
+                format,
+                crate::structured_binary::parser_info(binary_format),
+                crate::core::SchemaVersion::STRUCTURED_BINARY_V1,
+                Some("structured-binary"),
+                serde_json::to_value(crate::structured_binary::StructuredBinaryOptions::default())
+                    .unwrap_or_default(),
+            ),
+            parse,
+        )?;
+    }
+    Ok(())
+}
+
+#[cfg(feature = "structured-binary")]
+fn parse_structured_binary(
+    context: &mut ParserContext<'_>,
+    format: crate::structured_binary::StructuredBinaryFormat,
+) -> Result<ParserOutput, ParserError> {
+    let options = decode_options::<crate::structured_binary::StructuredBinaryOptions>(context)?;
+    output(
+        crate::structured_binary::parse_structured_binary_with_operation_control(
+            context.bytes(),
+            format,
+            context.source().clone(),
+            &options,
+            context.control(),
+        ),
+    )
+}
+
+#[cfg(feature = "structured-binary")]
+fn parse_cbor(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserError> {
+    parse_structured_binary(
+        context,
+        crate::structured_binary::StructuredBinaryFormat::Cbor,
+    )
+}
+
+#[cfg(feature = "structured-binary")]
+fn parse_messagepack(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserError> {
+    parse_structured_binary(
+        context,
+        crate::structured_binary::StructuredBinaryFormat::MessagePack,
+    )
+}
+
+#[cfg(feature = "structured-binary")]
+fn parse_protobuf(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserError> {
+    parse_structured_binary(
+        context,
+        crate::structured_binary::StructuredBinaryFormat::Protobuf,
+    )
+}
+
+#[cfg(not(feature = "structured-binary"))]
+fn register_structured_binary(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    for (id, aliases, extensions) in [
+        ("cbor", Vec::<&str>::new(), vec!["cbor"]),
+        (
+            "messagepack",
+            vec!["msgpack", "message-pack"],
+            vec!["msgpack", "mpk"],
+        ),
+        (
+            "protobuf",
+            vec!["protocol-buffers", "proto-binary"],
+            vec!["pb", "protobuf"],
+        ),
+    ] {
+        let format = FormatMetadata::new(id, ArtifactKind::StructuredBinary)
+            .with_aliases(aliases)
+            .with_extensions(extensions);
+        let metadata = descriptor(
+            &format!("grist.structured-binary.{id}"),
+            format,
+            ParserInfo::new("grist.structured-binary").with_feature("structured-binary"),
+            crate::core::SchemaVersion::STRUCTURED_BINARY_V1,
+            Some("structured-binary"),
+            serde_json::json!({}),
+        );
+        register_disabled(registry, metadata, "structured-binary")?;
+    }
     Ok(())
 }
 
@@ -1288,14 +1825,20 @@ fn register_serialization_format(
     extension: &str,
     parse: fn(&mut ParserContext<'_>) -> Result<ParserOutput, ParserError>,
 ) -> Result<(), ParserRegistryError> {
-    let format = FormatMetadata::new(id, ArtifactKind::Serialization).with_extensions([extension]);
+    let mut format =
+        FormatMetadata::new(id, ArtifactKind::Serialization).with_extensions([extension]);
+    if id == "jsonl" {
+        format = format
+            .with_aliases(["ndjson"])
+            .with_extensions(["jsonl", "ndjson"]);
+    }
     register(
         registry,
         descriptor(
             &("grist.serialization.".to_string() + id),
             format,
-            ParserInfo::new("grist.serialization").with_feature("serialization"),
-            crate::core::SchemaVersion::SERIALIZATION_V1,
+            ParserInfo::new("grist.structured-text").with_feature("serialization"),
+            crate::core::SchemaVersion::STRUCTURED_TEXT_V2,
             Some("serialization"),
             serde_json::to_value(crate::serialization::SerializationOptions::default())
                 .unwrap_or_default(),
@@ -1312,11 +1855,12 @@ fn parse_serialization(
     let options = decode_options::<crate::serialization::SerializationOptions>(context)?;
     let text = context.utf8_text()?;
     context.consume_decoded_characters(text.chars().count() as u64)?;
-    output(crate::serialization::parse_serialization_with_options(
+    output(crate::serialization::parse_serialization_with_control(
         text,
         format,
         context.source().clone(),
         &options,
+        context.control(),
     ))
 }
 
@@ -1347,8 +1891,8 @@ fn register_serialization(registry: &mut ParserRegistry) -> Result<(), ParserReg
         let metadata = descriptor(
             &("grist.serialization.".to_string() + id),
             format,
-            ParserInfo::new("grist.serialization").with_feature("serialization"),
-            crate::core::SchemaVersion::SERIALIZATION_V1,
+            ParserInfo::new("grist.structured-text").with_feature("serialization"),
+            crate::core::SchemaVersion::STRUCTURED_TEXT_V2,
             Some("serialization"),
             serde_json::json!({}),
         );
@@ -1479,23 +2023,12 @@ fn unimplemented_formats() -> &'static [(&'static str, &'static str, &'static st
         ("wordprocessingml", "wml", "word-processing"),
         ("flat_opc", "fopc", "word-processing"),
         ("ppt", "ppt", "presentations"),
-        ("tsv", "tsv", "spreadsheets"),
-        ("xlsx", "xlsx", "spreadsheets"),
-        ("xlsm", "xlsm", "spreadsheets"),
         ("xlsb", "xlsb", "spreadsheets"),
-        ("ods", "ods", "spreadsheets"),
-        ("ots", "ots", "spreadsheets"),
         ("xls", "xls", "spreadsheets"),
         ("spreadsheetml", "xmlss", "spreadsheets"),
         ("cbor", "cbor", "structured-data"),
         ("messagepack", "msgpack", "structured-data"),
         ("protobuf", "pb", "structured-data"),
-        ("arrow_ipc", "arrow", "structured-data"),
-        ("parquet", "parquet", "structured-data"),
-        ("sqlite", "sqlite", "structured-data"),
-        ("eml", "eml", "email-message"),
-        ("mbox", "mbox", "email-message"),
-        ("msg", "msg", "email-message"),
         ("pst", "pst", "email-message"),
         ("ost", "ost", "email-message"),
         ("icalendar", "ics", "email-message"),

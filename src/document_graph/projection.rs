@@ -211,6 +211,14 @@ fn source_order_bytes(locator: &SourceLocator) -> Vec<u8> {
     let mut output = Vec::new();
     for component in locator.components() {
         match component {
+            LocationComponent::ByteRange {
+                byte_start,
+                byte_end,
+            } => {
+                output.push(13);
+                push_u64(&mut output, *byte_start as u64);
+                push_u64(&mut output, *byte_end as u64);
+            }
             LocationComponent::TextRange {
                 byte_start,
                 byte_end,

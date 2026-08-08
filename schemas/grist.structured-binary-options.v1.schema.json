@@ -1,0 +1,90 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "BinaryMalformedRecovery": {
+      "enum": [
+        "strict",
+        "preserve_raw"
+      ],
+      "type": "string"
+    },
+    "ProtobufDecodeOptions": {
+      "additionalProperties": false,
+      "properties": {
+        "descriptor_set": {
+          "description": "Serialized google.protobuf.FileDescriptorSet bytes.",
+          "items": {
+            "format": "uint8",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "message_name": {
+          "description": "Fully-qualified message name, with or without a leading dot.",
+          "type": "string"
+        },
+        "preserve_unknown_fields": {
+          "default": true,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "descriptor_set",
+        "message_name"
+      ],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "allow_sequence": {
+      "default": true,
+      "type": "boolean"
+    },
+    "malformed_recovery": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/BinaryMalformedRecovery"
+        }
+      ],
+      "default": "strict"
+    },
+    "max_blob_bytes": {
+      "default": 67108864,
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_collection_items": {
+      "default": 1000000,
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_nesting_depth": {
+      "default": 256,
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_values": {
+      "default": 1000000,
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "protobuf": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/ProtobufDecodeOptions"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "title": "StructuredBinaryOptions",
+  "type": "object"
+}

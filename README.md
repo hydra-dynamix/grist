@@ -7,7 +7,7 @@ Grist is a Rust library and optional JSON-only CLI for interpretation tasks shar
 - Typed Rust output models with `serde` support.
 - Versioned JSON envelopes for CLI and cross-project integrations.
 - Checked-in JSON Schemas for public output contracts.
-- Parsers for Markdown, LaTeX, BibTeX/BibLaTeX, HTML fragments/documents, XML/JATS, CSV, Rust, Python, TypeScript/TSX/JSX, JSON/JSONL/YAML/TOML, model outputs, plain text, and LDGR Markdown Projection documents.
+- Parsers for Markdown, LaTeX, BibTeX/BibLaTeX, HTML fragments/documents, XML/JATS, CSV, EML/RFC 5322 and MIME, MBOX mailboxes, Outlook MSG, Rust, Python, TypeScript/TSX/JSX, JSON/JSONL/YAML/TOML, model outputs, plain text, and LDGR Markdown Projection documents.
 - A normalized `DocumentGraph` projection for cross-format transforms, code graph consumers, and semantic obligation extraction.
 - Safe file and repository ingestion that honors ignore rules by default.
 

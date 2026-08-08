@@ -197,6 +197,16 @@ pub fn project_envelope_to_graph(
                 serde_json::from_value(payload)?;
             Ok(document.to_document_graph(context)?)
         }
+        crate::core::ArtifactKind::SpreadsheetOoxml => {
+            let document: crate::spreadsheet_ooxml::SpreadsheetOoxmlDocument =
+                serde_json::from_value(payload)?;
+            Ok(document.to_document_graph(context)?)
+        }
+        crate::core::ArtifactKind::SpreadsheetOdf => {
+            let document: crate::spreadsheet_odf::SpreadsheetOdfDocument =
+                serde_json::from_value(payload)?;
+            Ok(document.to_document_graph(context)?)
+        }
         crate::core::ArtifactKind::PresentationOdf => {
             let document: crate::presentation_odf::OdfPresentationDocument =
                 serde_json::from_value(payload)?;
@@ -208,6 +218,35 @@ pub fn project_envelope_to_graph(
         }
         crate::core::ArtifactKind::Rtf => {
             let document: crate::rtf::RtfDocument = serde_json::from_value(payload)?;
+            Ok(document.to_document_graph(context)?)
+        }
+        crate::core::ArtifactKind::Csv => {
+            let document: crate::csv::CsvDocument = serde_json::from_value(payload)?;
+            Ok(document.to_document_graph(context)?)
+        }
+        crate::core::ArtifactKind::StructuredBinary => {
+            let document: crate::structured_binary::StructuredBinaryDocument =
+                serde_json::from_value(payload)?;
+            Ok(document.to_document_graph(context)?)
+        }
+        crate::core::ArtifactKind::Columnar => {
+            let document: crate::columnar::ColumnarDocument = serde_json::from_value(payload)?;
+            Ok(document.to_document_graph(context)?)
+        }
+        crate::core::ArtifactKind::Sqlite => {
+            let document: crate::sqlite::SqliteDocument = serde_json::from_value(payload)?;
+            Ok(document.to_document_graph(context)?)
+        }
+        crate::core::ArtifactKind::Email => {
+            let document: crate::email::EmailDocument = serde_json::from_value(payload)?;
+            Ok(document.to_document_graph(context)?)
+        }
+        crate::core::ArtifactKind::Mbox => {
+            let document: crate::mbox::MboxDocument = serde_json::from_value(payload)?;
+            Ok(document.to_document_graph(context)?)
+        }
+        crate::core::ArtifactKind::OutlookMsg => {
+            let document: crate::outlook::OutlookMsgDocument = serde_json::from_value(payload)?;
             Ok(document.to_document_graph(context)?)
         }
         crate::core::ArtifactKind::PythonCode => {

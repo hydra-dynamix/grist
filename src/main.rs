@@ -196,6 +196,7 @@ enum ParseCommand {
         dialect: XmlDialectArg,
     },
     /// Parse CSV data.
+    #[command(alias = "tsv")]
     Csv {
         /// Input path or `-` for stdin.
         input: String,
@@ -206,6 +207,14 @@ enum ParseCommand {
         #[arg(long)]
         no_headers: bool,
     },
+    /// Parse an OOXML workbook without calculating formulas.
+    Xlsx { input: String },
+    /// Parse a macro-enabled OOXML workbook and quarantine VBA projects.
+    Xlsm { input: String },
+    /// Parse an OpenDocument workbook without calculating formulas.
+    Ods { input: String },
+    /// Parse an OpenDocument spreadsheet template without calculating formulas.
+    Ots { input: String },
     /// Parse Rust code with tree-sitter.
     Rust {
         /// Input path or `-` for stdin.
@@ -258,6 +267,28 @@ enum ParseCommand {
         /// Optional JSON Schema file.
         #[arg(long)]
         schema: Option<PathBuf>,
+    },
+    /// Parse CBOR values or CBOR sequences with exact byte locators.
+    Cbor {
+        /// Input path or stdin marker.
+        input: String,
+    },
+    /// Parse MessagePack objects or concatenated streams with extension retention.
+    #[command(name = "messagepack", alias = "msgpack")]
+    MessagePack {
+        /// Input path or stdin marker.
+        input: String,
+    },
+    /// Parse Protocol Buffers using a serialized FileDescriptorSet.
+    Protobuf {
+        /// Binary message input path or stdin marker.
+        input: String,
+        /// Serialized google.protobuf.FileDescriptorSet path.
+        #[arg(long)]
+        descriptor: PathBuf,
+        /// Fully-qualified message name in the descriptor set.
+        #[arg(long)]
+        message: String,
     },
     /// Parse model-output text, repair candidate JSON/tool calls, and optionally validate.
     ModelOutput {
@@ -650,6 +681,18 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     Some(serde_json::to_value(options)?),
                 )?)?;
             }
+            ParseCommand::Xlsx { input } => {
+                print_json(&parse_registry(&input, "xlsx", None)?)?;
+            }
+            ParseCommand::Xlsm { input } => {
+                print_json(&parse_registry(&input, "xlsm", None)?)?;
+            }
+            ParseCommand::Ods { input } => {
+                print_json(&parse_registry(&input, "ods", None)?)?;
+            }
+            ParseCommand::Ots { input } => {
+                print_json(&parse_registry(&input, "ots", None)?)?;
+            }
             ParseCommand::Rust { input, detail } => {
                 let options = grist::rust::RustIngestOptions {
                     detail: detail.into(),
@@ -716,10 +759,48 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 };
                 let options = grist::serialization::SerializationOptions {
                     schema: load_json_value_optional(schema.as_ref())?,
+                    ..Default::default()
                 };
                 print_json(&parse_registry(
                     &input,
                     parser_format,
+                    Some(serde_json::to_value(options)?),
+                )?)?;
+            }
+            ParseCommand::Cbor { input } => {
+                print_json(&parse_registry(
+                    &input,
+                    "cbor",
+                    Some(serde_json::to_value(
+                        grist::structured_binary::StructuredBinaryOptions::default(),
+                    )?),
+                )?)?;
+            }
+            ParseCommand::MessagePack { input } => {
+                print_json(&parse_registry(
+                    &input,
+                    "messagepack",
+                    Some(serde_json::to_value(
+                        grist::structured_binary::StructuredBinaryOptions::default(),
+                    )?),
+                )?)?;
+            }
+            ParseCommand::Protobuf {
+                input,
+                descriptor,
+                message,
+            } => {
+                let options = grist::structured_binary::StructuredBinaryOptions {
+                    protobuf: Some(grist::structured_binary::ProtobufDecodeOptions {
+                        descriptor_set: std::fs::read(descriptor)?,
+                        message_name: message,
+                        preserve_unknown_fields: true,
+                    }),
+                    ..Default::default()
+                };
+                print_json(&parse_registry(
+                    &input,
+                    "protobuf",
                     Some(serde_json::to_value(options)?),
                 )?)?;
             }
@@ -1003,6 +1084,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     source,
                     &grist::serialization::SerializationOptions {
                         schema: Some(load_json_value(&schema)?),
+                        ..Default::default()
                     },
                 ))?;
             }
@@ -1153,6 +1235,7 @@ fn render_serialization_summary(
         source,
         &grist::serialization::SerializationOptions {
             schema: load_json_value_optional(schema)?,
+            ..Default::default()
         },
     );
     let payload = envelope
@@ -1202,6 +1285,17 @@ fn parse_input_to_document_graph(
                 grist::odf_word::OdfWordOptions::default(),
             )?),
         ),
+        "csv" | "tsv" => (
+            "csv",
+            Some(serde_json::to_value(grist::csv::CsvOptions {
+                delimiter: if extension == "tsv" {
+                    grist::csv::CsvDelimiter::Tab
+                } else {
+                    grist::csv::CsvDelimiter::Auto
+                },
+                ..Default::default()
+            })?),
+        ),
         "odp" | "otp" => (
             extension.as_str(),
             Some(serde_json::to_value(
@@ -1212,6 +1306,18 @@ fn parse_input_to_document_graph(
             "python",
             Some(serde_json::to_value(
                 grist::python::PythonIngestOptions::default(),
+            )?),
+        ),
+        "xlsx" | "xlsm" => (
+            extension.as_str(),
+            Some(serde_json::to_value(
+                grist::spreadsheet_ooxml::SpreadsheetOoxmlOptions::default(),
+            )?),
+        ),
+        "ods" | "ots" => (
+            extension.as_str(),
+            Some(serde_json::to_value(
+                grist::spreadsheet_odf::SpreadsheetOdfOptions::default(),
             )?),
         ),
         "rs" => (
@@ -1234,7 +1340,7 @@ fn parse_input_to_document_graph(
             )?),
         ),
         _ => return Err(format!(
-            "cannot infer transform source kind for `{input}`; use a supported extension (.txt, .md, .tex, .bib, .pdf, .odt, .ott, .odp, .otp, .py, .rs, .ts, .tsx, .jsx)"
+            "cannot infer transform source kind for `{input}`; use a supported extension (.txt, .md, .csv, .tsv, .xlsx, .xlsm, .ods, .ots, .tex, .bib, .pdf, .odt, .ott, .odp, .otp, .py, .rs, .ts, .tsx, .jsx)"
         )
         .into()),
     };

@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "CsvDelimiter": {
+      "enum": [
+        "auto",
+        "comma",
+        "tab",
+        "semicolon",
+        "pipe"
+      ],
+      "type": "string"
+    }
+  },
+  "properties": {
+    "delimiter": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/CsvDelimiter"
+        }
+      ],
+      "default": "auto"
+    },
+    "dialect_sample_records": {
+      "default": 32,
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "double_quote": {
+      "default": true,
+      "type": "boolean"
+    },
+    "escape": {
+      "default": null,
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "has_headers": {
+      "default": true,
+      "type": "boolean"
+    },
+    "quote": {
+      "default": "\"",
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "title": "CsvOptions",
+  "type": "object"
+}

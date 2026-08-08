@@ -21,7 +21,7 @@
     "asciidoc": {
       "schema_name": "asciidoc",
       "schema_version": "grist/asciidoc/v1",
-      "canonical_sha256": "sha256:40e94435d4271cfd3ae3b463894861989dd33999e341dec0dadac86dc59c60c8",
+      "canonical_sha256": "sha256:53576513386f5be59cdf58ae63d9965cc1fc672ef2e40da3a700c0fb8461ee7c",
       "value": {
         "decoded_range": {
           "byte_end": 0,
@@ -66,11 +66,7 @@
             {
               "byte_end": 0,
               "byte_start": 0,
-              "end_column": 0,
-              "end_line": 0,
-              "start_column": 0,
-              "start_line": 0,
-              "type": "text_range"
+              "type": "byte_range"
             }
           ],
           "precision": "exact"
@@ -180,7 +176,7 @@
     "bibliography": {
       "schema_name": "bibliography",
       "schema_version": "grist/bibliography/v1",
-      "canonical_sha256": "sha256:04bd67e373ff69a38902f3f77664a738cba5ae6bc70c48f8df7ff524e7cf521f",
+      "canonical_sha256": "sha256:c43a45cff54d4def96443170e0c3ea12ddc8b8e8fa16e48700306b23447a0df8",
       "value": {
         "decoding": {
           "declarations": [],
@@ -217,11 +213,7 @@
             {
               "byte_end": 0,
               "byte_start": 0,
-              "end_column": 0,
-              "end_line": 0,
-              "start_column": 0,
-              "start_line": 0,
-              "type": "text_range"
+              "type": "byte_range"
             }
           ],
           "precision": "exact"
@@ -499,6 +491,68 @@
         }
       }
     },
+    "columnar": {
+      "schema_name": "columnar",
+      "schema_version": "grist/columnar/v1",
+      "canonical_sha256": "sha256:1b9cdfbdb990a18272e447956eb5b07f88ecd6e6eb1c8d179538dbbdcf556efd",
+      "value": {
+        "batches": [],
+        "complete": false,
+        "diagnostics": [],
+        "dictionaries": [],
+        "format": "arrow_ipc_file",
+        "format_version": "",
+        "metadata": {},
+        "projected_rows": 0,
+        "schema": {
+          "fields": [],
+          "metadata": {}
+        },
+        "schema_version": "grist/columnar/v1"
+      }
+    },
+    "columnar-envelope": {
+      "schema_name": "columnar-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "value": {
+        "diagnostics": [],
+        "kind": "markdown",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "columnar-options": {
+      "schema_name": "columnar-options",
+      "schema_version": "grist/columnar-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "columnar-stream-event": {
+      "schema_name": "columnar-stream-event",
+      "schema_version": "grist/columnar-stream-event/v1",
+      "canonical_sha256": "sha256:403657438dc3d5b42149f211aa45dd4aad30f540beb063b022c17c3f750fec80",
+      "value": {
+        "event": "schema",
+        "format": "arrow_ipc_file",
+        "schema": {
+          "fields": [],
+          "metadata": {}
+        }
+      }
+    },
     "compatibility-policy": {
       "schema_name": "compatibility-policy",
       "schema_version": "grist/compatibility-policy/v1",
@@ -624,16 +678,31 @@
     },
     "csv": {
       "schema_name": "csv",
-      "schema_version": "grist/csv/v1",
-      "canonical_sha256": "sha256:e870bfe83223bc657ab81d0b1188ada486528e17820c93ebfd1241d40579eee7",
+      "schema_version": "grist/csv/v2",
+      "canonical_sha256": "sha256:84a2947feae265e86948886819843e78c675031c1e0bdc46174c7193c63dbf59",
       "value": {
         "column_count": 0,
-        "delimiter": "comma",
+        "complete": false,
+        "dialect": {
+          "candidates": [],
+          "delimiter": "auto",
+          "delimiter_text": "",
+          "double_quote": false,
+          "source": "detected"
+        },
         "has_headers": false,
         "headers": [],
+        "newline_fidelity": {
+          "cr_count": 0,
+          "crlf_count": 0,
+          "final_record_terminated": false,
+          "lf_count": 0,
+          "mixed": false
+        },
         "record_count": 0,
         "rows": [],
-        "schema_version": "grist/csv/v1"
+        "schema_version": "grist/csv/v2",
+        "source_record_count": 0
       }
     },
     "csv-envelope": {
@@ -661,7 +730,7 @@
     },
     "csv-options": {
       "schema_name": "csv-options",
-      "schema_version": "grist/csv-options/v1",
+      "schema_version": "grist/csv-options/v2",
       "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
       "value": {}
     },
@@ -757,10 +826,103 @@
         "canonical_events": []
       }
     },
+    "email": {
+      "schema_name": "email",
+      "schema_version": "grist/email/v1",
+      "canonical_sha256": "sha256:13e0e7d5a1065753b1afef7877b852acbf330e717c8d8f3be586e7a7de5b00de",
+      "value": {
+        "address_fields": [],
+        "authentication": [],
+        "complete": false,
+        "date_fields": [],
+        "diagnostics": [],
+        "encrypted_parts": [],
+        "external_references": [],
+        "headers": [],
+        "mime": {
+          "body_locator": {
+            "components": [
+              {
+                "byte_end": 0,
+                "byte_start": 0,
+                "type": "byte_range"
+              }
+            ],
+            "precision": "exact"
+          },
+          "children": [],
+          "content_type": {
+            "essence": "",
+            "parameters": [],
+            "raw": ""
+          },
+          "encoded_body_bytes": 0,
+          "encoded_body_sha256": "",
+          "encrypted": false,
+          "headers": [],
+          "locator": {
+            "components": [
+              {
+                "byte_end": 0,
+                "byte_start": 0,
+                "type": "byte_range"
+              }
+            ],
+            "precision": "exact"
+          },
+          "path": [],
+          "signed": false,
+          "transfer_encoding": ""
+        },
+        "schema_version": "grist/email/v1",
+        "signed_parts": [],
+        "thread": {
+          "in_reply_to": [],
+          "received": [],
+          "references": []
+        }
+      }
+    },
+    "email-envelope": {
+      "schema_name": "email-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "value": {
+        "diagnostics": [],
+        "kind": "markdown",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "email-options": {
+      "schema_name": "email-options",
+      "schema_version": "grist/email-options/v1",
+      "canonical_sha256": "sha256:48567eb9a59b9a62ec7f970e723316749d6edfb6d5fc1689f92bb4c213042f1f",
+      "value": {
+        "inline_attachment_bytes": false,
+        "max_decoded_part_bytes": 0,
+        "max_header_bytes": 0,
+        "max_mime_depth": 0,
+        "max_mime_parts": 0,
+        "parse_nested_attachments": false
+      }
+    },
     "embedded-artifact": {
       "schema_name": "embedded-artifact",
       "schema_version": "grist/embedded-artifact/v1",
-      "canonical_sha256": "sha256:ffa6d20f93b76beca3eb2b9c72a18301f329d9bd766c399b827f265ba3c3db01",
+      "canonical_sha256": "sha256:88a0f9f2ca8fc1a89a9b74002912880aeb1cef931dbee75ef6ef7cfb0b5bafa1",
       "value": {
         "disposition": "attachment",
         "extraction": {
@@ -776,11 +938,7 @@
             {
               "byte_end": 0,
               "byte_start": 0,
-              "end_column": 0,
-              "end_line": 0,
-              "start_column": 0,
-              "start_line": 0,
-              "type": "text_range"
+              "type": "byte_range"
             }
           ],
           "precision": "exact"
@@ -821,7 +979,7 @@
     "epub": {
       "schema_name": "epub",
       "schema_version": "grist/epub/v1",
-      "canonical_sha256": "sha256:b87fd36526a720fc13107f0f5b87d1f411c7d6d5073c574187a2750bd6913bdd",
+      "canonical_sha256": "sha256:a39ca1d462bd572f6b4328005caa0163123c6bccf3e57e32315856f6e67f00cb",
       "value": {
         "chapters": [],
         "encrypted_resources": [],
@@ -835,11 +993,7 @@
             {
               "byte_end": 0,
               "byte_start": 0,
-              "end_column": 0,
-              "end_line": 0,
-              "start_column": 0,
-              "start_line": 0,
-              "type": "text_range"
+              "type": "byte_range"
             }
           ],
           "precision": "exact"
@@ -855,11 +1009,7 @@
               {
                 "byte_end": 0,
                 "byte_start": 0,
-                "end_column": 0,
-                "end_line": 0,
-                "start_column": 0,
-                "start_line": 0,
-                "type": "text_range"
+                "type": "byte_range"
               }
             ],
             "precision": "exact"
@@ -1090,7 +1240,7 @@
     "html": {
       "schema_name": "html",
       "schema_version": "grist/html/v2",
-      "canonical_sha256": "sha256:51b8e8d4858562e0624b765a306d19124f633a0a5cb8825ecd55c2ad6a3dd1df",
+      "canonical_sha256": "sha256:9571a718cc8c49e16d9c144328cc51ef1994815c799d02403f89f5d7f4a2b3fc",
       "value": {
         "active_content": [],
         "decoded_range": {
@@ -1139,11 +1289,7 @@
             {
               "byte_end": 0,
               "byte_start": 0,
-              "end_column": 0,
-              "end_line": 0,
-              "start_column": 0,
-              "start_line": 0,
-              "type": "text_range"
+              "type": "byte_range"
             }
           ],
           "precision": "exact"
@@ -1393,7 +1539,7 @@
     "markdown": {
       "schema_name": "markdown",
       "schema_version": "grist/markdown/v2",
-      "canonical_sha256": "sha256:bf8a980ff8768b51e2fa46ae7cc49679b5d89b29a3011cd18b5526de294b736e",
+      "canonical_sha256": "sha256:85b771d9327f4bf512eed7c9816246b13964e48800d014dc0f8142154f9507a1",
       "value": {
         "decoded_range": {
           "byte_end": 0,
@@ -1438,11 +1584,7 @@
             {
               "byte_end": 0,
               "byte_start": 0,
-              "end_column": 0,
-              "end_line": 0,
-              "start_column": 0,
-              "start_line": 0,
-              "type": "text_range"
+              "type": "byte_range"
             }
           ],
           "precision": "exact"
@@ -1484,6 +1626,101 @@
       "schema_version": "grist/markdown-options/v1",
       "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
       "value": {}
+    },
+    "mbox": {
+      "schema_name": "mbox",
+      "schema_version": "grist/mbox/v1",
+      "canonical_sha256": "sha256:e06e6edbc06e2b1702010fd6f5c0b58817a53c9ac21f45d9e03f855eb35a0b42",
+      "value": {
+        "complete": false,
+        "diagnostics": [],
+        "messages": [],
+        "schema_version": "grist/mbox/v1",
+        "thread_evidence": {
+          "links": [],
+          "message_ids": [],
+          "subject_groups": []
+        },
+        "variant": "mboxo"
+      }
+    },
+    "mbox-envelope": {
+      "schema_name": "mbox-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "value": {
+        "diagnostics": [],
+        "kind": "markdown",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "mbox-options": {
+      "schema_name": "mbox-options",
+      "schema_version": "grist/mbox-options/v1",
+      "canonical_sha256": "sha256:a6a424fe30c7b9d29fa62d0d702216685b7b2f731a267f88377e0be602ea7a16",
+      "value": {
+        "email": {
+          "inline_attachment_bytes": false,
+          "max_decoded_part_bytes": 0,
+          "max_header_bytes": 0,
+          "max_mime_depth": 0,
+          "max_mime_parts": 0,
+          "parse_nested_attachments": false
+        },
+        "honor_content_length": false,
+        "max_messages": 0,
+        "max_separator_bytes": 0,
+        "recover_missing_initial_separator": false,
+        "unescape_from_lines": false
+      }
+    },
+    "mbox-stream-event": {
+      "schema_name": "mbox-stream-event",
+      "schema_version": "grist/mbox-stream-event/v1",
+      "canonical_sha256": "sha256:05b85494688e17d49db961b13481ae1262fe20133da5d410dbc71a0aa0869980",
+      "value": {
+        "event": "item",
+        "item": {
+          "identity": {},
+          "payload": {
+            "decoded_bytes": 0,
+            "decoded_sha256": "",
+            "diagnostics": [],
+            "duplicate_occurrence": 0,
+            "escaped_from_lines": [],
+            "locator": {
+              "components": [
+                {
+                  "byte_end": 0,
+                  "byte_start": 0,
+                  "type": "byte_range"
+                }
+              ],
+              "precision": "exact"
+            },
+            "ordinal": 0,
+            "raw_bytes": 0,
+            "raw_sha256": "",
+            "stable_id": "",
+            "status": "complete"
+          },
+          "request_id": "",
+          "sequence": 0
+        }
+      }
     },
     "metric-event": {
       "schema_name": "metric-event",
@@ -1598,7 +1835,7 @@
     "odf-word": {
       "schema_name": "odf-word",
       "schema_version": "grist/odf-word/v1",
-      "canonical_sha256": "sha256:b9b95e60659adb0d47c31f3f2194982fd9c3ebfe500f746ea16e3f7cdd3788c2",
+      "canonical_sha256": "sha256:750b83355b39634069a179078d7411b2a7978635b08494800b470fe7914c6457",
       "value": {
         "annotations": [],
         "body": {
@@ -1611,11 +1848,7 @@
               {
                 "byte_end": 0,
                 "byte_start": 0,
-                "end_column": 0,
-                "end_line": 0,
-                "start_column": 0,
-                "start_line": 0,
-                "type": "text_range"
+                "type": "byte_range"
               }
             ],
             "precision": "exact"
@@ -1676,6 +1909,80 @@
       "canonical_sha256": "sha256:58205dfa8b63985c3f1ffe872f2613d078c6d418c91be9d6ea0b0fdbadbd810e",
       "value": {
         "inline_embedded_artifact_bytes": false
+      }
+    },
+    "outlook-msg": {
+      "schema_name": "outlook-msg",
+      "schema_version": "grist/outlook-msg/v1",
+      "canonical_sha256": "sha256:ddbb684e29ddeda6907ed3db41373b525693cae93b4cfe017bccf8955d0da873",
+      "value": {
+        "attachments": [],
+        "bodies": [],
+        "complete": false,
+        "compound_file": {
+          "directory_entries": 0,
+          "major_version": 0,
+          "mini_sector_size": 0,
+          "mini_stream_cutoff": 0,
+          "minor_version": 0,
+          "sector_size": 0,
+          "storage_count": 0,
+          "stream_count": 0
+        },
+        "dates": [],
+        "diagnostics": [],
+        "encrypted": false,
+        "named_properties": [],
+        "properties": [],
+        "recipients": [],
+        "schema_version": "grist/outlook-msg/v1",
+        "sender": {},
+        "signed": false,
+        "thread": {
+          "in_reply_to": [],
+          "references": []
+        },
+        "unknown_objects": []
+      }
+    },
+    "outlook-msg-envelope": {
+      "schema_name": "outlook-msg-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "value": {
+        "diagnostics": [],
+        "kind": "markdown",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "outlook-msg-options": {
+      "schema_name": "outlook-msg-options",
+      "schema_version": "grist/outlook-msg-options/v1",
+      "canonical_sha256": "sha256:d454d68ea263e535f37e2afac7ecdb7bf3b75f76921dfd2508f3555bebadfe67",
+      "value": {
+        "inline_attachment_bytes": false,
+        "inline_property_binary": false,
+        "inline_unknown_streams": false,
+        "max_attachments": 0,
+        "max_chain_sectors": 0,
+        "max_embedded_depth": 0,
+        "max_properties_per_object": 0,
+        "max_recipients": 0,
+        "max_rtf_output_bytes": 0,
+        "parse_embedded_messages": false
       }
     },
     "parallelism-options": {
@@ -2066,7 +2373,7 @@
     "presentation-ooxml": {
       "schema_name": "presentation-ooxml",
       "schema_version": "grist/presentation-ooxml/v1",
-      "canonical_sha256": "sha256:2bfe3b994324175eafcfc74d656ade7df53611220d8c2455a9a21fb85d4048db",
+      "canonical_sha256": "sha256:0a2d297372f3c2fe0a73d5a89b2e45ef7977923650fac9b558fefe002f7cb384",
       "value": {
         "actions": [],
         "child_artifacts": [],
@@ -2077,11 +2384,7 @@
               {
                 "byte_end": 0,
                 "byte_start": 0,
-                "end_column": 0,
-                "end_line": 0,
-                "start_column": 0,
-                "start_line": 0,
-                "type": "text_range"
+                "type": "byte_range"
               }
             ],
             "precision": "exact"
@@ -2095,11 +2398,7 @@
             {
               "byte_end": 0,
               "byte_start": 0,
-              "end_column": 0,
-              "end_line": 0,
-              "start_column": 0,
-              "start_line": 0,
-              "type": "text_range"
+              "type": "byte_range"
             }
           ],
           "precision": "exact"
@@ -2446,7 +2745,7 @@
     "restructured-text": {
       "schema_name": "restructured-text",
       "schema_version": "grist/restructured-text/v1",
-      "canonical_sha256": "sha256:1d57efe115cff07b1b646dcce871faf5f5f308be65ee62eaa7a7f6329944b352",
+      "canonical_sha256": "sha256:722ad01d36bacf2623ec6b3512349daa05086c6b3bc879d5ffa4671a871e5b1a",
       "value": {
         "decoded_range": {
           "byte_end": 0,
@@ -2491,11 +2790,7 @@
             {
               "byte_end": 0,
               "byte_start": 0,
-              "end_column": 0,
-              "end_line": 0,
-              "start_column": 0,
-              "start_line": 0,
-              "type": "text_range"
+              "type": "byte_range"
             }
           ],
           "precision": "exact"
@@ -2541,7 +2836,7 @@
     "rtf": {
       "schema_name": "rtf",
       "schema_version": "grist/rtf/v1",
-      "canonical_sha256": "sha256:b774b380bf128120337bd35eff6308ba67bb6bb58572de5c816830620fa38c54",
+      "canonical_sha256": "sha256:1e6a79c98f277207563fad01c0f408426a0d0735fa6d3fec6dbd8d4a1774b7ed",
       "value": {
         "ansi_code_page": 0,
         "charset": "ansi",
@@ -2569,11 +2864,7 @@
               {
                 "byte_end": 0,
                 "byte_start": 0,
-                "end_column": 0,
-                "end_line": 0,
-                "start_column": 0,
-                "start_line": 0,
-                "type": "text_range"
+                "type": "byte_range"
               }
             ],
             "precision": "exact"
@@ -2793,12 +3084,19 @@
     },
     "serialization": {
       "schema_name": "serialization",
-      "schema_version": "grist/serialization/v1",
-      "canonical_sha256": "sha256:8efa097ba3010bbae69e8036ef341df54059c2ffc3a9d6559a6d3ddc80a12c20",
+      "schema_version": "grist/structured-text/v2",
+      "canonical_sha256": "sha256:a9f4132342df219c0631ad8adf97a31a75f5b6dbe17628f2f0865e84cbf14df8",
       "value": {
+        "aliases": [],
+        "complete": false,
+        "documents": [],
+        "duplicate_keys": [],
         "format": "json",
         "jsonl_records": [],
-        "schema_version": "grist/serialization/v1"
+        "ordering": "source",
+        "raw_unknowns": [],
+        "records": [],
+        "schema_version": "grist/structured-text/v2"
       }
     },
     "serialization-envelope": {
@@ -2826,24 +3124,20 @@
     },
     "serialization-options": {
       "schema_name": "serialization-options",
-      "schema_version": "grist/serialization-options/v1",
+      "schema_version": "grist/structured-text-options/v2",
       "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
       "value": {}
     },
     "source-locator": {
       "schema_name": "source-locator",
       "schema_version": "grist/source-locator/v1",
-      "canonical_sha256": "sha256:b0255809a4b257f91be862e78787ed4f1f54d2bd9edbe64e0a49ea15edd0f9e9",
+      "canonical_sha256": "sha256:17b0d1cbfec0df16ac2017fe107931b0e4c29d19c23ad858a6cafee2036d7e1c",
       "value": {
         "components": [
           {
             "byte_end": 0,
             "byte_start": 0,
-            "end_column": 0,
-            "end_line": 0,
-            "start_column": 0,
-            "start_line": 0,
-            "type": "text_range"
+            "type": "byte_range"
           }
         ],
         "precision": "exact"
@@ -2852,6 +3146,193 @@
     "source-options": {
       "schema_name": "source-options",
       "schema_version": "grist/source-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "spreadsheet-odf": {
+      "schema_name": "spreadsheet-odf",
+      "schema_version": "grist/spreadsheet-odf/v1",
+      "canonical_sha256": "sha256:8d54fdda3e14faccdc67057244b11f7651b4f00e0a2f825a709cff7d076bff8d",
+      "value": {
+        "calculation": {
+          "formulas_calculated_by_grist": false
+        },
+        "manifest": [],
+        "metadata": [],
+        "named_ranges": [],
+        "package_kind": "workbook",
+        "package_media_type": "",
+        "panes": [],
+        "parts": [],
+        "raw_elements": [],
+        "schema_version": "grist/spreadsheet-odf/v1",
+        "sheets": [],
+        "styles": [],
+        "workbook_locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        }
+      }
+    },
+    "spreadsheet-odf-envelope": {
+      "schema_name": "spreadsheet-odf-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "value": {
+        "diagnostics": [],
+        "kind": "markdown",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "spreadsheet-odf-options": {
+      "schema_name": "spreadsheet-odf-options",
+      "schema_version": "grist/spreadsheet-odf-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "spreadsheet-ooxml": {
+      "schema_name": "spreadsheet-ooxml",
+      "schema_version": "grist/spreadsheet-ooxml/v1",
+      "canonical_sha256": "sha256:844be4216abb743a5d3811b805643b065e54fadab9ceae1c05359ab722e403a1",
+      "value": {
+        "calculation": {
+          "formulas_calculated_by_grist": false
+        },
+        "date_system": "excel1900",
+        "macro_projects": [],
+        "named_ranges": [],
+        "package_kind": "workbook",
+        "package_media_type": "",
+        "parts": [],
+        "properties": [],
+        "relationships": [],
+        "schema_version": "grist/spreadsheet-ooxml/v1",
+        "sheets": [],
+        "styles": {
+          "borders": [],
+          "cell_formats": [],
+          "fills": [],
+          "fonts": [],
+          "number_formats": {}
+        },
+        "workbook_locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        },
+        "workbook_part": ""
+      }
+    },
+    "spreadsheet-ooxml-envelope": {
+      "schema_name": "spreadsheet-ooxml-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "value": {
+        "diagnostics": [],
+        "kind": "markdown",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "spreadsheet-ooxml-options": {
+      "schema_name": "spreadsheet-ooxml-options",
+      "schema_version": "grist/spreadsheet-ooxml-options/v1",
+      "canonical_sha256": "sha256:49f06d7a109492f297b760632ad09f4fdaa253b60e1d648182e24df3c7a05182",
+      "value": {
+        "include_parts": false
+      }
+    },
+    "sqlite": {
+      "schema_name": "sqlite",
+      "schema_version": "grist/sqlite/v1",
+      "canonical_sha256": "sha256:3297c3457af9c552eb0a75c6b76cf21ab61421ffcb5a99ed0998e5a0fa8f3f14",
+      "value": {
+        "complete": false,
+        "diagnostics": [],
+        "header": {
+          "application_id": 0,
+          "header_page_count": 0,
+          "page_count": 0,
+          "page_size": 0,
+          "read_version": "legacy",
+          "schema_cookie": 0,
+          "schema_format": 0,
+          "sqlite_version_number": 0,
+          "text_encoding": "utf8",
+          "usable_page_size": 0,
+          "user_version": 0,
+          "write_version": "legacy"
+        },
+        "indexes": [],
+        "record_sets": [],
+        "schema": [],
+        "schema_version": "grist/sqlite/v1",
+        "tables": [],
+        "views": []
+      }
+    },
+    "sqlite-envelope": {
+      "schema_name": "sqlite-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "value": {
+        "diagnostics": [],
+        "kind": "markdown",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "sqlite-options": {
+      "schema_name": "sqlite-options",
+      "schema_version": "grist/sqlite-options/v1",
       "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
       "value": {}
     },
@@ -2869,6 +3350,55 @@
         }
       }
     },
+    "structured-binary": {
+      "schema_name": "structured-binary",
+      "schema_version": "grist/structured-binary/v1",
+      "canonical_sha256": "sha256:d4dbfb10f15f4e4992588f65d5abd24a96290be4da429b8ee61d18504399943b",
+      "value": {
+        "complete": false,
+        "diagnostics": [],
+        "extensions": [],
+        "format": "cbor",
+        "records": [],
+        "schema_identity": {
+          "identity_kind": "cbor",
+          "self_described": false,
+          "specification": ""
+        },
+        "schema_version": "grist/structured-binary/v1",
+        "tags": [],
+        "unknown_fields": []
+      }
+    },
+    "structured-binary-envelope": {
+      "schema_name": "structured-binary-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "value": {
+        "diagnostics": [],
+        "kind": "markdown",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "structured-binary-options": {
+      "schema_name": "structured-binary-options",
+      "schema_version": "grist/structured-binary-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
     "summary-options": {
       "schema_name": "summary-options",
       "schema_version": "grist/summary-options/v1",
@@ -2878,7 +3408,7 @@
     "text": {
       "schema_name": "text",
       "schema_version": "grist/text/v2",
-      "canonical_sha256": "sha256:27a876274fe01cb3b61c6b12bf1a5f3bf6a18a79d4a0a5c5bf61febe1ceee8ee",
+      "canonical_sha256": "sha256:c661222e37f6ffc6a3387a239541fc42164e297ebaf990bb376533f67811c458",
       "value": {
         "blocks": [],
         "decoded_range": {
@@ -2924,11 +3454,7 @@
             {
               "byte_end": 0,
               "byte_start": 0,
-              "end_column": 0,
-              "end_line": 0,
-              "start_column": 0,
-              "start_line": 0,
-              "type": "text_range"
+              "type": "byte_range"
             }
           ],
           "precision": "exact"
@@ -3075,7 +3601,7 @@
     "word-ooxml": {
       "schema_name": "word-ooxml",
       "schema_version": "grist/word-ooxml/v1",
-      "canonical_sha256": "sha256:8f270cd3471a224054d7e1c2f81d7a7b42155db829933ac8d24df99781778b33",
+      "canonical_sha256": "sha256:d655e9b3a2f50d04dbbfa4a86ec6f9cf87888efdd9d97d41ce496eb72e1bead4",
       "value": {
         "child_artifacts": [],
         "content_types": {
@@ -3085,11 +3611,7 @@
               {
                 "byte_end": 0,
                 "byte_start": 0,
-                "end_column": 0,
-                "end_line": 0,
-                "start_column": 0,
-                "start_line": 0,
-                "type": "text_range"
+                "type": "byte_range"
               }
             ],
             "precision": "exact"
@@ -3102,11 +3624,7 @@
             {
               "byte_end": 0,
               "byte_start": 0,
-              "end_column": 0,
-              "end_line": 0,
-              "start_column": 0,
-              "start_line": 0,
-              "type": "text_range"
+              "type": "byte_range"
             }
           ],
           "precision": "exact"
@@ -3156,7 +3674,7 @@
     "xml": {
       "schema_name": "xml",
       "schema_version": "grist/xml/v1",
-      "canonical_sha256": "sha256:d7bb585148742c3891623da265f78d9436ba73ab1e5828acb9fcb17fcbdde669",
+      "canonical_sha256": "sha256:e9c39b0d7414da15b910fdd46e0ca33bdbff57c81ecdadac9522e3f014231f40",
       "value": {
         "decoded_range": {
           "byte_end": 0,
@@ -3204,11 +3722,7 @@
             {
               "byte_end": 0,
               "byte_start": 0,
-              "end_column": 0,
-              "end_line": 0,
-              "start_column": 0,
-              "start_line": 0,
-              "type": "text_range"
+              "type": "byte_range"
             }
           ],
           "precision": "exact"

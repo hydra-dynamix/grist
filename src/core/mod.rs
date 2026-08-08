@@ -117,11 +117,14 @@ impl SchemaVersion {
     pub const PDF_V1: &'static str = "grist/pdf/v1";
     pub const WORD_OOXML_V1: &'static str = "grist/word-ooxml/v1";
     pub const PRESENTATION_OOXML_V1: &'static str = "grist/presentation-ooxml/v1";
+    pub const SPREADSHEET_OOXML_V1: &'static str = "grist/spreadsheet-ooxml/v1";
+    pub const SPREADSHEET_ODF_V1: &'static str = "grist/spreadsheet-odf/v1";
     pub const PRESENTATION_ODF_V1: &'static str = "grist/presentation-odf/v1";
     pub const ODF_WORD_V1: &'static str = "grist/odf-word/v1";
     pub const RTF_V1: &'static str = "grist/rtf/v1";
     pub const XML_V1: &'static str = "grist/xml/v1";
     pub const CSV_V1: &'static str = "grist/csv/v1";
+    pub const CSV_V2: &'static str = "grist/csv/v2";
     pub const RUST_CODE_V1: &'static str = "grist/rust-code/v1";
     pub const PYTHON_CODE_V1: &'static str = "grist/python-code/v1";
     pub const TYPESCRIPT_CODE_V1: &'static str = "grist/typescript-code/v1";
@@ -130,6 +133,15 @@ impl SchemaVersion {
     pub const BIBLIOGRAPHY_CITATION_RESOLUTION_V1: &'static str =
         "grist/bibliography-citation-resolution/v1";
     pub const SERIALIZATION_V1: &'static str = "grist/serialization/v1";
+    pub const STRUCTURED_TEXT_V2: &'static str = "grist/structured-text/v2";
+    pub const STRUCTURED_BINARY_V1: &'static str = "grist/structured-binary/v1";
+    pub const COLUMNAR_V1: &'static str = "grist/columnar/v1";
+    pub const SQLITE_V1: &'static str = "grist/sqlite/v1";
+    pub const EMAIL_V1: &'static str = "grist/email/v1";
+    pub const MBOX_V1: &'static str = "grist/mbox/v1";
+    pub const OUTLOOK_MSG_V1: &'static str = "grist/outlook-msg/v1";
+    pub const ICALENDAR_V1: &'static str = "grist/icalendar/v1";
+    pub const VCARD_V1: &'static str = "grist/vcard/v1";
     pub const MODEL_OUTPUT_V1: &'static str = "grist/model-output/v1";
     pub const REPO_INGEST_V1: &'static str = "grist/repo-ingest/v1";
     pub const LDGR_PROJECTION_V1: &'static str = "grist.ldgr_projection.v1";
@@ -182,6 +194,8 @@ pub enum ArtifactKind {
     Pdf,
     WordOoxml,
     PresentationOoxml,
+    SpreadsheetOoxml,
+    SpreadsheetOdf,
     PresentationOdf,
     OdfWord,
     Rtf,
@@ -194,6 +208,14 @@ pub enum ArtifactKind {
     Latex,
     Bibliography,
     Serialization,
+    StructuredBinary,
+    Columnar,
+    Sqlite,
+    Email,
+    Mbox,
+    OutlookMsg,
+    ICalendar,
+    VCard,
     ModelOutput,
     RepoIngest,
     FileIngest,

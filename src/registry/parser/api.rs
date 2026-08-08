@@ -1,7 +1,7 @@
 use super::super::ParserDescriptor;
 use crate::core::{
-    DecodedContentIdentity, Diagnostic, Envelope, NetworkAccess, OperationStatus, ProvenanceStep,
-    OperationControl, Provider, ProviderInvocation, ProviderKind, ResolvedParseRequest, SourceInfo,
+    DecodedContentIdentity, Diagnostic, Envelope, NetworkAccess, OperationControl, OperationStatus,
+    ProvenanceStep, Provider, ProviderInvocation, ProviderKind, ResolvedParseRequest, SourceInfo,
 };
 use crate::decode::{DecodeError, DecodeOptions, DecodedText, decode_text};
 use crate::provider::{ProviderContractError, ProviderRequest, ProviderResponse};
@@ -57,7 +57,10 @@ impl<'a> ParserContext<'a> {
     }
 
     pub fn consume_cells(&self, count: u64) -> Result<(), ParserError> {
-        self.request.control.budget().consume_cells(count)
+        self.request
+            .control
+            .budget()
+            .consume_cells(count)
             .map_err(|error| Box::new(error.diagnostic(&self.descriptor.parser.name)))
     }
 

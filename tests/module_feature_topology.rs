@@ -119,6 +119,27 @@ fn structured_text_compatibility_path_has_identical_types() {
     accepts_legacy(envelope.payload.expect("complete serialization payload"));
 }
 
+#[cfg(feature = "sqlite")]
+#[test]
+fn sqlite_compatibility_path_has_identical_types() {
+    let canonical: Option<grist::formats::sqlite::SqliteDocument> = None;
+    let _: Option<grist::sqlite::SqliteDocument> = canonical;
+}
+
+#[cfg(feature = "email-message")]
+#[test]
+fn mbox_compatibility_path_has_identical_types() {
+    let canonical: Option<grist::formats::mbox::MboxDocument> = None;
+    let _: Option<grist::mbox::MboxDocument> = canonical;
+}
+
+#[cfg(feature = "email-message")]
+#[test]
+fn outlook_compatibility_path_has_identical_types() {
+    let canonical: Option<grist::formats::outlook::OutlookMsgDocument> = None;
+    let _: Option<grist::outlook::OutlookMsgDocument> = canonical;
+}
+
 #[cfg(feature = "html")]
 #[test]
 fn html_compatibility_path_has_identical_types() {

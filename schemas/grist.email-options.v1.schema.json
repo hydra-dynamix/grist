@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "inline_attachment_bytes": {
+      "description": "Capture decoded attachment bytes inline. Otherwise exact identities and source locators are retained without duplicating source bytes.",
+      "type": "boolean"
+    },
+    "max_decoded_part_bytes": {
+      "description": "Maximum decoded bytes retained or recursively parsed for one MIME entity.",
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_header_bytes": {
+      "description": "Maximum RFC 5322 header block accepted as structured headers.",
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_mime_depth": {
+      "description": "Maximum MIME entity depth, with the root entity at depth zero.",
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_mime_parts": {
+      "description": "Maximum number of MIME entities emitted for one message.",
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "parse_nested_attachments": {
+      "description": "Dispatch locally supplied attachment bytes to enabled Grist parsers.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "inline_attachment_bytes",
+    "max_decoded_part_bytes",
+    "max_header_bytes",
+    "max_mime_depth",
+    "max_mime_parts",
+    "parse_nested_attachments"
+  ],
+  "title": "EmailOptions",
+  "type": "object"
+}

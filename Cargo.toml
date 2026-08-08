@@ -47,8 +47,8 @@ scholarly = ["latex", "xml", "bibliography"]
 pdf = ["dep:flate2"]
 word-processing = ["word-ooxml", "odf-word", "rtf"]
 presentations = ["presentation-ooxml", "presentation-odf"]
-spreadsheets = []
-structured-data = ["csv", "serialization"]
+spreadsheets = ["spreadsheet-ooxml", "spreadsheet-odf"]
+structured-data = ["csv", "serialization", "structured-binary", "columnar", "sqlite"]
 email-message = []
 notebooks = []
 code = ["rust", "python", "typescript"]
@@ -70,13 +70,18 @@ epub = ["html", "xml", "dep:zip", "dep:flate2"]
 word-ooxml = ["dep:zip", "dep:flate2", "dep:quick-xml"]
 presentation-ooxml = ["dep:zip", "dep:flate2", "dep:quick-xml"]
 presentation-odf = ["dep:zip", "dep:flate2", "dep:quick-xml"]
+spreadsheet-ooxml = ["dep:zip", "dep:flate2", "dep:quick-xml"]
+spreadsheet-odf = ["dep:zip", "dep:flate2", "dep:quick-xml"]
 odf-word = ["dep:zip", "dep:flate2", "dep:quick-xml"]
 rtf = ["dep:encoding_rs"]
 csv = ["dep:csv"]
 rust = ["dep:tree-sitter", "dep:tree-sitter-rust"]
 python = ["dep:tree-sitter", "dep:tree-sitter-python"]
 typescript = ["dep:tree-sitter", "dep:tree-sitter-typescript"]
-serialization = ["dep:serde_yaml", "dep:toml", "dep:jsonschema"]
+serialization = ["dep:serde_yaml", "dep:toml", "dep:toml_edit", "dep:unsafe-libyaml", "dep:jsonschema", "xml"]
+structured-binary = []
+columnar = ["dep:flate2"]
+sqlite = []
 model-output = ["serialization"]
 schemas = ["dep:schemars", "dep:jsonschema"]
 extended-encodings = ["dep:encoding_rs"]
@@ -99,11 +104,13 @@ serde_yaml = { version = "0.9", optional = true }
 sha2 = "0.10"
 thiserror = "2"
 toml = { version = "0.8", optional = true }
+toml_edit = { version = "0.22.27", optional = true, features = ["parse"] }
 tree-sitter = { version = "0.24", optional = true }
 tree-sitter-rust = { version = "0.23", optional = true }
 tree-sitter-python = { version = "0.23", optional = true }
 tree-sitter-typescript = { version = "0.23", optional = true }
 zeroize = "1.8"
+unsafe-libyaml = { version = "0.2.11", optional = true }
 zip = { version = "4.6.1", default-features = false, features = ["deflate-flate2"], optional = true }
 
 [[bin]]

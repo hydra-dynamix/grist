@@ -116,6 +116,8 @@
         "pdf",
         "word_ooxml",
         "presentation_ooxml",
+        "spreadsheet_ooxml",
+        "spreadsheet_odf",
         "presentation_odf",
         "odf_word",
         "rtf",
@@ -127,6 +129,12 @@
         "latex",
         "bibliography",
         "serialization",
+        "structured_binary",
+        "columnar",
+        "sqlite",
+        "email",
+        "mbox",
+        "outlook_msg",
         "model_output",
         "repo_ingest",
         "file_ingest",
@@ -619,6 +627,46 @@
       ],
       "type": "string"
     },
+    "DuplicateKey": {
+      "properties": {
+        "disposition": {
+          "$ref": "#/definitions/DuplicateKeyDisposition"
+        },
+        "duplicate_locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "first_locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "key": {
+          "type": "string"
+        },
+        "occurrence": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "disposition",
+        "duplicate_locator",
+        "first_locator",
+        "key",
+        "occurrence",
+        "path"
+      ],
+      "type": "object"
+    },
+    "DuplicateKeyDisposition": {
+      "enum": [
+        "preserved",
+        "rejected_by_syntax"
+      ],
+      "type": "string"
+    },
     "FormatIdentity": {
       "description": "Detected parser-format name paired with an Internet media type when known.",
       "properties": {
@@ -737,6 +785,33 @@
     "LocationComponent": {
       "description": "One location inside its immediately preceding parent component.",
       "oneOf": [
+        {
+          "description": "A zero-based half-open byte range relative to the immediately preceding component, or to the source when this is the outermost component.",
+          "properties": {
+            "byte_end": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "byte_start": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "type": {
+              "enum": [
+                "byte_range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "byte_end",
+            "byte_start",
+            "type"
+          ],
+          "type": "object"
+        },
         {
           "properties": {
             "byte_end": {
@@ -1408,6 +1483,33 @@
       ],
       "type": "object"
     },
+    "RawStructuredUnknown": {
+      "properties": {
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "path": {
+          "type": "string"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "raw": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "locator",
+        "path",
+        "range",
+        "raw",
+        "reason"
+      ],
+      "type": "object"
+    },
     "RecoveryAction": {
       "description": "A recovery action is guidance, never an action executed by Grist.",
       "properties": {
@@ -1462,48 +1564,6 @@
     },
     "SchemaVersion": {
       "type": "string"
-    },
-    "SerializationFormat": {
-      "enum": [
-        "json",
-        "jsonl",
-        "yaml",
-        "toml"
-      ],
-      "type": "string"
-    },
-    "SerializationPayload": {
-      "properties": {
-        "format": {
-          "$ref": "#/definitions/SerializationFormat"
-        },
-        "jsonl_records": {
-          "items": {
-            "$ref": "#/definitions/JsonlRecord"
-          },
-          "type": "array"
-        },
-        "schema_version": {
-          "type": "string"
-        },
-        "validation": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/SchemaValidationResult"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "value": true
-      },
-      "required": [
-        "format",
-        "jsonl_records",
-        "schema_version"
-      ],
-      "type": "object"
     },
     "Severity": {
       "description": "Diagnostic importance at the public API boundary.",
@@ -1708,6 +1768,481 @@
         "start_line"
       ],
       "type": "object"
+    },
+    "StructuredAlias": {
+      "properties": {
+        "expanded": {
+          "description": "Aliases are references and are never recursively expanded by Grist.",
+          "type": "boolean"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "resolved": {
+          "type": "boolean"
+        },
+        "target_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "expanded",
+        "locator",
+        "name",
+        "path",
+        "resolved"
+      ],
+      "type": "object"
+    },
+    "StructuredEntry": {
+      "properties": {
+        "duplicate_ordinal": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "index": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "key": {
+          "$ref": "#/definitions/StructuredValue"
+        },
+        "key_text": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "value": {
+          "$ref": "#/definitions/StructuredValue"
+        }
+      },
+      "required": [
+        "duplicate_ordinal",
+        "index",
+        "key",
+        "value"
+      ],
+      "type": "object"
+    },
+    "StructuredOrdering": {
+      "oneOf": [
+        {
+          "description": "Object entries, sequence items, documents, and records follow source order.",
+          "enum": [
+            "source"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "StructuredRecord": {
+      "properties": {
+        "diagnostic": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Diagnostic"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "raw": {
+          "type": "string"
+        },
+        "source_line": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/StructuredValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "index",
+        "locator",
+        "range",
+        "raw",
+        "source_line"
+      ],
+      "type": "object"
+    },
+    "StructuredScalar": {
+      "oneOf": [
+        {
+          "properties": {
+            "scalar_kind": {
+              "enum": [
+                "null"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "scalar_kind"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "scalar_kind": {
+              "enum": [
+                "boolean"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "scalar_kind",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "Canonical decimal spelling; may exceed JSON's integer range.",
+          "properties": {
+            "canonical": {
+              "type": "string"
+            },
+            "scalar_kind": {
+              "enum": [
+                "integer"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "canonical",
+            "scalar_kind"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "Canonical spelling, including non-JSON YAML values `.inf` and `.nan`.",
+          "properties": {
+            "canonical": {
+              "type": "string"
+            },
+            "finite": {
+              "type": "boolean"
+            },
+            "scalar_kind": {
+              "enum": [
+                "float"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "canonical",
+            "finite",
+            "scalar_kind"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "scalar_kind": {
+              "enum": [
+                "string"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "scalar_kind",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "scalar_kind": {
+              "enum": [
+                "date"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "scalar_kind",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "scalar_kind": {
+              "enum": [
+                "time"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "scalar_kind",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "scalar_kind": {
+              "enum": [
+                "date_time"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "scalar_kind",
+            "value"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "StructuredTextDocument": {
+      "properties": {
+        "aliases": {
+          "items": {
+            "$ref": "#/definitions/StructuredAlias"
+          },
+          "type": "array"
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "documents": {
+          "description": "Values in source-document order. JSON, TOML, and XML normally contain one.",
+          "items": {
+            "$ref": "#/definitions/StructuredValue"
+          },
+          "type": "array"
+        },
+        "duplicate_keys": {
+          "items": {
+            "$ref": "#/definitions/DuplicateKey"
+          },
+          "type": "array"
+        },
+        "format": {
+          "$ref": "#/definitions/StructuredTextFormat"
+        },
+        "jsonl_records": {
+          "description": "Compatibility JSONL projection retained for the v1 Rust API.",
+          "items": {
+            "$ref": "#/definitions/JsonlRecord"
+          },
+          "type": "array"
+        },
+        "ordering": {
+          "$ref": "#/definitions/StructuredOrdering"
+        },
+        "raw_unknowns": {
+          "items": {
+            "$ref": "#/definitions/RawStructuredUnknown"
+          },
+          "type": "array"
+        },
+        "records": {
+          "description": "Non-empty only for record-oriented JSONL/NDJSON input.",
+          "items": {
+            "$ref": "#/definitions/StructuredRecord"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "validation": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SchemaValidationResult"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "value": {
+          "description": "Compatibility JSON projection. The typed tree above is authoritative."
+        }
+      },
+      "required": [
+        "aliases",
+        "complete",
+        "documents",
+        "duplicate_keys",
+        "format",
+        "jsonl_records",
+        "ordering",
+        "raw_unknowns",
+        "records",
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "StructuredTextFormat": {
+      "enum": [
+        "json",
+        "jsonl",
+        "yaml",
+        "toml",
+        "xml"
+      ],
+      "type": "string"
+    },
+    "StructuredValue": {
+      "properties": {
+        "alias": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "alias_target_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "anchor": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "entries": {
+          "items": {
+            "$ref": "#/definitions/StructuredEntry"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/definitions/StructuredValue"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "$ref": "#/definitions/StructuredValueKind"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "path": {
+          "type": "string"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "raw": {
+          "description": "Exact source spelling for this node.",
+          "type": "string"
+        },
+        "recovered": {
+          "type": "boolean"
+        },
+        "scalar": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/StructuredScalar"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tag": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "entries",
+        "id",
+        "items",
+        "kind",
+        "locator",
+        "path",
+        "range",
+        "raw",
+        "recovered"
+      ],
+      "type": "object"
+    },
+    "StructuredValueKind": {
+      "enum": [
+        "null",
+        "boolean",
+        "integer",
+        "float",
+        "string",
+        "date",
+        "time",
+        "date_time",
+        "array",
+        "object",
+        "alias",
+        "xml_element",
+        "xml_text",
+        "xml_comment",
+        "xml_processing_instruction",
+        "raw_unknown"
+      ],
+      "type": "string"
     }
   },
   "description": "Universal result for parse, ingest, transform, render, segment, and validation operations.",
@@ -1755,7 +2290,7 @@
     "payload": {
       "anyOf": [
         {
-          "$ref": "#/definitions/SerializationPayload"
+          "$ref": "#/definitions/StructuredTextDocument"
         },
         {
           "type": "null"
@@ -1800,6 +2335,6 @@
     "source",
     "status"
   ],
-  "title": "Envelope_for_SerializationPayload",
+  "title": "Envelope_for_StructuredTextDocument",
   "type": "object"
 }

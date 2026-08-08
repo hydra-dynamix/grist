@@ -207,7 +207,7 @@ fn cli_renders_json_summaries_and_validates_dynamic_event_datasets() {
     );
     validate_with_schema(&summary, "rendered-summary");
     assert_eq!(summary["schema_version"], "grist/rendered-summary/v1");
-    assert_eq!(summary["source_schema_version"], "grist/serialization/v1");
+    assert_eq!(summary["source_schema_version"], "grist/structured-text/v2");
     assert_eq!(summary["profile"], "dynamic-event-dataset");
     assert!(
         summary["sections"][0]["facts"]
@@ -523,6 +523,15 @@ fn cli_parses_csv_with_headers_end_to_end() {
         output["payload"]["rows"][1]["cells"][1]["value"],
         serde_json::Value::Null
     );
+
+    let tsv = run_stdin(
+        &["parse", "tsv", "-"],
+        "name\tnote\r\nalpha\t\"one\nline\"\r\n",
+    );
+    validate_with_schema(&tsv, "csv-envelope");
+    assert_eq!(tsv["payload"]["dialect"]["delimiter"], "tab");
+    assert_eq!(tsv["payload"]["rows"][0]["cells"][1]["text"], "one\nline");
+    assert_eq!(tsv["payload"]["rows"][0]["terminator"], "cr_lf");
 }
 
 #[test]

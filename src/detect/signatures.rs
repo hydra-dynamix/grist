@@ -87,7 +87,14 @@ fn image_signature(bytes: &[u8]) -> Option<Signal> {
 }
 
 fn other_signature(bytes: &[u8]) -> Option<Signal> {
-    if bytes.starts_with(b"SQLite format 3\0") {
+    if bytes.starts_with(&[0xd9, 0xd9, 0xf7]) {
+        Some(magic(
+            "cbor",
+            "application/cbor",
+            "self-described CBOR tag",
+            0.99,
+        ))
+    } else if bytes.starts_with(b"SQLite format 3\0") {
         Some(magic(
             "sqlite",
             "application/vnd.sqlite3",
@@ -95,12 +102,23 @@ fn other_signature(bytes: &[u8]) -> Option<Signal> {
             0.995,
         ))
     } else if bytes.starts_with(&[0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]) {
-        Some(magic(
-            "ole_compound",
-            "application/x-ole-storage",
-            "OLE compound-file signature",
-            0.99,
-        ))
+        if contains_utf16le_ascii(bytes, "__properties_version1.0")
+            && contains_utf16le_ascii(bytes, "__substg1.0_")
+        {
+            Some(magic(
+                "msg",
+                "application/vnd.ms-outlook",
+                "OLE compound file contains Outlook MSG property streams",
+                0.998,
+            ))
+        } else {
+            Some(magic(
+                "ole_compound",
+                "application/x-ole-storage",
+                "OLE compound-file signature",
+                0.99,
+            ))
+        }
     } else if bytes.starts_with(b"{\\rtf") {
         Some(magic(
             "rtf",
@@ -133,6 +151,13 @@ fn other_signature(bytes: &[u8]) -> Option<Signal> {
             "7z signature",
             0.99,
         ))
+    } else if bytes.len() >= 12 && bytes.starts_with(b"ARROW1") && bytes.ends_with(b"ARROW1") {
+        Some(magic(
+            "arrow",
+            "application/vnd.apache.arrow.file",
+            "Arrow IPC file boundary signatures",
+            0.995,
+        ))
     } else if bytes.len() >= 8 && bytes.starts_with(b"PAR1") && bytes.ends_with(b"PAR1") {
         Some(magic(
             "parquet",
@@ -143,4 +168,12 @@ fn other_signature(bytes: &[u8]) -> Option<Signal> {
     } else {
         None
     }
+}
+
+fn contains_utf16le_ascii(bytes: &[u8], needle: &str) -> bool {
+    let encoded = needle
+        .bytes()
+        .flat_map(|byte| [byte, 0])
+        .collect::<Vec<_>>();
+    bytes.windows(encoded.len()).any(|window| window == encoded)
 }

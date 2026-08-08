@@ -4,6 +4,8 @@ use crate::core::{DetectionEvidenceKind, Diagnostic};
     feature = "epub",
     feature = "word-ooxml",
     feature = "presentation-ooxml",
+    feature = "spreadsheet-ooxml",
+    feature = "spreadsheet-odf",
     feature = "presentation-odf",
     feature = "odf-word"
 ))]
@@ -104,6 +106,14 @@ pub(super) fn zip_signals(bytes: &[u8], diagnostics: &mut Vec<Diagnostic>) -> Ve
             "application/vnd.openxmlformats-officedocument.presentationml.slideshow",
             "ZIP [Content_Types].xml declares an OOXML presentation slideshow",
         ))
+    } else if content_types.as_deref().is_some_and(|manifest| {
+        manifest.contains("application/vnd.ms-excel.sheet.macroenabled.main+xml")
+    }) {
+        Some(package(
+            "xlsm",
+            "application/vnd.ms-excel.sheet.macroEnabled.12",
+            "ZIP [Content_Types].xml declares a macro-enabled OOXML workbook",
+        ))
     } else if content_types
         .as_deref()
         .is_some_and(|manifest| manifest.contains("wordprocessingml.document.main+xml"))
@@ -194,6 +204,11 @@ fn odf_or_epub_signal(
             media,
             "ZIP mimetype manifest declares OpenDocument spreadsheet",
         ),
+        "application/vnd.oasis.opendocument.spreadsheet-template" => package(
+            "ots",
+            media,
+            "ZIP mimetype manifest declares OpenDocument spreadsheet template",
+        ),
         _ => return None,
     })
 }
@@ -214,6 +229,8 @@ fn stored_text<'a>(entries: &'a [ZipEntry<'a>], name: &str) -> Option<&'a str> {
     feature = "epub",
     feature = "word-ooxml",
     feature = "presentation-ooxml",
+    feature = "spreadsheet-ooxml",
+    feature = "spreadsheet-odf",
     feature = "presentation-odf",
     feature = "odf-word"
 ))]
@@ -237,6 +254,8 @@ fn bounded_content_types(bytes: &[u8]) -> Option<String> {
     feature = "epub",
     feature = "word-ooxml",
     feature = "presentation-ooxml",
+    feature = "spreadsheet-ooxml",
+    feature = "spreadsheet-odf",
     feature = "presentation-odf",
     feature = "odf-word"
 )))]

@@ -544,6 +544,10 @@ fn bounded_excerpt(text: &str, maximum: usize) -> Option<String> {
 
 pub fn citation_label(locator: &SourceLocator) -> String {
     let label = match locator.innermost() {
+        LocationComponent::ByteRange {
+            byte_start,
+            byte_end,
+        } => format!("bytes {byte_start}..{byte_end}"),
         LocationComponent::TextRange {
             start_line,
             end_line,

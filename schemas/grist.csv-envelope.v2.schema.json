@@ -116,6 +116,8 @@
         "pdf",
         "word_ooxml",
         "presentation_ooxml",
+        "spreadsheet_ooxml",
+        "spreadsheet_odf",
         "presentation_odf",
         "odf_word",
         "rtf",
@@ -127,6 +129,12 @@
         "latex",
         "bibliography",
         "serialization",
+        "structured_binary",
+        "columnar",
+        "sqlite",
+        "email",
+        "mbox",
+        "outlook_msg",
         "model_output",
         "repo_ingest",
         "file_ingest",
@@ -334,25 +342,150 @@
             "null"
           ]
         },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "quote_closed": {
+          "type": "boolean"
+        },
+        "quoted": {
+          "type": "boolean"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
         "raw": {
+          "description": "Exact source lexeme, including quote and escape spelling.",
           "type": "string"
         },
-        "value": true
+        "text": {
+          "description": "Field text after dialect-level unquoting only.",
+          "type": "string"
+        },
+        "typed_candidates": {
+          "items": {
+            "$ref": "#/definitions/CsvScalarCandidate"
+          },
+          "type": "array"
+        },
+        "value": {
+          "description": "Compatibility-selected scalar; `typed_candidates` is authoritative."
+        },
+        "value_range": {
+          "$ref": "#/definitions/SourceRange"
+        }
       },
       "required": [
         "column_index",
         "empty",
+        "locator",
+        "quote_closed",
+        "quoted",
+        "range",
         "raw",
-        "value"
+        "text",
+        "typed_candidates",
+        "value",
+        "value_range"
       ],
       "type": "object"
     },
     "CsvDelimiter": {
       "enum": [
+        "auto",
         "comma",
         "tab",
         "semicolon",
         "pipe"
+      ],
+      "type": "string"
+    },
+    "CsvDialect": {
+      "properties": {
+        "candidates": {
+          "items": {
+            "$ref": "#/definitions/CsvDialectCandidate"
+          },
+          "type": "array"
+        },
+        "delimiter": {
+          "$ref": "#/definitions/CsvDelimiter"
+        },
+        "delimiter_text": {
+          "type": "string"
+        },
+        "double_quote": {
+          "type": "boolean"
+        },
+        "escape": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "quote": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "$ref": "#/definitions/CsvDialectSource"
+        }
+      },
+      "required": [
+        "candidates",
+        "delimiter",
+        "delimiter_text",
+        "double_quote",
+        "source"
+      ],
+      "type": "object"
+    },
+    "CsvDialectCandidate": {
+      "properties": {
+        "consistent_records": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "delimiter": {
+          "$ref": "#/definitions/CsvDelimiter"
+        },
+        "malformed_records": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "modal_width": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "sampled_records": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "score": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "consistent_records",
+        "delimiter",
+        "malformed_records",
+        "modal_width",
+        "sampled_records",
+        "score"
+      ],
+      "type": "object"
+    },
+    "CsvDialectSource": {
+      "enum": [
+        "detected",
+        "declared"
       ],
       "type": "string"
     },
@@ -363,17 +496,33 @@
           "minimum": 0.0,
           "type": "integer"
         },
-        "delimiter": {
-          "$ref": "#/definitions/CsvDelimiter"
+        "complete": {
+          "type": "boolean"
+        },
+        "dialect": {
+          "$ref": "#/definitions/CsvDialect"
         },
         "has_headers": {
           "type": "boolean"
+        },
+        "header_record": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CsvRow"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "headers": {
           "items": {
             "$ref": "#/definitions/CsvHeader"
           },
           "type": "array"
+        },
+        "newline_fidelity": {
+          "$ref": "#/definitions/CsvNewlineFidelity"
         },
         "record_count": {
           "format": "uint",
@@ -388,16 +537,24 @@
         },
         "schema_version": {
           "type": "string"
+        },
+        "source_record_count": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
         }
       },
       "required": [
         "column_count",
-        "delimiter",
+        "complete",
+        "dialect",
         "has_headers",
         "headers",
+        "newline_fidelity",
         "record_count",
         "rows",
-        "schema_version"
+        "schema_version",
+        "source_record_count"
       ],
       "type": "object"
     },
@@ -408,15 +565,99 @@
           "minimum": 0.0,
           "type": "integer"
         },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
         "name": {
+          "type": "string"
+        },
+        "quoted": {
+          "type": "boolean"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "raw": {
           "type": "string"
         }
       },
       "required": [
         "column_index",
-        "name"
+        "locator",
+        "name",
+        "quoted",
+        "range",
+        "raw"
       ],
       "type": "object"
+    },
+    "CsvNewlineFidelity": {
+      "properties": {
+        "cr_count": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "crlf_count": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "final_record_terminated": {
+          "type": "boolean"
+        },
+        "lf_count": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "mixed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "cr_count",
+        "crlf_count",
+        "final_record_terminated",
+        "lf_count",
+        "mixed"
+      ],
+      "type": "object"
+    },
+    "CsvParseIssue": {
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "range"
+      ],
+      "type": "object"
+    },
+    "CsvRecordRole": {
+      "enum": [
+        "header",
+        "data"
+      ],
+      "type": "string"
+    },
+    "CsvRecordTerminator": {
+      "enum": [
+        "lf",
+        "cr_lf",
+        "cr",
+        "end_of_input"
+      ],
+      "type": "string"
     },
     "CsvRow": {
       "properties": {
@@ -426,28 +667,49 @@
           },
           "type": "array"
         },
+        "full_range": {
+          "$ref": "#/definitions/SourceRange"
+        },
         "index": {
           "format": "uint",
           "minimum": 0.0,
           "type": "integer"
         },
+        "issues": {
+          "items": {
+            "$ref": "#/definitions/CsvParseIssue"
+          },
+          "type": "array"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "malformed": {
+          "type": "boolean"
+        },
         "range": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/SourceRange"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/SourceRange"
+        },
+        "raw": {
+          "description": "Exact logical-record text, excluding its terminator.",
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/definitions/CsvRecordRole"
         },
         "source_line": {
           "format": "uint",
           "minimum": 0.0,
-          "type": [
-            "integer",
-            "null"
-          ]
+          "type": "integer"
+        },
+        "source_record_index": {
+          "description": "One-based logical record index, including the header.",
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "terminator": {
+          "$ref": "#/definitions/CsvRecordTerminator"
         },
         "width": {
           "format": "uint",
@@ -457,10 +719,58 @@
       },
       "required": [
         "cells",
+        "full_range",
         "index",
+        "issues",
+        "locator",
+        "malformed",
+        "range",
+        "raw",
+        "role",
+        "source_line",
+        "source_record_index",
+        "terminator",
         "width"
       ],
       "type": "object"
+    },
+    "CsvScalarCandidate": {
+      "properties": {
+        "confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "evidence": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/CsvScalarKind"
+        },
+        "normalized": {
+          "type": "boolean"
+        },
+        "value": true
+      },
+      "required": [
+        "confidence",
+        "evidence",
+        "kind",
+        "normalized",
+        "value"
+      ],
+      "type": "object"
+    },
+    "CsvScalarKind": {
+      "enum": [
+        "null",
+        "boolean",
+        "integer",
+        "decimal",
+        "date",
+        "date_time",
+        "text"
+      ],
+      "type": "string"
     },
     "DecodedContentIdentity": {
       "description": "SHA-256 of decoded text's UTF-8 bytes, including replacements when lossy.\n\nEncoding, loss state, and diagnostics are metadata outside the hashed bytes.",
@@ -857,6 +1167,33 @@
     "LocationComponent": {
       "description": "One location inside its immediately preceding parent component.",
       "oneOf": [
+        {
+          "description": "A zero-based half-open byte range relative to the immediately preceding component, or to the source when this is the outermost component.",
+          "properties": {
+            "byte_end": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "byte_start": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "type": {
+              "enum": [
+                "byte_range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "byte_end",
+            "byte_start",
+            "type"
+          ],
+          "type": "object"
+        },
         {
           "properties": {
             "byte_end": {

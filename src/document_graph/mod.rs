@@ -358,15 +358,20 @@ pub enum DocumentKind {
     Pdf,
     WordOoxml,
     PresentationOoxml,
+    SpreadsheetOoxml,
+    SpreadsheetOdf,
     PresentationOdf,
     OdfWord,
     Rtf,
     Xml,
     Latex,
     Bibliography,
+    Email,
+    Mbox,
     Text,
     Csv,
     Serialization,
+    StructuredBinary,
     ModelOutput,
     Repository,
     Code,
@@ -388,15 +393,20 @@ impl DocumentKind {
             Self::Pdf => "grist.pdf",
             Self::WordOoxml => "grist.word_ooxml",
             Self::PresentationOoxml => "grist.presentation_ooxml",
+            Self::SpreadsheetOoxml => "grist.spreadsheet_ooxml",
+            Self::SpreadsheetOdf => "grist.spreadsheet_odf",
             Self::PresentationOdf => "grist.presentation_odf",
             Self::OdfWord => "grist.odf_word",
             Self::Rtf => "grist.rtf",
             Self::Xml => "grist.xml",
             Self::Latex => "grist.latex",
             Self::Bibliography => "grist.bibliography",
+            Self::Email => "grist.email",
+            Self::Mbox => "grist.mbox",
             Self::Text => "grist.text",
             Self::Csv => "grist.csv",
             Self::Serialization => "grist.serialization",
+            Self::StructuredBinary => "grist.structured_binary",
             Self::ModelOutput => "grist.model_output",
             Self::Repository => "grist.repository",
             Self::Python => "grist.python",
@@ -5328,6 +5338,310 @@ impl ToDocumentGraph for crate::bibliography::BibliographyDocument {
             .map_err(projection_transform_error)?;
         Ok(graph)
     }
+}
+
+#[cfg(feature = "csv")]
+impl ToDocumentGraph for crate::csv::CsvDocument {
+    fn to_document_graph(
+        &self,
+        context: DocumentGraphContext,
+    ) -> Result<DocumentGraph, TransformError> {
+        let identities = context
+            .identity_generator(SchemaVersion::CSV_V2, "csv")
+            .map_err(projection_transform_error)?;
+        let mut graph = DocumentGraph::new(context.graph_id, DocumentKind::Csv).with_projection(
+            "csv",
+            SchemaVersion::CSV_V2,
+            "grist.csv.to-document-graph.v2",
+        );
+        graph.source = context.source;
+        graph.language = Some(context.language.unwrap_or_else(|| "csv".into()));
+        graph.dialect = Some(
+            context
+                .dialect
+                .unwrap_or_else(|| self.dialect.delimiter_text.clone()),
+        );
+        graph.attrs = context.attrs;
+        graph.attrs.insert(
+            "dialect".into(),
+            serde_json::to_value(&self.dialect).map_err(projection_transform_error)?,
+        );
+        let root_id =
+            stable_projection_node_id(&identities, vec!["document".into()], Some("root"), None)?;
+        graph.add_node(DocumentNode::new(&root_id, DocumentNodeKind::Document).with_ordinal(0));
+        let table_id = stable_projection_node_id(
+            &identities,
+            vec!["document".into(), "table".into()],
+            Some("records"),
+            None,
+        )?;
+        graph.add_node(
+            DocumentNode::new(&table_id, DocumentNodeKind::Table)
+                .with_ordinal(1)
+                .with_attr("column_count", self.column_count),
+        );
+        graph.add_contains(&root_id, &table_id);
+        for (ordinal, row) in self
+            .header_record
+            .iter()
+            .chain(self.rows.iter())
+            .enumerate()
+        {
+            let row_id = stable_projection_node_id(
+                &identities,
+                vec![
+                    "document".into(),
+                    "records".into(),
+                    row.source_record_index.to_string(),
+                ],
+                None,
+                Some(&row.range),
+            )?;
+            let mut row_node = DocumentNode::new(&row_id, DocumentNodeKind::TableRow)
+                .with_range(row.range.clone())
+                .with_locator(row.locator.clone())
+                .with_ordinal(ordinal)
+                .with_attr("malformed", row.malformed)
+                .with_attr(
+                    "record_role",
+                    serde_json::to_value(row.role).map_err(projection_transform_error)?,
+                );
+            row_node.extensions.insert(
+                "grist.csv".into(),
+                serde_json::json!({
+                    "source_record_index": row.source_record_index,
+                    "raw": row.raw,
+                    "terminator": row.terminator,
+                    "issues": row.issues,
+                }),
+            );
+            graph.add_node(row_node);
+            graph.add_contains(&table_id, &row_id);
+            for cell in &row.cells {
+                let cell_id = stable_projection_node_id(
+                    &identities,
+                    vec![
+                        "document".into(),
+                        "records".into(),
+                        row.source_record_index.to_string(),
+                        "cells".into(),
+                        cell.column_index.to_string(),
+                    ],
+                    None,
+                    Some(&cell.range),
+                )?;
+                let mut cell_node = DocumentNode::new(&cell_id, DocumentNodeKind::TableCell)
+                    .with_range(cell.range.clone())
+                    .with_locator(cell.locator.clone())
+                    .with_text(cell.text.clone())
+                    .with_ordinal(cell.column_index);
+                cell_node.name = cell.header.clone();
+                cell_node.extensions.insert(
+                    "grist.csv".into(),
+                    serde_json::to_value(cell).map_err(projection_transform_error)?,
+                );
+                graph.add_node(cell_node);
+                graph.add_contains(&row_id, &cell_id);
+            }
+        }
+        graph
+            .finalize_projection(&identities)
+            .map_err(projection_transform_error)?;
+        Ok(graph)
+    }
+}
+
+#[cfg(feature = "serialization")]
+impl ToDocumentGraph for crate::serialization::StructuredTextDocument {
+    fn to_document_graph(
+        &self,
+        context: DocumentGraphContext,
+    ) -> Result<DocumentGraph, TransformError> {
+        let identities = context
+            .identity_generator(SchemaVersion::STRUCTURED_TEXT_V2, "structured-text")
+            .map_err(projection_transform_error)?;
+        let mut graph = DocumentGraph::new(context.graph_id, DocumentKind::Serialization)
+            .with_projection(
+                "structured-text",
+                SchemaVersion::STRUCTURED_TEXT_V2,
+                "grist.structured-text.to-document-graph.v1",
+            );
+        graph.source = context.source;
+        graph.language = Some(
+            context
+                .language
+                .unwrap_or_else(|| format!("{:?}", self.format).to_ascii_lowercase()),
+        );
+        graph.dialect = context.dialect;
+        graph.attrs = context.attrs;
+        graph.attrs.insert(
+            "ordering".into(),
+            serde_json::to_value(self.ordering).map_err(projection_transform_error)?,
+        );
+        let root_id =
+            stable_projection_node_id(&identities, vec!["document".into()], Some("root"), None)?;
+        graph.add_node(DocumentNode::new(&root_id, DocumentNodeKind::Document).with_ordinal(0));
+
+        if self.format == crate::serialization::StructuredTextFormat::Jsonl {
+            for record in &self.records {
+                let record_id = stable_projection_node_id(
+                    &identities,
+                    vec![
+                        "document".into(),
+                        "records".into(),
+                        record.index.to_string(),
+                    ],
+                    None,
+                    Some(&record.range),
+                )?;
+                let mut record_node = DocumentNode::new(&record_id, DocumentNodeKind::Record)
+                    .with_range(record.range.clone())
+                    .with_locator(record.locator.clone())
+                    .with_ordinal(record.index - 1)
+                    .with_attr("source_line", record.source_line);
+                record_node.extensions.insert(
+                    "grist.structured-text".into(),
+                    serde_json::json!({"raw": record.raw, "malformed": record.value.is_none()}),
+                );
+                graph.add_node(record_node);
+                graph.add_contains(&root_id, &record_id);
+                if let Some(value) = &record.value {
+                    add_structured_value(
+                        &mut graph,
+                        &identities,
+                        &record_id,
+                        value,
+                        vec!["records".into(), record.index.to_string()],
+                        0,
+                    )?;
+                } else {
+                    let raw_id = stable_projection_node_id(
+                        &identities,
+                        vec![
+                            "document".into(),
+                            "records".into(),
+                            record.index.to_string(),
+                            "raw".into(),
+                        ],
+                        None,
+                        Some(&record.range),
+                    )?;
+                    graph.add_node(
+                        DocumentNode::new(&raw_id, DocumentNodeKind::Raw)
+                            .with_range(record.range.clone())
+                            .with_locator(record.locator.clone())
+                            .with_text(record.raw.clone()),
+                    );
+                    graph.add_contains(&record_id, &raw_id);
+                }
+            }
+        } else {
+            for (ordinal, value) in self.documents.iter().enumerate() {
+                add_structured_value(
+                    &mut graph,
+                    &identities,
+                    &root_id,
+                    value,
+                    vec!["documents".into(), ordinal.to_string()],
+                    ordinal,
+                )?;
+            }
+        }
+        graph
+            .finalize_projection(&identities)
+            .map_err(projection_transform_error)?;
+        Ok(graph)
+    }
+}
+
+#[cfg(feature = "serialization")]
+fn add_structured_value(
+    graph: &mut DocumentGraph,
+    identities: &GraphIdGenerator,
+    parent_id: &str,
+    value: &crate::serialization::StructuredValue,
+    structural_path: Vec<String>,
+    ordinal: usize,
+) -> Result<String, TransformError> {
+    use crate::serialization::{StructuredScalar, StructuredValueKind};
+    let mut identity_path = vec!["document".into()];
+    identity_path.extend(structural_path.iter().cloned());
+    let id = stable_projection_node_id(
+        identities,
+        identity_path,
+        Some(&value.id),
+        Some(&value.range),
+    )?;
+    let node_kind = if value.kind == StructuredValueKind::RawUnknown {
+        DocumentNodeKind::Raw
+    } else {
+        DocumentNodeKind::StructuredValue
+    };
+    let mut node = DocumentNode::new(&id, node_kind)
+        .with_range(value.range.clone())
+        .with_locator(value.locator.clone())
+        .with_ordinal(ordinal)
+        .with_attr(
+            "value_kind",
+            serde_json::to_value(value.kind).map_err(projection_transform_error)?,
+        )
+        .with_attr("path", value.path.clone())
+        .with_attr("recovered", value.recovered);
+    node.name = value.tag.clone().or_else(|| value.alias.clone());
+    node.text = value.scalar.as_ref().map(|scalar| match scalar {
+        StructuredScalar::Null => "null".into(),
+        StructuredScalar::Boolean { value } => value.to_string(),
+        StructuredScalar::Integer { canonical } | StructuredScalar::Float { canonical, .. } => {
+            canonical.clone()
+        }
+        StructuredScalar::String { value }
+        | StructuredScalar::Date { value }
+        | StructuredScalar::Time { value }
+        | StructuredScalar::DateTime { value } => value.clone(),
+    });
+    node.extensions.insert(
+        "grist.structured-text".into(),
+        serde_json::json!({
+            "raw": value.raw,
+            "anchor": value.anchor,
+            "tag": value.tag,
+            "alias": value.alias,
+            "alias_target_id": value.alias_target_id,
+        }),
+    );
+    graph.add_node(node);
+    graph.add_contains(parent_id, &id);
+
+    for entry in &value.entries {
+        let mut field_path = structural_path.clone();
+        field_path.extend(["entries".into(), entry.index.to_string()]);
+        let mut field_identity_path = vec!["document".into()];
+        field_identity_path.extend(field_path.iter().cloned());
+        let field_id = stable_projection_node_id(
+            identities,
+            field_identity_path,
+            Some(&entry.key.id),
+            Some(&entry.key.range),
+        )?;
+        let mut field = DocumentNode::new(&field_id, DocumentNodeKind::Field)
+            .with_range(entry.key.range.clone())
+            .with_locator(entry.key.locator.clone())
+            .with_ordinal(entry.index)
+            .with_attr("duplicate_ordinal", entry.duplicate_ordinal);
+        field.name = entry.key_text.clone();
+        field.text = entry.key_text.clone();
+        graph.add_node(field);
+        graph.add_contains(&id, &field_id);
+        let mut value_path = field_path;
+        value_path.push("value".into());
+        add_structured_value(graph, identities, &field_id, &entry.value, value_path, 0)?;
+    }
+    for (index, item) in value.items.iter().enumerate() {
+        let mut item_path = structural_path.clone();
+        item_path.extend(["items".into(), index.to_string()]);
+        add_structured_value(graph, identities, &id, item, item_path, index)?;
+    }
+    Ok(id)
 }
 
 #[cfg(feature = "python")]

@@ -55,17 +55,25 @@ pub enum ContentKind {
     Jsonl,
     Yaml,
     Toml,
+    Cbor,
+    MessagePack,
+    Protobuf,
+    Arrow,
     Text,
     Pdf,
     Zip,
     Docx,
     Pptx,
     Xlsx,
+    Xlsm,
     Epub,
     Odt,
     Odp,
     Ods,
     Rtf,
+    Eml,
+    Mbox,
+    Msg,
     Sqlite,
     Png,
     Jpeg,
@@ -360,6 +368,64 @@ pub fn detect_with_registry(
     ));
     if let Some(sample) = text::sample(bytes, options.max_probe_bytes) {
         signals.extend(grammar::signals(&sample.text));
+    }
+    #[cfg(feature = "structured-binary")]
+    #[cfg(feature = "columnar")]
+    for format in crate::columnar::probe(bytes) {
+        let (name, media, description) = match format {
+            crate::columnar::ColumnarFormat::ArrowIpcFile => (
+                "arrow",
+                "application/vnd.apache.arrow.file",
+                "valid Arrow IPC file framing",
+            ),
+            crate::columnar::ColumnarFormat::ArrowIpcStream => (
+                "arrow",
+                "application/vnd.apache.arrow.stream",
+                "valid Arrow IPC stream framing",
+            ),
+            crate::columnar::ColumnarFormat::Parquet => (
+                "parquet",
+                "application/vnd.apache.parquet",
+                "valid Parquet boundary framing",
+            ),
+        };
+        signals.push(Signal::new(
+            name,
+            Some(media),
+            0.94,
+            DetectionEvidenceKind::Structure,
+            description,
+        ));
+    }
+    #[cfg(feature = "structured-binary")]
+    for format in crate::structured_binary::probe_formats(bytes) {
+        let (name, media, description, weight) = match format {
+            crate::structured_binary::StructuredBinaryFormat::Cbor => (
+                "cbor",
+                "application/cbor",
+                "complete CBOR structural probe",
+                0.82,
+            ),
+            crate::structured_binary::StructuredBinaryFormat::MessagePack => (
+                "messagepack",
+                "application/msgpack",
+                "complete MessagePack structural probe",
+                0.82,
+            ),
+            crate::structured_binary::StructuredBinaryFormat::Protobuf => (
+                "protobuf",
+                "application/x-protobuf",
+                "valid Protocol Buffers wire-structure probe; descriptor still required",
+                0.82,
+            ),
+        };
+        signals.push(Signal::new(
+            name,
+            Some(media),
+            weight,
+            DetectionEvidenceKind::Structure,
+            description,
+        ));
     }
     if signals.is_empty() {
         signals.push(Signal::new(
@@ -833,6 +899,9 @@ fn extension_identity(extension: &str) -> Option<(&'static str, &'static str)> {
         "jsonl" | "ndjson" => ("jsonl", "application/x-ndjson"),
         "yaml" | "yml" => ("yaml", "application/yaml"),
         "toml" => ("toml", "application/toml"),
+        "cbor" => ("cbor", "application/cbor"),
+        "msgpack" | "mpk" => ("messagepack", "application/msgpack"),
+        "pb" | "protobuf" => ("protobuf", "application/x-protobuf"),
         "txt" => ("text", "text/plain"),
         "pdf" => ("pdf", "application/pdf"),
         "zip" => ("zip", "application/zip"),
@@ -875,7 +944,13 @@ fn extension_identity(extension: &str) -> Option<(&'static str, &'static str)> {
             "application/vnd.oasis.opendocument.presentation-template",
         ),
         "ods" => ("ods", "application/vnd.oasis.opendocument.spreadsheet"),
+        "ots" => (
+            "ots",
+            "application/vnd.oasis.opendocument.spreadsheet-template",
+        ),
         "rtf" => ("rtf", "application/rtf"),
+        "eml" => ("eml", "message/rfc822"),
+        "mbox" => ("mbox", "application/mbox"),
         "sqlite" | "sqlite3" | "db" => ("sqlite", "application/vnd.sqlite3"),
         "png" => ("png", "image/png"),
         "jpg" | "jpeg" => ("jpeg", "image/jpeg"),
@@ -909,6 +984,9 @@ fn media_type_identity(media_type: &str) -> Option<(&'static str, &'static str)>
         "application/x-ndjson" | "application/jsonl" => ("jsonl", "application/x-ndjson"),
         "application/yaml" | "text/yaml" | "application/x-yaml" => ("yaml", "application/yaml"),
         "application/toml" => ("toml", "application/toml"),
+        "application/cbor" => ("cbor", "application/cbor"),
+        "application/msgpack" | "application/x-msgpack" => ("messagepack", "application/msgpack"),
+        "application/x-protobuf" | "application/protobuf" => ("protobuf", "application/x-protobuf"),
         "text/x-rust" => ("rust", "text/x-rust"),
         "text/x-python" | "application/x-python-code" => ("python", "text/x-python"),
         "text/javascript" | "application/javascript" => ("javascript", "text/javascript"),
@@ -965,7 +1043,16 @@ fn media_type_identity(media_type: &str) -> Option<(&'static str, &'static str)>
             "otp",
             "application/vnd.oasis.opendocument.presentation-template",
         ),
+        "application/vnd.oasis.opendocument.spreadsheet" => {
+            ("ods", "application/vnd.oasis.opendocument.spreadsheet")
+        }
+        "application/vnd.oasis.opendocument.spreadsheet-template" => (
+            "ots",
+            "application/vnd.oasis.opendocument.spreadsheet-template",
+        ),
         "application/rtf" | "text/rtf" => ("rtf", "application/rtf"),
+        "message/rfc822" => ("eml", "message/rfc822"),
+        "application/mbox" => ("mbox", "application/mbox"),
         "application/vnd.sqlite3" | "application/x-sqlite3" => {
             ("sqlite", "application/vnd.sqlite3")
         }
@@ -1005,17 +1092,25 @@ fn format_for_kind(kind: &ContentKind) -> Option<&'static str> {
         ContentKind::Jsonl => "jsonl",
         ContentKind::Yaml => "yaml",
         ContentKind::Toml => "toml",
+        ContentKind::Cbor => "cbor",
+        ContentKind::MessagePack => "messagepack",
+        ContentKind::Protobuf => "protobuf",
+        ContentKind::Arrow => "arrow",
         ContentKind::Text => "text",
         ContentKind::Pdf => "pdf",
         ContentKind::Zip => "zip",
         ContentKind::Docx => "docx",
         ContentKind::Pptx => "pptx",
         ContentKind::Xlsx => "xlsx",
+        ContentKind::Xlsm => "xlsm",
         ContentKind::Epub => "epub",
         ContentKind::Odt => "odt",
         ContentKind::Odp => "odp",
         ContentKind::Ods => "ods",
         ContentKind::Rtf => "rtf",
+        ContentKind::Eml => "eml",
+        ContentKind::Mbox => "mbox",
+        ContentKind::Msg => "msg",
         ContentKind::Sqlite => "sqlite",
         ContentKind::Png => "png",
         ContentKind::Jpeg => "jpeg",
@@ -1056,17 +1151,25 @@ fn content_kind_for_format(format: &str) -> ContentKind {
         "jsonl" | "ndjson" => ContentKind::Jsonl,
         "yaml" => ContentKind::Yaml,
         "toml" => ContentKind::Toml,
+        "cbor" => ContentKind::Cbor,
+        "messagepack" | "msgpack" | "message_pack" => ContentKind::MessagePack,
+        "protobuf" | "protocol_buffers" | "proto_binary" => ContentKind::Protobuf,
+        "arrow" | "arrow_ipc" | "feather" => ContentKind::Arrow,
         "text" | "plain_text" => ContentKind::Text,
         "pdf" => ContentKind::Pdf,
         "zip" => ContentKind::Zip,
         "docx" | "docm" | "dotx" | "dotm" => ContentKind::Docx,
         "pptx" | "pptm" | "potx" | "ppsx" => ContentKind::Pptx,
         "xlsx" => ContentKind::Xlsx,
+        "xlsm" => ContentKind::Xlsm,
         "epub" => ContentKind::Epub,
         "odt" | "ott" => ContentKind::Odt,
         "odp" | "otp" => ContentKind::Odp,
-        "ods" => ContentKind::Ods,
+        "ods" | "ots" => ContentKind::Ods,
         "rtf" => ContentKind::Rtf,
+        "eml" | "email" | "rfc5322" | "message_rfc822" => ContentKind::Eml,
+        "mbox" | "mailbox" | "application_mbox" => ContentKind::Mbox,
+        "msg" | "outlook_msg" => ContentKind::Msg,
         "sqlite" => ContentKind::Sqlite,
         "png" => ContentKind::Png,
         "jpeg" | "jpg" => ContentKind::Jpeg,
@@ -1214,11 +1317,15 @@ fn is_binary_content(kind: &ContentKind) -> bool {
             | ContentKind::Docx
             | ContentKind::Pptx
             | ContentKind::Xlsx
+            | ContentKind::Xlsm
             | ContentKind::Epub
             | ContentKind::Odt
             | ContentKind::Odp
             | ContentKind::Ods
             | ContentKind::Sqlite
+            | ContentKind::Cbor
+            | ContentKind::MessagePack
+            | ContentKind::Protobuf
             | ContentKind::Png
             | ContentKind::Jpeg
             | ContentKind::Gif
@@ -1231,6 +1338,7 @@ fn is_binary_content(kind: &ContentKind) -> bool {
             | ContentKind::Zstd
             | ContentKind::SevenZip
             | ContentKind::Parquet
+            | ContentKind::Msg
             | ContentKind::OleCompound
             | ContentKind::Binary
     )

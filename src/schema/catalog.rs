@@ -76,6 +76,13 @@ pub fn schema_json_version(name: &str, version: &str) -> Option<Value> {
         ("text", SchemaVersion::TEXT_V1) => {
             serde_json::from_str(include_str!("../../schemas/grist.text.v1.schema.json")).ok()
         }
+        ("csv", SchemaVersion::CSV_V1) => {
+            serde_json::from_str(include_str!("../../schemas/grist.csv.v1.schema.json")).ok()
+        }
+        ("csv-options", "grist/csv-options/v1") => serde_json::from_str(include_str!(
+            "../../schemas/grist.csv-options.v1.schema.json"
+        ))
+        .ok(),
         ("document-graph", SchemaVersion::DOCUMENT_GRAPH_V1) => serde_json::from_str(include_str!(
             "../../schemas/grist.document-graph.v1.schema.json"
         ))
@@ -941,9 +948,9 @@ fn registrations() -> Vec<Registration> {
         add!(
             "serialization",
             "serialization",
-            SchemaVersion::SERIALIZATION_V1,
+            SchemaVersion::STRUCTURED_TEXT_V2,
             SchemaKind::Payload,
-            "grist.serialization.v1.schema.json",
+            "grist.structured-text.v2.schema.json",
             true,
             crate::serialization::SerializationPayload
         );
@@ -959,9 +966,9 @@ fn registrations() -> Vec<Registration> {
         add!(
             "serialization-options",
             "serialization-options",
-            "grist/serialization-options/v1",
+            "grist/structured-text-options/v2",
             SchemaKind::Options,
-            "grist.serialization-options.v1.schema.json",
+            "grist.structured-text-options.v2.schema.json",
             false,
             crate::serialization::SerializationOptions
         );
@@ -1263,6 +1270,199 @@ fn registrations() -> Vec<Registration> {
             crate::word_ooxml::WordOoxmlOptions
         );
     }
+    #[cfg(feature = "structured-binary")]
+    #[cfg(feature = "columnar")]
+    {
+        add!(
+            "columnar",
+            "columnar",
+            SchemaVersion::COLUMNAR_V1,
+            SchemaKind::Payload,
+            "grist.columnar.v1.schema.json",
+            true,
+            crate::columnar::ColumnarDocument
+        );
+        add!(
+            "columnar-envelope",
+            "envelope",
+            SchemaVersion::ENVELOPE_V2,
+            SchemaKind::Envelope,
+            "grist.columnar-envelope.v2.schema.json",
+            true,
+            crate::core::Envelope<crate::columnar::ColumnarDocument>
+        );
+        add!(
+            "columnar-options",
+            "columnar-options",
+            "grist/columnar-options/v1",
+            SchemaKind::Options,
+            "grist.columnar-options.v1.schema.json",
+            false,
+            crate::columnar::ColumnarOptions
+        );
+        add!(
+            "columnar-stream-event",
+            "columnar",
+            "grist/columnar-stream-event/v1",
+            SchemaKind::Event,
+            "grist.columnar-stream-event.v1.schema.json",
+            true,
+            crate::columnar::ColumnarStreamEvent
+        );
+    }
+    #[cfg(feature = "structured-binary")]
+    {
+        add!(
+            "structured-binary",
+            "structured-binary",
+            SchemaVersion::STRUCTURED_BINARY_V1,
+            SchemaKind::Payload,
+            "grist.structured-binary.v1.schema.json",
+            true,
+            crate::structured_binary::StructuredBinaryDocument
+        );
+        add!(
+            "structured-binary-envelope",
+            "envelope",
+            SchemaVersion::ENVELOPE_V2,
+            SchemaKind::Envelope,
+            "grist.structured-binary-envelope.v2.schema.json",
+            true,
+            crate::core::Envelope<crate::structured_binary::StructuredBinaryDocument>
+        );
+        add!(
+            "structured-binary-options",
+            "structured-binary-options",
+            "grist/structured-binary-options/v1",
+            SchemaKind::Options,
+            "grist.structured-binary-options.v1.schema.json",
+            false,
+            crate::structured_binary::StructuredBinaryOptions
+        );
+    }
+    #[cfg(feature = "sqlite")]
+    {
+        add!(
+            "sqlite",
+            "sqlite",
+            SchemaVersion::SQLITE_V1,
+            SchemaKind::Payload,
+            "grist.sqlite.v1.schema.json",
+            true,
+            crate::sqlite::SqliteDocument
+        );
+        add!(
+            "sqlite-envelope",
+            "envelope",
+            SchemaVersion::ENVELOPE_V2,
+            SchemaKind::Envelope,
+            "grist.sqlite-envelope.v2.schema.json",
+            true,
+            crate::core::Envelope<crate::sqlite::SqliteDocument>
+        );
+        add!(
+            "sqlite-options",
+            "sqlite-options",
+            "grist/sqlite-options/v1",
+            SchemaKind::Options,
+            "grist.sqlite-options.v1.schema.json",
+            false,
+            crate::sqlite::SqliteOptions
+        );
+    }
+    #[cfg(feature = "email-message")]
+    {
+        add!(
+            "email",
+            "email-message",
+            SchemaVersion::EMAIL_V1,
+            SchemaKind::Payload,
+            "grist.email.v1.schema.json",
+            true,
+            crate::email::EmailDocument
+        );
+        add!(
+            "email-envelope",
+            "envelope",
+            SchemaVersion::ENVELOPE_V2,
+            SchemaKind::Envelope,
+            "grist.email-envelope.v2.schema.json",
+            true,
+            crate::core::Envelope<crate::email::EmailDocument>
+        );
+        add!(
+            "email-options",
+            "email-options",
+            "grist/email-options/v1",
+            SchemaKind::Options,
+            "grist.email-options.v1.schema.json",
+            false,
+            crate::email::EmailOptions
+        );
+        add!(
+            "mbox",
+            "email-message",
+            SchemaVersion::MBOX_V1,
+            SchemaKind::Payload,
+            "grist.mbox.v1.schema.json",
+            true,
+            crate::mbox::MboxDocument
+        );
+        add!(
+            "mbox-envelope",
+            "envelope",
+            SchemaVersion::ENVELOPE_V2,
+            SchemaKind::Envelope,
+            "grist.mbox-envelope.v2.schema.json",
+            true,
+            crate::core::Envelope<crate::mbox::MboxDocument>
+        );
+        add!(
+            "mbox-options",
+            "mbox-options",
+            "grist/mbox-options/v1",
+            SchemaKind::Options,
+            "grist.mbox-options.v1.schema.json",
+            false,
+            crate::mbox::MboxOptions
+        );
+        add!(
+            "outlook-msg",
+            "email-message",
+            SchemaVersion::OUTLOOK_MSG_V1,
+            SchemaKind::Payload,
+            "grist.outlook-msg.v1.schema.json",
+            true,
+            crate::outlook::OutlookMsgDocument
+        );
+        add!(
+            "outlook-msg-envelope",
+            "envelope",
+            SchemaVersion::ENVELOPE_V2,
+            SchemaKind::Envelope,
+            "grist.outlook-msg-envelope.v2.schema.json",
+            true,
+            crate::core::Envelope<crate::outlook::OutlookMsgDocument>
+        );
+        add!(
+            "outlook-msg-options",
+            "outlook-msg-options",
+            "grist/outlook-msg-options/v1",
+            SchemaKind::Options,
+            "grist.outlook-msg-options.v1.schema.json",
+            false,
+            crate::outlook::OutlookMsgOptions
+        );
+        add!(
+            "mbox-stream-event",
+            "stream-event",
+            "grist/mbox-stream-event/v1",
+            SchemaKind::Event,
+            "grist.mbox-stream-event.v1.schema.json",
+            true,
+            crate::mbox::MboxStreamEvent
+        );
+    }
     #[cfg(feature = "presentation-ooxml")]
     {
         add!(
@@ -1321,6 +1521,66 @@ fn registrations() -> Vec<Registration> {
             "grist.presentation-odf-options.v1.schema.json",
             false,
             crate::presentation_odf::OdfPresentationOptions
+        );
+    }
+    #[cfg(feature = "spreadsheet-ooxml")]
+    {
+        add!(
+            "spreadsheet-ooxml",
+            "spreadsheet-ooxml",
+            SchemaVersion::SPREADSHEET_OOXML_V1,
+            SchemaKind::Payload,
+            "grist.spreadsheet-ooxml.v1.schema.json",
+            true,
+            crate::spreadsheet_ooxml::SpreadsheetOoxmlDocument
+        );
+        add!(
+            "spreadsheet-ooxml-envelope",
+            "envelope",
+            SchemaVersion::ENVELOPE_V2,
+            SchemaKind::Envelope,
+            "grist.spreadsheet-ooxml-envelope.v2.schema.json",
+            true,
+            crate::core::Envelope<crate::spreadsheet_ooxml::SpreadsheetOoxmlDocument>
+        );
+        add!(
+            "spreadsheet-ooxml-options",
+            "spreadsheet-ooxml-options",
+            "grist/spreadsheet-ooxml-options/v1",
+            SchemaKind::Options,
+            "grist.spreadsheet-ooxml-options.v1.schema.json",
+            false,
+            crate::spreadsheet_ooxml::SpreadsheetOoxmlOptions
+        );
+    }
+    #[cfg(feature = "spreadsheet-odf")]
+    {
+        add!(
+            "spreadsheet-odf",
+            "spreadsheet-odf",
+            SchemaVersion::SPREADSHEET_ODF_V1,
+            SchemaKind::Payload,
+            "grist.spreadsheet-odf.v1.schema.json",
+            true,
+            crate::spreadsheet_odf::SpreadsheetOdfDocument
+        );
+        add!(
+            "spreadsheet-odf-envelope",
+            "envelope",
+            SchemaVersion::ENVELOPE_V2,
+            SchemaKind::Envelope,
+            "grist.spreadsheet-odf-envelope.v2.schema.json",
+            true,
+            crate::core::Envelope<crate::spreadsheet_odf::SpreadsheetOdfDocument>
+        );
+        add!(
+            "spreadsheet-odf-options",
+            "spreadsheet-odf-options",
+            "grist/spreadsheet-odf-options/v1",
+            SchemaKind::Options,
+            "grist.spreadsheet-odf-options.v1.schema.json",
+            false,
+            crate::spreadsheet_odf::SpreadsheetOdfOptions
         );
     }
     #[cfg(feature = "odf-word")]
@@ -1418,9 +1678,9 @@ fn registrations() -> Vec<Registration> {
         add!(
             "csv",
             "csv",
-            SchemaVersion::CSV_V1,
+            SchemaVersion::CSV_V2,
             SchemaKind::Payload,
-            "grist.csv.v1.schema.json",
+            "grist.csv.v2.schema.json",
             true,
             crate::csv::CsvDocument
         );
@@ -1436,9 +1696,9 @@ fn registrations() -> Vec<Registration> {
         add!(
             "csv-options",
             "csv-options",
-            "grist/csv-options/v1",
+            "grist/csv-options/v2",
             SchemaKind::Options,
-            "grist.csv-options.v1.schema.json",
+            "grist.csv-options.v2.schema.json",
             false,
             crate::csv::CsvOptions
         );

@@ -635,6 +635,7 @@ fn compiled_features() -> Vec<FeatureCapability> {
     feature!("bibliography");
     feature!("cli");
     feature!("code");
+    feature!("columnar");
     feature!("csv");
     feature!("document-graph");
     feature!("email-message");
@@ -659,7 +660,11 @@ fn compiled_features() -> Vec<FeatureCapability> {
     feature!("schemas");
     feature!("scholarly");
     feature!("serialization");
+    feature!("spreadsheet-odf");
+    feature!("spreadsheet-ooxml");
     feature!("spreadsheets");
+    feature!("sqlite");
+    feature!("structured-binary");
     feature!("structured-data");
     feature!("text-publishing");
     feature!("typescript");

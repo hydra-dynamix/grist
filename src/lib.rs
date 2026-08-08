@@ -5,6 +5,8 @@ pub mod basin;
 pub mod capabilities;
 #[cfg(feature = "cli")]
 pub mod cli;
+#[cfg(feature = "columnar")]
+pub mod columnar;
 #[cfg(all(feature = "model-output", feature = "rust"))]
 pub mod compatibility;
 pub mod container;
@@ -14,11 +16,19 @@ pub mod csv;
 pub mod decode;
 pub mod detect;
 pub mod document_graph;
+#[cfg(feature = "email-message")]
+pub mod email;
 #[cfg(feature = "epub")]
 pub mod epub;
 pub mod fixtures;
 pub mod formats;
 pub mod ingest;
+#[cfg(feature = "email-message")]
+pub mod calendar_contact;
+#[cfg(feature = "email-message")]
+pub mod mbox;
+#[cfg(feature = "email-message")]
+pub mod outlook;
 pub mod promotion;
 pub mod provider;
 pub mod registry;
@@ -64,6 +74,14 @@ pub mod schema;
 pub mod security;
 #[cfg(feature = "serialization")]
 pub mod serialization;
+#[cfg(feature = "spreadsheet-odf")]
+pub mod spreadsheet_odf;
+#[cfg(feature = "spreadsheet-ooxml")]
+pub mod spreadsheet_ooxml;
+#[cfg(feature = "sqlite")]
+pub mod sqlite;
+#[cfg(feature = "structured-binary")]
+pub mod structured_binary;
 pub mod summary;
 #[cfg(feature = "typescript")]
 pub mod typescript;

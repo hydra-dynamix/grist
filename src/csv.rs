@@ -310,7 +310,7 @@ pub fn parse_csv_with_control(
         .unwrap_or(0);
     let record_count = rows.len();
     let payload = CsvDocument {
-        schema_version: SchemaVersion::CSV_V1.to_string(),
+        schema_version: SchemaVersion::CSV_V2.to_string(),
         dialect,
         has_headers: options.has_headers,
         headers,
@@ -323,26 +323,35 @@ pub fn parse_csv_with_control(
         complete: batch.status == OperationStatus::Complete,
     };
     let parser = ParserInfo::new(PARSER).with_feature("csv");
-    let envelope = if batch.status == OperationStatus::Complete {
-        Envelope::complete(
+    let envelope = match batch.status {
+        OperationStatus::Complete => Envelope::complete(
             OperationKind::Parse,
             ArtifactKind::Csv,
             source,
             parser,
             digest,
-            SchemaVersion::CSV_V1,
+            SchemaVersion::CSV_V2,
             payload,
-        )
-    } else {
-        Envelope::partial(
+        ),
+        OperationStatus::Partial => Envelope::partial(
             OperationKind::Parse,
             ArtifactKind::Csv,
             source,
             parser,
             digest,
-            SchemaVersion::CSV_V1,
+            SchemaVersion::CSV_V2,
             Some(payload),
+        ),
+        terminal => Envelope::without_payload(
+            OperationKind::Parse,
+            ArtifactKind::Csv,
+            terminal,
+            source,
+            parser,
+            digest,
+            SchemaVersion::CSV_V2,
         )
+        .expect("stream terminal status is valid"),
     };
     envelope
         .with_hashes(Hashes::for_bytes(text.as_bytes(), Some(text)))
@@ -458,16 +467,41 @@ impl Iterator for CsvStream<'_> {
             if self.expected_width == Some(row.width) {
             } else {
                 row.malformed = true;
+                row.issues.push(CsvParseIssue {
+                    code: "csv.ragged_record".into(),
+                    message: "record width differs from the first record".into(),
+                    range: row.range.clone(),
+                });
             }
             self.data_index += 1;
         }
         // Retain malformed rows and report them at stream termination.
         let malformed = row.malformed;
         if malformed {
-            self.diagnostics
-                .push(Diagnostic::malformed(PARSER, PARSER).partial());
+            for issue in &row.issues {
+                self.diagnostics.push(
+                    Diagnostic::warning(PARSER, &issue.code, &issue.message)
+                        .with_range(issue.range.clone())
+                        .with_locator(row.locator.clone())
+                        .partial(),
+                );
+            }
         }
-        let identity = ContentIdentity::for_raw_bytes(row.raw.as_bytes());
+        let record_bytes =
+            &self.text.as_bytes()[row.full_range.byte_start..row.full_range.byte_end];
+        let identity =
+            ContentIdentity::for_raw_bytes(record_bytes).with_format(FormatIdentity::new(
+                if self.dialect.delimiter == CsvDelimiter::Tab {
+                    "tsv"
+                } else {
+                    "csv"
+                },
+                Some(if self.dialect.delimiter == CsvDelimiter::Tab {
+                    "text/tab-separated-values"
+                } else {
+                    "text/csv"
+                }),
+            ));
         let payload = match role {
             CsvRecordRole::Header => CsvStreamRecord::Header(row),
             CsvRecordRole::Data => CsvStreamRecord::Data(row),
@@ -507,7 +541,11 @@ fn materialize_row(
             let cell_range = SourceRange::new(cell.start, cell.end, &line_index);
             let value_range = SourceRange::new(cell.value_start, cell.value_end, &line_index);
             let raw = text[cell.start..cell.end].to_string();
-            let decoded = decode_cell(&raw, cell.quoted, cell.quote_closed, &record.dialect);
+            let decoded = decode_cell(
+                &text[cell.value_start..cell.value_end],
+                cell.quoted,
+                &record.dialect,
+            );
             let candidates = infer_scalar_candidates(&decoded);
             let value = candidates
                 .iter()
@@ -599,6 +637,23 @@ fn infer_scalar_candidates(text: &str) -> Vec<CsvScalarCandidate> {
             }
         }
     }
+    if looks_like_iso_datetime(trimmed) {
+        candidates.push(scalar(
+            CsvScalarKind::DateTime,
+            Value::String(trimmed.into()),
+            0.9,
+            "ISO-8601-shaped date-time candidate",
+            false,
+        ));
+    } else if looks_like_iso_date(trimmed) {
+        candidates.push(scalar(
+            CsvScalarKind::Date,
+            Value::String(trimmed.into()),
+            0.9,
+            "ISO-8601-shaped date candidate",
+            false,
+        ));
+    }
     candidates.push(scalar(
         CsvScalarKind::Text,
         Value::String(text.into()),
@@ -632,22 +687,30 @@ fn should_parse_integer(value: &str) -> bool {
         && (digits == "0" || !digits.starts_with(char::from(48)))
 }
 
-fn decode_cell(raw: &str, quoted: bool, closed: bool, dialect: &CsvDialect) -> String {
+fn looks_like_iso_date(value: &str) -> bool {
+    value.len() == 10
+        && value.as_bytes().get(4) == Some(&45)
+        && value.as_bytes().get(7) == Some(&45)
+        && value
+            .bytes()
+            .enumerate()
+            .all(|(index, byte)| matches!(index, 4 | 7) || byte.is_ascii_digit())
+}
+
+fn looks_like_iso_datetime(value: &str) -> bool {
+    value.len() >= 19
+        && value.get(..10).is_some_and(looks_like_iso_date)
+        && matches!(value.as_bytes()[10], 32 | 84)
+        && value.as_bytes()[13] == 58
+        && value.as_bytes()[16] == 58
+}
+
+fn decode_cell(raw: &str, quoted: bool, dialect: &CsvDialect) -> String {
     if !quoted {
         return raw.to_string();
     }
     let quote = dialect.quote.unwrap_or(char::from(34));
-    let width = quote.len_utf8();
-    let start = width.min(raw.len());
-    let end = if closed && raw.ends_with(quote) {
-        raw.len().saturating_sub(width)
-    } else {
-        raw.len()
-    };
-    if end < start {
-        return raw.to_string();
-    }
-    let mut value = raw[start..end].to_string();
+    let mut value = raw.to_string();
     if dialect.double_quote {
         let doubled = quote.to_string().repeat(2);
         value = value.replace(&doubled, &quote.to_string());
@@ -822,6 +885,7 @@ impl Iterator for Scanner<'_> {
         let mut cell_start = cursor;
         let mut quoted = false;
         let mut quote_closed = false;
+        let mut quoted_value_end = None;
         let mut in_quotes = false;
         let mut after_quote = false;
         let mut cells = Vec::new();
@@ -831,9 +895,20 @@ impl Iterator for Scanner<'_> {
         loop {
             if cursor >= bytes.len() {
                 if in_quotes {
-                    issues.push(self.issue(PARSER, PARSER, cell_start, cursor));
+                    issues.push(self.issue(
+                        "csv.unterminated_quote",
+                        "quoted field has no closing quote",
+                        cell_start,
+                        cursor,
+                    ));
                 }
-                cells.push(scanned_cell(cell_start, cursor, quoted, quote_closed));
+                cells.push(scanned_cell(
+                    cell_start,
+                    cursor,
+                    quoted,
+                    quote_closed,
+                    quoted_value_end,
+                ));
                 record_end = cursor;
                 break;
             }
@@ -850,6 +925,7 @@ impl Iterator for Scanner<'_> {
                     }
                     in_quotes = false;
                     quote_closed = true;
+                    quoted_value_end = Some(cursor);
                     after_quote = true;
                     cursor += 1;
                     continue;
@@ -858,16 +934,29 @@ impl Iterator for Scanner<'_> {
                 continue;
             }
             if byte == delimiter {
-                cells.push(scanned_cell(cell_start, cursor, quoted, quote_closed));
+                cells.push(scanned_cell(
+                    cell_start,
+                    cursor,
+                    quoted,
+                    quote_closed,
+                    quoted_value_end,
+                ));
                 cursor += 1;
                 cell_start = cursor;
                 quoted = false;
                 quote_closed = false;
+                quoted_value_end = None;
                 after_quote = false;
                 continue;
             }
             if byte == 13 || byte == 10 {
-                cells.push(scanned_cell(cell_start, cursor, quoted, quote_closed));
+                cells.push(scanned_cell(
+                    cell_start,
+                    cursor,
+                    quoted,
+                    quote_closed,
+                    quoted_value_end,
+                ));
                 record_end = cursor;
                 terminator = if byte == 13 && bytes.get(cursor + 1) == Some(&10) {
                     CsvRecordTerminator::CrLf
@@ -886,9 +975,19 @@ impl Iterator for Scanner<'_> {
                     cursor += 1;
                     continue;
                 }
-                issues.push(self.issue(PARSER, PARSER, cursor, cursor + 1));
-            } else if after_quote && byte.is_ascii_whitespace() == false {
-                issues.push(self.issue(PARSER, PARSER, cursor, cursor + 1));
+                issues.push(self.issue(
+                    "csv.unexpected_quote",
+                    "quote appeared inside an unquoted field",
+                    cursor,
+                    cursor + 1,
+                ));
+            } else if after_quote && !byte.is_ascii_whitespace() {
+                issues.push(self.issue(
+                    "csv.trailing_after_quote",
+                    "content followed a closing quote before the delimiter",
+                    cursor,
+                    cursor + 1,
+                ));
                 after_quote = false;
             }
             cursor += 1;
@@ -905,17 +1004,19 @@ impl Iterator for Scanner<'_> {
     }
 }
 
-fn scanned_cell(start: usize, end: usize, quoted: bool, quote_closed: bool) -> ScannedCell {
+fn scanned_cell(
+    start: usize,
+    end: usize,
+    quoted: bool,
+    quote_closed: bool,
+    quoted_value_end: Option<usize>,
+) -> ScannedCell {
     let value_start = if quoted {
         start.saturating_add(1).min(end)
     } else {
         start
     };
-    let value_end = if quoted && quote_closed && end > value_start {
-        end - 1
-    } else {
-        end
-    };
+    let value_end = quoted_value_end.unwrap_or(end).max(value_start);
     ScannedCell {
         start,
         end,

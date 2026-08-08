@@ -1,0 +1,11 @@
+# Spreadsheet OOXML contract
+
+The `spreadsheet-ooxml` feature provides the `xlsx` and `xlsm` registry parsers. It reads OPC ZIP packages with the built-in `zip` and `quick-xml` backends and emits `grist/spreadsheet-ooxml/v1`. The parser never calculates formulas, executes macros or embedded objects, follows hyperlinks, or performs network access.
+
+The authoritative payload preserves workbook and sheet order; visible, hidden, and very-hidden state; workbook calculation metadata and date system; defined names; rows, columns, exact cell addresses, raw stored values, source-native displayed text, formula source, and explicitly labeled workbook-stored formula caches. It also retains meaningful cell formats, number formats, comments, external and internal hyperlinks, merged ranges, tables and calculated-column formula source, panes and selections, core/application/custom properties, package relationships and parts, chart formulas and caches, image identities, and drawing anchors.
+
+VBA project parts are inventoried by content type or package path, content-addressed, classified as active content, and always marked `quarantined: true` and `executable: false`. Password-protected compound OOXML and encrypted ZIP members return `encrypted`. Malformed XML, missing relationship targets, rejected archive members, and security findings are explicit diagnostics; usable recovery is `partial`. ZIP traversal and worksheet cell consumption use the shared archive, memory, cancellation, node, and cell budgets.
+
+Cell and range facts use one-based `SheetRange` locators. Package metadata uses nested `OoxmlPart` and `XmlPath` locators. The `DocumentGraph` projection emits workbook, sheet, row, cell, table, comment, link, chart, image, metadata, named-range, and quarantined-attachment nodes. `FormulaDependsOn` edges are syntax-only references between cells already present in the workbook; they do not imply evaluation.
+
+Detection recognizes extensionless packages through `[Content_Types].xml` and distinguishes macro-enabled workbooks. The CLI surfaces the same parser through `parse xlsx`, `parse xlsm`, `parse auto`, file ingestion, transformation, segmentation, capabilities, and the `spreadsheet-ooxml`, `spreadsheet-ooxml-envelope`, and `spreadsheet-ooxml-options` schemas.

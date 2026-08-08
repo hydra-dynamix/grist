@@ -44,7 +44,11 @@ Expected modules:
 - `grist::python` — tree-sitter-backed Python parsing.
 - `grist::typescript` — tree-sitter-backed TypeScript, TSX, and JSX parsing.
 - `grist::serialization` — JSON, JSONL, YAML, and TOML parsing.
+- `grist::structured_binary` — CBOR, MessagePack, and descriptor-driven Protocol Buffers.
 - `grist::csv` — CSV row/cell parsing with headers, typed scalar inference, source metadata, and diagnostics.
+- `grist::email` — inert RFC 5322/MIME parsing, attachments, and threading evidence.
+- `grist::mbox` — streaming MBOX variants, separator provenance, and aggregate threads.
+- `grist::outlook` — bounded, inert Outlook MSG compound-file and MAPI parsing.
 - `grist::model_output` — model-output candidate extraction, normalization, repair, and streaming parsing.
 - `grist::schema` — generated JSON Schema emission and validation helpers.
 - `grist::cli` / binary `grist` — thin JSON-only CLI over the library API.
@@ -61,6 +65,10 @@ Suggested features:
 - `python`
 - `typescript`
 - `serialization`
+- `structured-binary`
+- `columnar`
+- `sqlite`
+- `email-message`
 - `csv`
 - `model-output`
 - `schemas`
@@ -85,7 +93,13 @@ All public CLI/library JSON outputs include explicit schema versions, for exampl
 - `grist/rust-code/v1`
 - `grist/python-code/v1`
 - `grist/typescript-code/v1`
-- `grist/serialization/v1`
+- `grist/structured-text/v2`
+- `grist/structured-binary/v1`
+- `grist/columnar/v1`
+- `grist/sqlite/v1`
+- `grist/email/v1`
+- `grist/mbox/v1`
+- `grist/outlook-msg/v1`
 - `grist/csv/v1`
 - `grist/model-output/v1`
 - `grist/repo-ingest/v1`
