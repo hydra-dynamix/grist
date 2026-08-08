@@ -911,6 +911,8 @@ fn extension_identity(extension: &str) -> Option<(&'static str, &'static str)> {
         "jsx" => ("jsx", "text/jsx"),
         "sh" | "bash" => ("shell", "text/x-shellscript"),
         "md" | "markdown" => ("markdown", "text/markdown"),
+        "rmd" => ("r_markdown", "text/x-r-markdown"),
+        "qmd" => ("quarto", "text/x-quarto"),
         "rst" | "rest" => ("restructured-text", "text/x-rst"),
         "adoc" | "asciidoc" | "asc" => ("asciidoc", "text/asciidoc"),
         "tex" | "latex" => ("latex", "application/x-latex"),
@@ -1165,7 +1167,9 @@ fn format_for_kind(kind: &ContentKind) -> Option<&'static str> {
 
 fn content_kind_for_format(format: &str) -> ContentKind {
     match normalize_format(format).as_str() {
-        "markdown" | "md" => ContentKind::Markdown,
+        "markdown" | "md" | "r_markdown" | "rmarkdown" | "rmd" | "quarto" | "qmd" => {
+            ContentKind::Markdown
+        }
         "restructured_text" | "restructuredtext" | "rst" | "rest" => ContentKind::RestructuredText,
         "asciidoc" | "adoc" | "asc" => ContentKind::AsciiDoc,
         "html" => ContentKind::Html,

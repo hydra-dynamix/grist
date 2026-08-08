@@ -64,6 +64,15 @@ impl<'a> ParserContext<'a> {
             .map_err(|error| Box::new(error.diagnostic(&self.descriptor.parser.name)))
     }
 
+    /// Charge parser-discovered local inputs that were not part of the primary request body.
+    pub fn consume_input_bytes(&self, count: u64) -> Result<(), ParserError> {
+        self.request
+            .control
+            .budget()
+            .consume_input_bytes(count)
+            .map_err(|error| Box::new(error.diagnostic(&self.descriptor.parser.name)))
+    }
+
     pub fn checkpoint(&self) -> Result<(), ParserError> {
         self.request
             .control

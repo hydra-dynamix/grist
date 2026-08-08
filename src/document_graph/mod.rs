@@ -4082,7 +4082,9 @@ impl ToDocumentGraph for crate::markdown::MarkdownDocument {
             );
         graph.source = context.source;
         graph.language = Some(context.language.unwrap_or_else(|| "markdown".to_string()));
-        graph.dialect = context.dialect;
+        graph.dialect = context
+            .dialect
+            .or_else(|| Some(self.dialect.as_str().to_string()));
         graph.attrs = context.attrs;
 
         let root_id = stable_projection_node_id(
@@ -4219,19 +4221,54 @@ impl ToDocumentGraph for crate::markdown::MarkdownDocument {
                     node.attrs.insert("table".to_string(), value);
                 }
             }
+            if let Some(executable) = &md_node.executable {
+                node.attrs.insert(
+                    "executable".to_string(),
+                    serde_json::to_value(executable).map_err(projection_transform_error)?,
+                );
+                node.attrs
+                    .insert("executed".to_string(), Value::Bool(executable.executed));
+            }
+            if let Some(citation) = &md_node.citation {
+                node.attrs.insert(
+                    "citation".to_string(),
+                    serde_json::to_value(citation).map_err(projection_transform_error)?,
+                );
+            }
+            if let Some(figure) = &md_node.figure {
+                node.attrs.insert(
+                    "figure".to_string(),
+                    serde_json::to_value(figure).map_err(projection_transform_error)?,
+                );
+            }
+            if let Some(reference) = &md_node.local_reference {
+                node.attrs.insert(
+                    "local_reference".to_string(),
+                    serde_json::to_value(reference).map_err(projection_transform_error)?,
+                );
+            }
+            if let Some(output) = &md_node.stored_output {
+                node.attrs.insert(
+                    "stored_output".to_string(),
+                    serde_json::to_value(output).map_err(projection_transform_error)?,
+                );
+            }
             node.extensions.insert(
                 "grist.markdown".to_string(),
                 serde_json::to_value(md_node).map_err(projection_transform_error)?,
             );
-            if matches!(
-                md_node.kind,
-                crate::markdown::MarkdownNodeKind::HtmlBlock
-                    | crate::markdown::MarkdownNodeKind::HtmlInline
-                    | crate::markdown::MarkdownNodeKind::DirectiveBlock
-                    | crate::markdown::MarkdownNodeKind::ExtensionInline
-                    | crate::markdown::MarkdownNodeKind::RawBlock
-                    | crate::markdown::MarkdownNodeKind::RawInline
-            ) {
+            if md_node.executable.is_some()
+                || matches!(
+                    md_node.kind,
+                    crate::markdown::MarkdownNodeKind::HtmlBlock
+                        | crate::markdown::MarkdownNodeKind::HtmlInline
+                        | crate::markdown::MarkdownNodeKind::DirectiveBlock
+                        | crate::markdown::MarkdownNodeKind::ExtensionInline
+                        | crate::markdown::MarkdownNodeKind::StoredOutput
+                        | crate::markdown::MarkdownNodeKind::RawBlock
+                        | crate::markdown::MarkdownNodeKind::RawInline
+                )
+            {
                 node.raw = Some(
                     RawNodeContent::new(
                         "grist.markdown",
@@ -4274,6 +4311,21 @@ impl ToDocumentGraph for crate::markdown::MarkdownDocument {
                     .insert("label".to_string(), Value::from(label.clone()));
                 graph.add_edge(edge);
             }
+            if let Some(citation) = &md_node.citation {
+                for key in &citation.keys {
+                    let mut edge = DocumentEdge::new(
+                        &node_id,
+                        DocumentRelation::References,
+                        format!("citation:{key}"),
+                    );
+                    if let Some(range) = md_node.range.clone() {
+                        edge = edge.with_range(range);
+                    }
+                    edge.attrs
+                        .insert("citation_key".to_string(), Value::from(key.clone()));
+                    graph.add_edge(edge);
+                }
+            }
             ordinal += 1;
         }
 
@@ -4306,7 +4358,10 @@ fn markdown_document_node_kind(kind: &crate::markdown::MarkdownNodeKind) -> Docu
         Markdown::TableRow => DocumentNodeKind::TableRow,
         Markdown::TableCell => DocumentNodeKind::TableCell,
         Markdown::FootnoteDefinition => DocumentNodeKind::Footnote,
-        Markdown::FootnoteReference => DocumentNodeKind::Reference,
+        Markdown::FootnoteReference | Markdown::Include => DocumentNodeKind::Reference,
+        Markdown::Citation => DocumentNodeKind::Citation,
+        Markdown::Figure => DocumentNodeKind::Figure,
+        Markdown::StoredOutput => DocumentNodeKind::RawBlock,
         Markdown::Emphasis => DocumentNodeKind::Emphasis,
         Markdown::Strong => DocumentNodeKind::Strong,
         Markdown::Strikethrough => DocumentNodeKind::Span,

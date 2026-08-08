@@ -259,7 +259,8 @@ impl<'a> RenderState<'a> {
             });
         }
         let kind = self.graph.nodes[index].kind.clone();
-        if is_unsupported_kind(&kind) {
+        let loses_executable_metadata = self.graph.nodes[index].attrs.contains_key("executable");
+        if is_unsupported_kind(&kind) || loses_executable_metadata {
             self.render_unsupported(index)?;
         } else {
             match self.format {

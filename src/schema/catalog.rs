@@ -1042,6 +1042,63 @@ fn registrations() -> Vec<Registration> {
             crate::markdown::MarkdownOptions
         );
     }
+    #[cfg(feature = "notebooks")]
+    {
+        add!(
+            "r_markdown",
+            "r_markdown",
+            SchemaVersion::MARKDOWN_V2,
+            SchemaKind::Payload,
+            "grist.r-markdown.v2.schema.json",
+            true,
+            crate::markdown::MarkdownDocument
+        );
+        add!(
+            "quarto",
+            "quarto",
+            SchemaVersion::MARKDOWN_V2,
+            SchemaKind::Payload,
+            "grist.quarto.v2.schema.json",
+            true,
+            crate::markdown::MarkdownDocument
+        );
+        add!(
+            "r_markdown-envelope",
+            "envelope",
+            SchemaVersion::ENVELOPE_V2,
+            SchemaKind::Envelope,
+            "grist.r-markdown-envelope.v2.schema.json",
+            true,
+            crate::core::Envelope<crate::markdown::MarkdownDocument>
+        );
+        add!(
+            "quarto-envelope",
+            "envelope",
+            SchemaVersion::ENVELOPE_V2,
+            SchemaKind::Envelope,
+            "grist.quarto-envelope.v2.schema.json",
+            true,
+            crate::core::Envelope<crate::markdown::MarkdownDocument>
+        );
+        add!(
+            "r_markdown-options",
+            "r-markdown-options",
+            "grist/r-markdown-options/v1",
+            SchemaKind::Options,
+            "grist.r-markdown-options.v1.schema.json",
+            false,
+            crate::markdown::MarkdownOptions
+        );
+        add!(
+            "quarto-options",
+            "quarto-options",
+            "grist/quarto-options/v1",
+            SchemaKind::Options,
+            "grist.quarto-options.v1.schema.json",
+            false,
+            crate::markdown::MarkdownOptions
+        );
+    }
     #[cfg(feature = "restructured-text")]
     {
         add!(

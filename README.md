@@ -7,7 +7,7 @@ Grist is a Rust library and optional JSON-only CLI for interpretation tasks shar
 - Typed Rust output models with `serde` support.
 - Versioned JSON envelopes for CLI and cross-project integrations.
 - Checked-in JSON Schemas for public output contracts.
-- Parsers for Markdown, LaTeX, BibTeX/BibLaTeX, HTML fragments/documents, XML/JATS, CSV, EML/RFC 5322 and MIME, MBOX mailboxes, Outlook MSG, iCalendar, vCard, Rust, Python, TypeScript/TSX/JSX, JSON/JSONL/YAML/TOML, model outputs, plain text, and LDGR Markdown Projection documents.
+- Parsers for Markdown, R Markdown, Quarto, LaTeX, BibTeX/BibLaTeX, HTML fragments/documents, XML/JATS, CSV, EML/RFC 5322 and MIME, MBOX mailboxes, Outlook MSG, iCalendar, vCard, Rust, Python, TypeScript/TSX/JSX, JSON/JSONL/YAML/TOML, model outputs, plain text, and LDGR Markdown Projection documents.
 - A normalized `DocumentGraph` projection for cross-format transforms, code graph consumers, and semantic obligation extraction.
 - Safe file and repository ingestion that honors ignore rules by default.
 
@@ -104,6 +104,7 @@ The `cli` feature enables the `grist` binary and pulls in the parser features ne
 - `docs/cli.md` describes the CLI command menu, parse/ingest/schema/render/validate/transform commands, and examples.
 - `docs/ldgr-projection-module-spec.md` describes the LDGR Markdown Projection parser/renderer contract.
 - `docs/markdown.md` describes the CommonMark/GFM v2 payload, extensions, diagnostics, projections, and security behavior.
+- `docs/rmarkdown-quarto.md` describes inert R Markdown/Quarto executable metadata, citations, figures, stored outputs, and bounded references.
 - `docs/restructured-text.md` describes the source-preserving reStructuredText payload, inert syntax handling, and root-bounded include policy.
 - docs/asciidoc.md describes the typed inert AsciiDoc payload, raw syntax retention, and explicit root-bounded includes.
 - docs/latex.md describes safe project-root detection, bounded includes and macro expansion, rich scholarly syntax, and inert active commands.

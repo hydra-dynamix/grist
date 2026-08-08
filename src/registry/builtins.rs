@@ -180,6 +180,7 @@ fn parse_text(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserErr
 
 fn register_feature_parsers(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
     register_markdown(registry)?;
+    register_rmarkdown_quarto(registry)?;
     register_restructured_text(registry)?;
     register_asciidoc(registry)?;
     register_html(registry)?;
@@ -262,7 +263,9 @@ fn parse_markdown(context: &mut ParserContext<'_>) -> Result<ParserOutput, Parse
     }
     let decoded = context.decoded_bytes_with_options(decode_options)?;
     context.consume_decoded_characters(decoded.text.chars().count() as u64)?;
-    let (document, diagnostics) = crate::markdown::document_from_decoded(decoded, &options);
+    let (document, diagnostics) =
+        crate::markdown::document_from_decoded(decoded, context.source(), &options);
+    context.consume_input_bytes(crate::markdown::resolved_reference_input_bytes(&document))?;
     context.consume_nodes(document.nodes.len().saturating_add(1) as u64)?;
     let value = serde_json::to_value(document).map_err(|error| {
         Box::new(Diagnostic::parser_defect(
@@ -299,6 +302,64 @@ fn register_markdown(registry: &mut ParserRegistry) -> Result<(), ParserRegistry
     register_disabled(registry, metadata, "markdown")
 }
 
+#[cfg(feature = "notebooks")]
+fn register_rmarkdown_quarto(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    for (id, aliases, media_type, extension, dialect) in [
+        (
+            "r_markdown",
+            &["rmarkdown", "rmd"][..],
+            "text/x-r-markdown",
+            "rmd",
+            crate::markdown::MarkdownDialect::RMarkdown,
+        ),
+        (
+            "quarto",
+            &["qmd"][..],
+            "text/x-quarto",
+            "qmd",
+            crate::markdown::MarkdownDialect::Quarto,
+        ),
+    ] {
+        let format = FormatMetadata::new(id, ArtifactKind::Markdown)
+            .with_aliases(aliases.iter().copied())
+            .with_media_types([media_type])
+            .with_extensions([extension]);
+        let options = crate::markdown::MarkdownOptions {
+            dialect: Some(dialect),
+            ..crate::markdown::MarkdownOptions::default()
+        };
+        register(
+            registry,
+            descriptor(
+                &format!("grist.{id}"),
+                format,
+                crate::markdown::parser_info(),
+                crate::core::SchemaVersion::MARKDOWN_V2,
+                Some("notebooks"),
+                serde_json::to_value(options).expect("Markdown notebook options serialize"),
+            ),
+            parse_markdown,
+        )?;
+    }
+    Ok(())
+}
+
+#[cfg(not(feature = "notebooks"))]
+fn register_rmarkdown_quarto(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    for (id, extension) in [("r_markdown", "rmd"), ("quarto", "qmd")] {
+        let format = FormatMetadata::new(id, ArtifactKind::Markdown).with_extensions([extension]);
+        let metadata = descriptor(
+            &format!("grist.{id}"),
+            format,
+            ParserInfo::new(format!("grist.{id}")).with_feature("notebooks"),
+            crate::core::SchemaVersion::MARKDOWN_V2,
+            Some("notebooks"),
+            serde_json::json!({}),
+        );
+        register_disabled(registry, metadata, "notebooks")?;
+    }
+    Ok(())
+}
 #[cfg(feature = "restructured-text")]
 fn register_restructured_text(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
     let format = FormatMetadata::new("restructured-text", ArtifactKind::RestructuredText)
@@ -2184,8 +2245,6 @@ fn unimplemented_formats() -> &'static [(&'static str, &'static str, &'static st
         ("ost", "ost", "email-message"),
         ("tnef", "dat", "email-message"),
         ("smime", "p7m", "email-message"),
-        ("r_markdown", "rmd", "notebooks"),
-        ("quarto", "qmd", "notebooks"),
         ("javascript", "js", "code"),
         ("go", "go", "code"),
         ("java", "java", "code"),

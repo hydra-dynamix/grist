@@ -68,6 +68,8 @@ pub mod presentation_ooxml;
 pub mod python;
 #[cfg(feature = "restructured-text")]
 pub mod restructured_text;
+#[cfg(feature = "notebooks")]
+pub mod rmarkdown_quarto;
 #[cfg(feature = "rtf")]
 pub mod rtf;
 #[cfg(feature = "rust")]

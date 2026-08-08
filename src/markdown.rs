@@ -6,7 +6,7 @@
 use crate::core::{
     ArtifactKind, ContentIdentity, Diagnostic, Envelope, FormatIdentity, LineIndex, OperationKind,
     OperationStatus, ParserInfo, SchemaVersion, SourceInfo, SourceLocator, SourceRange,
-    options_digest,
+    options_digest, sha256_hex,
 };
 use crate::decode::{
     DecodeContext, DecodeError, DecodeOptions, DecodeReport, DecodedByteRange, DecodedText,
@@ -18,7 +18,10 @@ use pulldown_cmark::{
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{BTreeMap, HashMap};
+use std::fs::{self, File};
+use std::io::Read;
 use std::ops::Range;
+use std::path::{Component, Path, PathBuf};
 
 #[cfg(feature = "schemas")]
 use schemars::JsonSchema;
@@ -36,6 +39,9 @@ pub struct MarkdownDocument {
     pub decoding: DecodeReport,
     pub nodes: Vec<MarkdownNode>,
     pub frontmatter: Option<Frontmatter>,
+    /// Resolved source dialect. CommonMark is omitted to preserve the Markdown v2 wire shape.
+    #[serde(default, skip_serializing_if = "MarkdownDialect::is_common_mark")]
+    pub dialect: MarkdownDialect,
 }
 
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
@@ -78,6 +84,16 @@ pub struct MarkdownNode {
     #[serde(default)]
     pub attributes: BTreeMap<String, Option<String>>,
     pub table: Option<MarkdownTable>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub executable: Option<ExecutableBlockMetadata>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub citation: Option<MarkdownCitation>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub figure: Option<MarkdownFigure>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub local_reference: Option<MarkdownLocalReference>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stored_output: Option<MarkdownStoredOutput>,
 }
 
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
@@ -115,11 +131,119 @@ pub enum MarkdownNodeKind {
     HardBreak,
     DirectiveBlock,
     ExtensionInline,
+    Citation,
+    Include,
+    Figure,
+    StoredOutput,
     RawBlock,
     RawInline,
     Text,
 }
 
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum MarkdownDialect {
+    CommonMark,
+    RMarkdown,
+    Quarto,
+}
+
+impl MarkdownDialect {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::CommonMark => "common_mark",
+            Self::RMarkdown => "r_markdown",
+            Self::Quarto => "quarto",
+        }
+    }
+
+    fn is_common_mark(&self) -> bool {
+        *self == Self::CommonMark
+    }
+}
+
+impl Default for MarkdownDialect {
+    fn default() -> Self {
+        Self::CommonMark
+    }
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ExecutableBlockMetadata {
+    pub engine: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+    #[serde(default)]
+    pub options: BTreeMap<String, Value>,
+    /// Always false. The parser has no execution path.
+    pub executed: bool,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct MarkdownCitation {
+    pub keys: Vec<String>,
+    pub textual: bool,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct MarkdownFigure {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub identifier: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub caption: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct MarkdownStoredOutput {
+    pub output_kind: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cell_label: Option<String>,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum LocalReferenceKind {
+    Include,
+    Bibliography,
+    CitationStyle,
+    Figure,
+    Resource,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum LocalReferenceStatus {
+    Resolved,
+    ReferenceOnly,
+    RemoteDisabled,
+    OutsideProjectRoot,
+    Missing,
+    NotFile,
+    BudgetExceeded,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct MarkdownLocalReference {
+    pub kind: LocalReferenceKind,
+    pub target: String,
+    pub status: LocalReferenceStatus,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resolved_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_sha256: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content: Option<Vec<u8>>,
+}
 impl MarkdownNodeKind {
     fn accumulates_text(&self) -> bool {
         !matches!(
@@ -209,6 +333,52 @@ pub struct MarkdownOptions {
     pub definition_lists: bool,
     pub frontmatter: bool,
     pub retain_extensions: bool,
+    /// Explicit dialect, or filename-based detection when omitted.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dialect: Option<MarkdownDialect>,
+    /// Explicit filesystem boundary. No root means local references stay inert.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project_root: Option<PathBuf>,
+    #[serde(default = "default_true", skip_serializing_if = "is_true")]
+    pub resolve_local_references: bool,
+    #[serde(
+        default = "default_max_reference_bytes",
+        skip_serializing_if = "is_default_max_reference_bytes"
+    )]
+    pub max_reference_bytes: u64,
+    /// Aggregate retained reference bytes across the complete document.
+    #[serde(
+        default = "default_max_total_reference_bytes",
+        skip_serializing_if = "is_default_max_total_reference_bytes"
+    )]
+    pub max_total_reference_bytes: u64,
+}
+
+const DEFAULT_MAX_REFERENCE_BYTES: u64 = 8 * 1024 * 1024;
+const DEFAULT_MAX_TOTAL_REFERENCE_BYTES: u64 = 32 * 1024 * 1024;
+
+const fn default_true() -> bool {
+    true
+}
+
+const fn is_true(value: &bool) -> bool {
+    *value
+}
+
+const fn default_max_reference_bytes() -> u64 {
+    DEFAULT_MAX_REFERENCE_BYTES
+}
+
+const fn is_default_max_reference_bytes(value: &u64) -> bool {
+    *value == DEFAULT_MAX_REFERENCE_BYTES
+}
+
+const fn default_max_total_reference_bytes() -> u64 {
+    DEFAULT_MAX_TOTAL_REFERENCE_BYTES
+}
+
+const fn is_default_max_total_reference_bytes(value: &u64) -> bool {
+    *value == DEFAULT_MAX_TOTAL_REFERENCE_BYTES
 }
 
 impl Default for MarkdownOptions {
@@ -225,6 +395,11 @@ impl Default for MarkdownOptions {
             definition_lists: true,
             frontmatter: true,
             retain_extensions: true,
+            dialect: None,
+            project_root: None,
+            resolve_local_references: true,
+            max_reference_bytes: DEFAULT_MAX_REFERENCE_BYTES,
+            max_total_reference_bytes: DEFAULT_MAX_TOTAL_REFERENCE_BYTES,
         }
     }
 }
@@ -276,7 +451,7 @@ fn envelope_from_decoded(
     source: SourceInfo,
     options: &MarkdownOptions,
 ) -> MarkdownEnvelope {
-    let (payload, mut diagnostics) = document_from_decoded(decoded, options);
+    let (payload, mut diagnostics) = document_from_decoded(decoded, &source, options);
     let digest = options_digest(options).expect("Markdown options always serialize");
     let partial = decoded.report.makes_operation_partial()
         || diagnostics.iter().any(|diagnostic| diagnostic.partial);
@@ -345,10 +520,12 @@ fn failed_decode_envelope(
 
 pub(crate) fn document_from_decoded(
     decoded: &DecodedText,
+    source: &SourceInfo,
     options: &MarkdownOptions,
 ) -> (MarkdownDocument, Vec<Diagnostic>) {
     let text = decoded.text.as_str();
     let line_index = LineIndex::new(text);
+    let dialect = resolve_dialect(source, options);
     let (frontmatter, mut diagnostics, body_start) = if options.frontmatter {
         parse_frontmatter(decoded, &line_index)
     } else {
@@ -397,6 +574,17 @@ pub(crate) fn document_from_decoded(
         builder.nodes.extend(extensions);
         diagnostics.append(&mut extension_diagnostics);
     }
+    if dialect != MarkdownDialect::CommonMark {
+        let mut dialect_diagnostics = annotate_notebook_constructs(
+            &mut builder.nodes,
+            decoded,
+            &line_index,
+            source,
+            options,
+            frontmatter.as_ref(),
+        );
+        diagnostics.append(&mut dialect_diagnostics);
+    }
     builder.finish();
 
     let decoded_range = SourceRange::new(0, text.len(), &line_index);
@@ -417,6 +605,7 @@ pub(crate) fn document_from_decoded(
             decoding: decoded.report.clone(),
             nodes: builder.nodes,
             frontmatter,
+            dialect,
         },
         diagnostics,
     )
@@ -857,6 +1046,11 @@ fn source_node(
         classes: Vec::new(),
         attributes: BTreeMap::new(),
         table: None,
+        executable: None,
+        citation: None,
+        figure: None,
+        local_reference: None,
+        stored_output: None,
     }
 }
 
@@ -949,6 +1143,814 @@ fn parse_frontmatter(
     )
 }
 
+fn resolve_dialect(source: &SourceInfo, options: &MarkdownOptions) -> MarkdownDialect {
+    if let Some(dialect) = options.dialect {
+        return dialect;
+    }
+    let name = source
+        .path
+        .as_deref()
+        .unwrap_or(source.display_name.as_str())
+        .to_ascii_lowercase();
+    if name.ends_with(".rmd") {
+        MarkdownDialect::RMarkdown
+    } else if name.ends_with(".qmd") {
+        MarkdownDialect::Quarto
+    } else {
+        MarkdownDialect::CommonMark
+    }
+}
+
+fn annotate_notebook_constructs(
+    nodes: &mut Vec<MarkdownNode>,
+    decoded: &DecodedText,
+    line_index: &LineIndex,
+    source: &SourceInfo,
+    options: &MarkdownOptions,
+    frontmatter: Option<&Frontmatter>,
+) -> Vec<Diagnostic> {
+    let mut diagnostics = Vec::new();
+    let mut resolver = LocalReferenceResolver::new(source, options);
+    let mut added = Vec::new();
+
+    for node in nodes.iter_mut() {
+        if matches!(
+            node.kind,
+            MarkdownNodeKind::CodeFence | MarkdownNodeKind::DirectiveBlock
+        ) {
+            let info = node.info.clone().unwrap_or_default();
+            if info.contains("cell-output") {
+                node.kind = MarkdownNodeKind::StoredOutput;
+                node.stored_output = Some(MarkdownStoredOutput {
+                    output_kind: output_kind(&info),
+                    cell_label: None,
+                });
+                continue;
+            }
+            if let Some((metadata, malformed)) = parse_executable_metadata(&info, &node.raw) {
+                node.kind = MarkdownNodeKind::CodeFence;
+                for message in malformed {
+                    diagnostics.push(node_diagnostic(node, "executable.metadata", message));
+                }
+                node.language = Some(metadata.engine.clone());
+                node.label.clone_from(&metadata.label);
+                node.executable = Some(metadata.clone());
+                if metadata
+                    .label
+                    .as_deref()
+                    .is_some_and(|label| label.starts_with("fig-"))
+                    || metadata.options.contains_key("fig-cap")
+                    || metadata.options.contains_key("fig.cap")
+                {
+                    let caption = metadata
+                        .options
+                        .get("fig-cap")
+                        .or_else(|| metadata.options.get("fig.cap"))
+                        .and_then(value_text);
+                    node.figure = Some(MarkdownFigure {
+                        identifier: metadata.label.clone(),
+                        caption,
+                        source: None,
+                    });
+                    added.push(overlay_node(
+                        node,
+                        MarkdownNodeKind::Figure,
+                        node.figure.clone(),
+                        None,
+                    ));
+                }
+                for key in ["child", "dependson"] {
+                    if let Some(target) = metadata.options.get(key).and_then(value_text) {
+                        let (reference, diagnostic) =
+                            resolver.resolve(LocalReferenceKind::Include, target, node, options);
+                        if let Some(diagnostic) = diagnostic {
+                            diagnostics.push(diagnostic);
+                        }
+                        added.push(reference_node(node, reference));
+                    }
+                }
+            }
+        }
+
+        if node.kind == MarkdownNodeKind::Image {
+            let target = node.destination.clone().unwrap_or_default();
+            let figure = MarkdownFigure {
+                identifier: node.label.clone(),
+                caption: node.text.clone(),
+                source: Some(target.clone()),
+            };
+            let (reference, diagnostic) =
+                resolver.resolve(LocalReferenceKind::Figure, target, node, options);
+            if let Some(diagnostic) = diagnostic {
+                diagnostics.push(diagnostic);
+            }
+            node.figure = Some(figure.clone());
+            node.local_reference = Some(reference);
+            added.push(overlay_node(
+                node,
+                MarkdownNodeKind::Figure,
+                Some(figure),
+                None,
+            ));
+        }
+
+        if node.kind == MarkdownNodeKind::Link {
+            let target = node.destination.clone().unwrap_or_default();
+            if is_local_reference_candidate(&target) {
+                let (reference, diagnostic) =
+                    resolver.resolve(LocalReferenceKind::Resource, target, node, options);
+                if let Some(diagnostic) = diagnostic {
+                    diagnostics.push(diagnostic);
+                }
+                node.local_reference = Some(reference);
+            }
+        }
+
+        if node.kind == MarkdownNodeKind::DirectiveBlock
+            && node
+                .info
+                .as_deref()
+                .is_some_and(|info| info.contains("cell-output"))
+        {
+            node.kind = MarkdownNodeKind::StoredOutput;
+            node.stored_output = Some(MarkdownStoredOutput {
+                output_kind: output_kind(node.info.as_deref().unwrap_or("output")),
+                cell_label: None,
+            });
+        }
+
+        if node.kind == MarkdownNodeKind::ExtensionInline
+            && node.raw.trim_start().starts_with("{{< include ")
+        {
+            if let Some(target) = shortcode_include_target(&node.raw) {
+                let (reference, diagnostic) =
+                    resolver.resolve(LocalReferenceKind::Include, target, node, options);
+                if let Some(diagnostic) = diagnostic {
+                    diagnostics.push(diagnostic);
+                }
+                node.kind = MarkdownNodeKind::Include;
+                node.destination = Some(reference.target.clone());
+                node.local_reference = Some(reference);
+            }
+        }
+    }
+
+    for (range, citation) in citation_ranges(&decoded.text, nodes, frontmatter) {
+        let mut node = source_node(
+            nodes.len() + added.len(),
+            MarkdownNodeKind::Citation,
+            range,
+            decoded,
+            line_index,
+            None,
+        );
+        node.label = citation.keys.first().cloned();
+        node.text = Some(citation.keys.join("; "));
+        node.citation = Some(citation);
+        added.push(node);
+    }
+
+    if let Some(frontmatter) = frontmatter
+        && let Some(value) = &frontmatter.value
+    {
+        for (kind, target) in frontmatter_references(value) {
+            let mut anchor = source_node(
+                nodes.len() + added.len(),
+                MarkdownNodeKind::Include,
+                frontmatter.range.byte_start..frontmatter.range.byte_end,
+                decoded,
+                line_index,
+                None,
+            );
+            let (reference, diagnostic) = resolver.resolve(kind, target, &anchor, options);
+            if let Some(diagnostic) = diagnostic {
+                diagnostics.push(diagnostic);
+            }
+            anchor.destination = Some(reference.target.clone());
+            anchor.local_reference = Some(reference);
+            added.push(anchor);
+        }
+    }
+
+    nodes.extend(added);
+    diagnostics
+}
+
+fn parse_executable_metadata(
+    info: &str,
+    raw: &str,
+) -> Option<(ExecutableBlockMetadata, Vec<String>)> {
+    let header = info.trim();
+    if !(header.starts_with('{') && header.ends_with('}')) {
+        return None;
+    }
+    let header = header[1..header.len() - 1].trim();
+    if header.starts_with('.') || header.is_empty() {
+        return None;
+    }
+    let first_end = header
+        .find(|value: char| value.is_whitespace() || value == ',')
+        .unwrap_or(header.len());
+    let engine = header[..first_end].trim().to_string();
+    if engine.is_empty() {
+        return None;
+    }
+    let mut label = None;
+    let mut options = BTreeMap::new();
+    let mut malformed = Vec::new();
+    let (tokens, balanced) = split_executable_header_tokens(&header[first_end..]);
+    if !balanced {
+        malformed.push("unbalanced quotes or delimiters in executable header metadata".to_string());
+    }
+    for token in tokens
+        .iter()
+        .map(String::as_str)
+        .map(str::trim)
+        .filter(|v| !v.is_empty())
+    {
+        if let Some((key, value)) = token.split_once('=') {
+            options.insert(
+                key.trim().replace('.', "-"),
+                parse_metadata_value(value.trim()),
+            );
+        } else if label.is_none() && !token.contains(char::is_whitespace) {
+            label = Some(token.to_string());
+        } else {
+            malformed.push(format!("unrecognized executable header metadata `{token}`"));
+        }
+    }
+    for line in raw.lines() {
+        let Some(metadata) = line.trim_start().strip_prefix("#|") else {
+            continue;
+        };
+        let Some((key, value)) = metadata.split_once(':') else {
+            malformed.push(format!("malformed executable option `{}`", metadata.trim()));
+            continue;
+        };
+        let key = key.trim().to_string();
+        if key.is_empty() {
+            malformed.push("executable option has an empty key".to_string());
+            continue;
+        }
+        let value = match parse_metadata_value_checked(value.trim()) {
+            Ok(value) => value,
+            Err(error) => {
+                malformed.push(format!("malformed executable option `{key}`: {error}"));
+                Value::String(value.trim().to_string())
+            }
+        };
+        if key == "label" {
+            label = value_text(&value);
+        }
+        options.insert(key, value);
+    }
+    Some((
+        ExecutableBlockMetadata {
+            engine,
+            label,
+            options,
+            executed: false,
+        },
+        malformed,
+    ))
+}
+
+fn parse_metadata_value(value: &str) -> Value {
+    serde_yaml::from_str::<serde_yaml::Value>(value)
+        .ok()
+        .and_then(|value| serde_json::to_value(value).ok())
+        .unwrap_or_else(|| Value::String(value.trim_matches(['\'', '"']).to_string()))
+}
+
+fn parse_metadata_value_checked(value: &str) -> Result<Value, String> {
+    serde_yaml::from_str::<serde_yaml::Value>(value)
+        .map_err(|error| error.to_string())
+        .and_then(|value| serde_json::to_value(value).map_err(|error| error.to_string()))
+}
+
+fn split_executable_header_tokens(input: &str) -> (Vec<String>, bool) {
+    let mut tokens = Vec::new();
+    let mut current = String::new();
+    let mut quote = None;
+    let mut escaped = false;
+    let mut delimiters = Vec::new();
+    for character in input.chars() {
+        if let Some(active_quote) = quote {
+            current.push(character);
+            if escaped {
+                escaped = false;
+            } else if character == '\\' {
+                escaped = true;
+            } else if character == active_quote {
+                quote = None;
+            }
+            continue;
+        }
+        match character {
+            '\'' | '"' => {
+                quote = Some(character);
+                current.push(character);
+            }
+            '(' | '[' | '{' => {
+                delimiters.push(character);
+                current.push(character);
+            }
+            ')' | ']' | '}' => {
+                let expected = match character {
+                    ')' => '(',
+                    ']' => '[',
+                    '}' => '{',
+                    _ => unreachable!(),
+                };
+                if delimiters.last().copied() == Some(expected) {
+                    delimiters.pop();
+                } else {
+                    delimiters.push(character);
+                }
+                current.push(character);
+            }
+            ',' if delimiters.is_empty() => {
+                tokens.push(std::mem::take(&mut current));
+            }
+            _ => current.push(character),
+        }
+    }
+    tokens.push(current);
+    (tokens, quote.is_none() && delimiters.is_empty())
+}
+
+fn value_text(value: &Value) -> Option<String> {
+    match value {
+        Value::String(value) => Some(value.clone()),
+        Value::Number(value) => Some(value.to_string()),
+        Value::Bool(value) => Some(value.to_string()),
+        _ => None,
+    }
+}
+
+fn output_kind(info: &str) -> String {
+    info.split(|value: char| value.is_whitespace() || matches!(value, '{' | '}' | '.'))
+        .find(|value| value.starts_with("cell-output"))
+        .unwrap_or("cell-output")
+        .to_string()
+}
+
+fn overlay_node(
+    source: &MarkdownNode,
+    kind: MarkdownNodeKind,
+    figure: Option<MarkdownFigure>,
+    stored_output: Option<MarkdownStoredOutput>,
+) -> MarkdownNode {
+    let mut node = source.clone();
+    node.id = format!("{}-overlay", source.id);
+    node.kind = kind;
+    node.parent_id = None;
+    node.children.clear();
+    node.executable = None;
+    node.citation = None;
+    node.local_reference = None;
+    node.figure = figure;
+    node.stored_output = stored_output;
+    node
+}
+
+fn reference_node(source: &MarkdownNode, reference: MarkdownLocalReference) -> MarkdownNode {
+    let mut node = overlay_node(source, MarkdownNodeKind::Include, None, None);
+    node.id = format!("{}-reference-{}", source.id, reference.target);
+    node.destination = Some(reference.target.clone());
+    node.local_reference = Some(reference);
+    node
+}
+
+fn node_diagnostic(node: &MarkdownNode, code: &str, message: String) -> Diagnostic {
+    let mut diagnostic = Diagnostic::warning("grist.markdown.notebook", code, message).partial();
+    if let Some(range) = node.range.clone() {
+        diagnostic = diagnostic.with_range(range);
+    }
+    if let Some(locator) = node.locator.clone() {
+        diagnostic = diagnostic.with_locator(locator);
+    }
+    diagnostic
+}
+
+fn shortcode_include_target(raw: &str) -> Option<String> {
+    raw.trim()
+        .strip_prefix("{{<")?
+        .strip_suffix(">}}")?
+        .trim()
+        .strip_prefix("include")?
+        .split_whitespace()
+        .next()
+        .map(|value| value.trim_matches(['\'', '"']).to_string())
+}
+
+fn citation_ranges(
+    text: &str,
+    nodes: &[MarkdownNode],
+    frontmatter: Option<&Frontmatter>,
+) -> Vec<(Range<usize>, MarkdownCitation)> {
+    let mut excluded = nodes
+        .iter()
+        .filter(|node| {
+            matches!(
+                node.kind,
+                MarkdownNodeKind::CodeFence
+                    | MarkdownNodeKind::InlineCode
+                    | MarkdownNodeKind::StoredOutput
+                    | MarkdownNodeKind::RawBlock
+                    | MarkdownNodeKind::RawInline
+                    | MarkdownNodeKind::DirectiveBlock
+                    | MarkdownNodeKind::ExtensionInline
+                    | MarkdownNodeKind::Link
+                    | MarkdownNodeKind::Image
+            )
+        })
+        .filter_map(|node| {
+            node.range
+                .as_ref()
+                .map(|range| range.byte_start..range.byte_end)
+        })
+        .collect::<Vec<_>>();
+    if let Some(frontmatter) = frontmatter {
+        excluded.push(frontmatter.range.byte_start..frontmatter.range.byte_end);
+    }
+    let bytes = text.as_bytes();
+    let mut ranges = Vec::new();
+    let mut cursor = 0;
+    while cursor < bytes.len() {
+        if bytes[cursor] != b'@'
+            || excluded.iter().any(|range| range.contains(&cursor))
+            || cursor.checked_sub(1).is_some_and(|index| {
+                bytes[index].is_ascii_alphanumeric() || matches!(bytes[index], b'/' | b'\\')
+            })
+        {
+            cursor += 1;
+            continue;
+        }
+        let mut end = cursor + 1;
+        while end < bytes.len()
+            && (bytes[end].is_ascii_alphanumeric()
+                || matches!(bytes[end], b'_' | b'-' | b':' | b'.'))
+        {
+            end += 1;
+        }
+        while end > cursor + 1 && bytes[end - 1] == b'.' {
+            end -= 1;
+        }
+        if end == cursor + 1 {
+            cursor += 1;
+            continue;
+        }
+        let textual = cursor == 0 || !matches!(bytes[cursor - 1], b'[' | b';');
+        ranges.push((
+            cursor..end,
+            MarkdownCitation {
+                keys: vec![text[cursor + 1..end].to_string()],
+                textual,
+            },
+        ));
+        cursor = end;
+    }
+    ranges
+}
+
+fn frontmatter_references(value: &Value) -> Vec<(LocalReferenceKind, String)> {
+    let Some(object) = value.as_object() else {
+        return Vec::new();
+    };
+    let mut references = Vec::new();
+    for (key, kind) in [
+        ("bibliography", LocalReferenceKind::Bibliography),
+        ("csl", LocalReferenceKind::CitationStyle),
+        ("resources", LocalReferenceKind::Resource),
+        ("include-before-body", LocalReferenceKind::Include),
+        ("include-after-body", LocalReferenceKind::Include),
+        ("include-in-header", LocalReferenceKind::Include),
+    ] {
+        let Some(value) = object.get(key) else {
+            continue;
+        };
+        match value {
+            Value::String(target) => references.push((kind.clone(), target.clone())),
+            Value::Array(values) => references.extend(values.iter().filter_map(|value| {
+                value
+                    .as_str()
+                    .map(|target| (kind.clone(), target.to_string()))
+            })),
+            _ => {}
+        }
+    }
+    references
+}
+
+fn is_local_reference_candidate(target: &str) -> bool {
+    let target = target.trim();
+    !target.is_empty() && !target.starts_with('#') && !looks_remote_reference(target)
+}
+
+struct LocalReferenceResolver {
+    root: Option<PathBuf>,
+    root_error: Option<String>,
+    base: Option<PathBuf>,
+    cache: HashMap<PathBuf, CachedReference>,
+    retained_bytes: u64,
+}
+
+#[derive(Clone)]
+struct CachedReference {
+    resolved_path: Option<String>,
+    content_sha256: String,
+    content: Vec<u8>,
+}
+
+impl LocalReferenceResolver {
+    fn new(source: &SourceInfo, options: &MarkdownOptions) -> Self {
+        let (root, root_error) = match options.project_root.as_ref() {
+            Some(root) => match fs::canonicalize(root) {
+                Ok(root) if root.is_dir() => (Some(root), None),
+                Ok(_) => (
+                    None,
+                    Some("supplied project root is not a directory".to_string()),
+                ),
+                Err(error) => (
+                    None,
+                    Some(format!("supplied project root is unavailable: {error}")),
+                ),
+            },
+            None => (None, None),
+        };
+        let base = source.path.as_deref().and_then(|path| {
+            let source_path = Path::new(path);
+            let parent = source_path.parent()?;
+            let candidate = if source_path.is_absolute() {
+                parent.to_path_buf()
+            } else {
+                root.as_ref()?.join(parent)
+            };
+            fs::canonicalize(candidate).ok()
+        });
+        Self {
+            root,
+            root_error,
+            base,
+            cache: HashMap::new(),
+            retained_bytes: 0,
+        }
+    }
+
+    fn resolve(
+        &mut self,
+        kind: LocalReferenceKind,
+        target: String,
+        node: &MarkdownNode,
+        options: &MarkdownOptions,
+    ) -> (MarkdownLocalReference, Option<Diagnostic>) {
+        let unresolved = |status| MarkdownLocalReference {
+            kind: kind.clone(),
+            target: target.clone(),
+            status,
+            resolved_path: None,
+            content_sha256: None,
+            content: None,
+        };
+        let diagnostic = |code: &str, message: String| node_diagnostic(node, code, message);
+        if !options.resolve_local_references {
+            return (
+                unresolved(LocalReferenceStatus::ReferenceOnly),
+                Some(diagnostic(
+                    "reference.resolution_disabled",
+                    "local reference resolution is disabled".to_string(),
+                )),
+            );
+        }
+        if looks_remote_reference(&target) {
+            return (
+                unresolved(LocalReferenceStatus::RemoteDisabled),
+                Some(diagnostic(
+                    "reference.remote_disabled",
+                    format!("remote reference `{target}` was retained without a network request"),
+                )),
+            );
+        }
+        let Some(root) = self.root.clone() else {
+            return (
+                unresolved(LocalReferenceStatus::ReferenceOnly),
+                Some(diagnostic(
+                    "reference.project_root_required",
+                    self.root_error.clone().unwrap_or_else(|| {
+                        "reference was retained because no explicit project root was supplied"
+                            .to_string()
+                    }),
+                )),
+            );
+        };
+        let target_path = Path::new(target.split(['#', '?']).next().unwrap_or(&target));
+        if target_path.as_os_str().is_empty()
+            || target_path.is_absolute()
+            || target_path
+                .components()
+                .any(|component| matches!(component, Component::ParentDir))
+        {
+            return (
+                unresolved(LocalReferenceStatus::OutsideProjectRoot),
+                Some(diagnostic(
+                    "reference.outside_project_root",
+                    format!("reference `{target}` is not a safe project-relative path"),
+                )),
+            );
+        }
+        let base = self
+            .base
+            .as_ref()
+            .filter(|base| base.starts_with(&root))
+            .unwrap_or(&root);
+        let candidate = base.join(target_path);
+        let canonical = match fs::canonicalize(&candidate) {
+            Ok(canonical) => canonical,
+            Err(error) => {
+                return (
+                    unresolved(LocalReferenceStatus::Missing),
+                    Some(diagnostic(
+                        "reference.not_found",
+                        format!("reference `{target}` could not be opened: {error}"),
+                    )),
+                );
+            }
+        };
+        if !canonical.starts_with(&root) {
+            return (
+                unresolved(LocalReferenceStatus::OutsideProjectRoot),
+                Some(diagnostic(
+                    "reference.outside_project_root",
+                    format!("reference `{target}` resolves outside the supplied project root"),
+                )),
+            );
+        }
+        if let Some(cached) = self.cache.get(&canonical).cloned() {
+            if !self.reserve_retained_bytes(cached.content.len() as u64, options) {
+                return (
+                    unresolved(LocalReferenceStatus::BudgetExceeded),
+                    Some(diagnostic(
+                        "reference.aggregate_budget_exceeded",
+                        format!(
+                            "reference `{target}` would exceed the configured {} byte aggregate reference limit",
+                            options.max_total_reference_bytes
+                        ),
+                    )),
+                );
+            }
+            return (
+                MarkdownLocalReference {
+                    kind,
+                    target,
+                    status: LocalReferenceStatus::Resolved,
+                    resolved_path: cached.resolved_path,
+                    content_sha256: Some(cached.content_sha256),
+                    content: Some(cached.content),
+                },
+                None,
+            );
+        }
+        let file = match File::open(&canonical) {
+            Ok(file) => file,
+            Err(error) => {
+                return (
+                    unresolved(LocalReferenceStatus::Missing),
+                    Some(diagnostic(
+                        "reference.not_found",
+                        format!("reference `{target}` could not be opened: {error}"),
+                    )),
+                );
+            }
+        };
+        let metadata = match file.metadata() {
+            Ok(metadata) if metadata.is_file() => metadata,
+            _ => {
+                return (
+                    unresolved(LocalReferenceStatus::NotFile),
+                    Some(diagnostic(
+                        "reference.not_file",
+                        format!("reference `{target}` does not resolve to a regular file"),
+                    )),
+                );
+            }
+        };
+        if metadata.len() > options.max_reference_bytes {
+            return (
+                unresolved(LocalReferenceStatus::BudgetExceeded),
+                Some(diagnostic(
+                    "reference.budget_exceeded",
+                    format!(
+                        "reference `{target}` is {} bytes, above the configured {} byte limit",
+                        metadata.len(),
+                        options.max_reference_bytes
+                    ),
+                )),
+            );
+        }
+        let mut content = Vec::with_capacity(
+            metadata
+                .len()
+                .min(options.max_reference_bytes)
+                .min(usize::MAX as u64) as usize,
+        );
+        let mut bounded = file.take(options.max_reference_bytes.saturating_add(1));
+        if let Err(error) = bounded.read_to_end(&mut content) {
+            return (
+                unresolved(LocalReferenceStatus::Missing),
+                Some(diagnostic(
+                    "reference.not_found",
+                    format!("reference `{target}` could not be read: {error}"),
+                )),
+            );
+        }
+        if content.len() as u64 > options.max_reference_bytes {
+            return (
+                unresolved(LocalReferenceStatus::BudgetExceeded),
+                Some(diagnostic(
+                    "reference.budget_exceeded",
+                    format!(
+                        "reference `{target}` grew beyond the configured {} byte limit while being read",
+                        options.max_reference_bytes
+                    ),
+                )),
+            );
+        }
+        if !self.reserve_retained_bytes(content.len() as u64, options) {
+            return (
+                unresolved(LocalReferenceStatus::BudgetExceeded),
+                Some(diagnostic(
+                    "reference.aggregate_budget_exceeded",
+                    format!(
+                        "reference `{target}` would exceed the configured {} byte aggregate reference limit",
+                        options.max_total_reference_bytes
+                    ),
+                )),
+            );
+        }
+        let resolved_path = canonical
+            .strip_prefix(&root)
+            .ok()
+            .map(|path| path.to_string_lossy().replace('\\', "/"));
+        let content_sha256 = sha256_hex(&content);
+        self.cache.insert(
+            canonical,
+            CachedReference {
+                resolved_path: resolved_path.clone(),
+                content_sha256: content_sha256.clone(),
+                content: content.clone(),
+            },
+        );
+        (
+            MarkdownLocalReference {
+                kind,
+                target,
+                status: LocalReferenceStatus::Resolved,
+                resolved_path,
+                content_sha256: Some(content_sha256),
+                content: Some(content),
+            },
+            None,
+        )
+    }
+
+    fn reserve_retained_bytes(&mut self, bytes: u64, options: &MarkdownOptions) -> bool {
+        let Some(next) = self.retained_bytes.checked_add(bytes) else {
+            return false;
+        };
+        if next > options.max_total_reference_bytes {
+            return false;
+        }
+        self.retained_bytes = next;
+        true
+    }
+}
+
+pub(crate) fn resolved_reference_input_bytes(document: &MarkdownDocument) -> u64 {
+    let mut seen = std::collections::BTreeSet::new();
+    document
+        .nodes
+        .iter()
+        .filter_map(|node| node.local_reference.as_ref())
+        .filter_map(|reference| {
+            let content = reference.content.as_ref()?;
+            let identity = (
+                reference.resolved_path.clone(),
+                reference.content_sha256.clone(),
+            );
+            seen.insert(identity).then_some(content.len() as u64)
+        })
+        .fold(0_u64, u64::saturating_add)
+}
+
+fn looks_remote_reference(target: &str) -> bool {
+    let lower = target.trim().to_ascii_lowercase();
+    lower.starts_with("http://")
+        || lower.starts_with("https://")
+        || lower.starts_with("ftp://")
+        || lower.starts_with("//")
+        || lower.starts_with("data:")
+}
 fn scan_extensions(
     decoded: &DecodedText,
     line_index: &LineIndex,
