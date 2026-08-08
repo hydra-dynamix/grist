@@ -3,7 +3,7 @@ use crate::core::{
     SourceRange,
 };
 use serde::{Deserialize, Serialize};
-use tree_sitter::{Node, Parser};
+use tree_sitter::{Language, Node, Parser};
 
 #[cfg(feature = "schemas")]
 use schemars::JsonSchema;
@@ -20,6 +20,12 @@ pub struct TypeScriptFile {
     pub returns: Vec<TypeScriptReturn>,
     pub calls: Vec<TypeScriptCall>,
     pub branches: Vec<TypeScriptBranch>,
+    #[serde(default)]
+    pub tests: Vec<TypeScriptTest>,
+    #[serde(default)]
+    pub comments: Vec<TypeScriptComment>,
+    #[serde(default)]
+    pub syntax_nodes: Vec<TypeScriptSyntaxNode>,
     pub parse_errors: Vec<TypeScriptParseError>,
     pub detail: Option<TypeScriptSyntaxDetail>,
 }
@@ -30,6 +36,7 @@ pub struct TypeScriptFile {
 pub enum TypeScriptDialect {
     #[serde(rename = "typescript")]
     TypeScript,
+    JavaScript,
     Tsx,
     Jsx,
 }
@@ -48,6 +55,10 @@ pub struct TypeScriptSymbol {
     pub parent: Option<String>,
     pub modifiers: Vec<String>,
     pub decorators: Vec<String>,
+    #[serde(default)]
+    pub extends: Vec<String>,
+    #[serde(default)]
+    pub implements: Vec<String>,
     pub doc: Option<String>,
     pub syntax: Option<TypeScriptSyntaxSummary>,
 }
@@ -141,9 +152,42 @@ pub struct TypeScriptBranch {
 
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TypeScriptTest {
+    pub id: String,
+    pub name: String,
+    pub framework: String,
+    pub range: SourceRange,
+    pub parent: Option<String>,
+}
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TypeScriptComment {
+    pub id: String,
+    pub text: String,
+    pub doc: bool,
+    pub range: SourceRange,
+}
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TypeScriptSyntaxNode {
+    pub id: String,
+    pub kind: String,
+    pub named: bool,
+    pub error: bool,
+    pub missing: bool,
+    pub parent: Option<String>,
+    pub raw: String,
+    pub range: SourceRange,
+}
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TypeScriptParseError {
     pub range: SourceRange,
     pub node_kind: String,
+    #[serde(default)]
+    pub raw: String,
+    #[serde(default)]
+    pub missing: bool,
 }
 
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
@@ -199,31 +243,65 @@ pub fn parse_typescript(
     source: SourceInfo,
     options: &TypeScriptIngestOptions,
 ) -> TypeScriptEnvelope {
-    let mut parser = Parser::new();
     let language = match options.dialect {
-        TypeScriptDialect::TypeScript => tree_sitter_typescript::LANGUAGE_TYPESCRIPT,
-        TypeScriptDialect::Tsx | TypeScriptDialect::Jsx => tree_sitter_typescript::LANGUAGE_TSX,
+        TypeScriptDialect::TypeScript | TypeScriptDialect::JavaScript => {
+            if options.dialect == TypeScriptDialect::JavaScript {
+                tree_sitter_javascript::LANGUAGE.into()
+            } else {
+                tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into()
+            }
+        }
+        TypeScriptDialect::Tsx => tree_sitter_typescript::LANGUAGE_TSX.into(),
+        TypeScriptDialect::Jsx => tree_sitter_javascript::LANGUAGE.into(),
     };
+    parse_ecmascript_family(
+        text,
+        source,
+        options.dialect,
+        options.detail,
+        language,
+        ArtifactKind::TypeScriptCode,
+        SchemaVersion::TYPESCRIPT_CODE_V1,
+        parser_id(options.dialect),
+        "typescript",
+        crate::core::options_digest(options).expect("TypeScript options must serialize"),
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn parse_ecmascript_family(
+    text: &str,
+    source: SourceInfo,
+    dialect: TypeScriptDialect,
+    detail_mode: TypeScriptDetailMode,
+    language: Language,
+    artifact_kind: ArtifactKind,
+    payload_schema_version: &'static str,
+    parser_id: &'static str,
+    diagnostic_prefix: &'static str,
+    options_digest: String,
+) -> TypeScriptEnvelope {
+    let mut parser = Parser::new();
     parser
-        .set_language(&language.into())
-        .expect("tree-sitter TypeScript language should load");
+        .set_language(&language)
+        .expect("tree-sitter ECMAScript-family language should load");
     let line_index = LineIndex::new(text);
     let Some(tree) = parser.parse(text, None) else {
         return Envelope::without_payload(
             crate::core::OperationKind::Parse,
-            ArtifactKind::TypeScriptCode,
+            artifact_kind,
             crate::core::OperationStatus::Failed,
             source,
-            ParserInfo::new("tree-sitter-typescript"),
-            crate::core::options_digest(options).expect("TypeScript options must serialize"),
-            SchemaVersion::TYPESCRIPT_CODE_V1,
+            ParserInfo::new(parser_id),
+            options_digest,
+            payload_schema_version,
         )
         .expect("failed envelope status is valid")
         .with_hashes(Hashes::for_bytes(text.as_bytes(), Some(text)))
         .with_diagnostics(vec![Diagnostic::error(
-            "tree-sitter-typescript",
-            "typescript.parse.none",
-            "tree-sitter returned no parse tree",
+            parser_id,
+            format!("{diagnostic_prefix}.parse.none"),
+            "tree-sitter returned no ECMAScript-family parse tree",
         )]);
     };
 
@@ -235,7 +313,7 @@ pub fn parse_typescript(
     let mut collector = TypeScriptCollector {
         text,
         line_index: &line_index,
-        dialect: options.dialect,
+        dialect,
         symbols: Vec::new(),
         imports: Vec::new(),
         exports: Vec::new(),
@@ -245,11 +323,35 @@ pub fn parse_typescript(
         branches: Vec::new(),
         errors: Vec::new(),
         diagnostics: Vec::new(),
-        detail: options.detail,
+        detail: detail_mode,
         source_path,
     };
     collector.walk(root, Vec::new());
-    let detail = match options.detail {
+    let comments = collect_comments(root, text, &line_index);
+    let syntax_nodes = collect_syntax_nodes(root, text, &line_index, detail_mode);
+    let tests = collector
+        .calls
+        .iter()
+        .filter(|call| {
+            matches!(
+                call.target.as_str(),
+                "test" | "it" | "describe" | "test.only" | "it.only" | "describe.only"
+            )
+        })
+        .enumerate()
+        .map(|(index, call)| TypeScriptTest {
+            id: format!("typescript-test-{index}"),
+            name: call
+                .args
+                .first()
+                .cloned()
+                .unwrap_or_else(|| call.target.clone()),
+            framework: call.target.clone(),
+            range: call.range.clone(),
+            parent: call.parent.clone(),
+        })
+        .collect();
+    let detail = match detail_mode {
         TypeScriptDetailMode::SyntaxDebug => Some(TypeScriptSyntaxDetail {
             root_kind: root.kind().to_string(),
             root_named_child_count: root.named_child_count(),
@@ -262,22 +364,22 @@ pub fn parse_typescript(
     for err in &parse_errors {
         diagnostics.push(
             Diagnostic::error(
-                "tree-sitter-typescript",
-                "typescript.parse.error_node",
-                format!("TypeScript parse contained {} node", err.node_kind),
+                parser_id,
+                format!("{diagnostic_prefix}.parse.error_node"),
+                format!("ECMAScript-family parse contained {} node", err.node_kind),
             )
             .with_range(err.range.clone())
             .partial(),
         );
     }
     Envelope::new(
-        ArtifactKind::TypeScriptCode,
+        artifact_kind,
         source,
-        ParserInfo::new("tree-sitter-typescript"),
-        SchemaVersion::TYPESCRIPT_CODE_V1,
+        ParserInfo::new(parser_id),
+        payload_schema_version,
         TypeScriptFile {
-            schema_version: SchemaVersion::TYPESCRIPT_CODE_V1.to_string(),
-            dialect: options.dialect,
+            schema_version: payload_schema_version.to_string(),
+            dialect,
             symbols: collector.symbols,
             imports: collector.imports,
             exports: collector.exports,
@@ -285,21 +387,22 @@ pub fn parse_typescript(
             returns: collector.returns,
             calls: collector.calls,
             branches: collector.branches,
+            tests,
+            comments,
+            syntax_nodes,
             parse_errors,
             detail,
         },
     )
     .with_hashes(Hashes::for_bytes(text.as_bytes(), Some(text)))
-    .with_options_digest(
-        crate::core::options_digest(options).expect("TypeScript options must serialize"),
-    )
+    .with_options_digest(options_digest)
     .with_diagnostics(diagnostics)
 }
 
 #[derive(Debug, Clone)]
 struct ParentSymbol {
-    id: String,
     name: String,
+    qualified_name: String,
 }
 
 struct TypeScriptCollector<'a, 'b> {
@@ -325,6 +428,8 @@ impl TypeScriptCollector<'_, '_> {
             self.errors.push(TypeScriptParseError {
                 range: self.range(node),
                 node_kind: node.kind().to_string(),
+                raw: self.source(node).to_string(),
+                missing: node.is_missing(),
             });
         }
 
@@ -333,12 +438,36 @@ impl TypeScriptCollector<'_, '_> {
             "import_statement" => self.imports.push(self.import_for(node)),
             "export_statement" => self.exports.push(self.export_for(node)),
             "variable_declarator" | "assignment_expression" => {
+                if kind == "assignment_expression"
+                    && let Some(export) = self.commonjs_export_for(node)
+                {
+                    self.exports.push(export);
+                }
                 self.assignments.push(self.assignment_for(node, &parents));
             }
             "return_statement" => self.returns.push(self.return_for(node, &parents)),
-            "call_expression" | "new_expression" => self.calls.push(self.call_for(node, &parents)),
+            "call_expression" | "new_expression" => {
+                let call = self.call_for(node, &parents);
+                if call.target == "require"
+                    && let Some(module) = call
+                        .args
+                        .first()
+                        .and_then(|arg| string_literals(arg).first().cloned())
+                {
+                    self.imports.push(TypeScriptImport {
+                        id: format!("typescript-import-{}", self.imports.len()),
+                        module,
+                        names: Vec::new(),
+                        default: None,
+                        namespace: None,
+                        range: call.range.clone(),
+                    });
+                }
+                self.calls.push(call);
+            }
             "if_statement" | "for_statement" | "for_in_statement" | "while_statement"
-            | "do_statement" | "switch_statement" | "try_statement" | "catch_clause" => {
+            | "do_statement" | "switch_statement" | "switch_case" | "switch_default"
+            | "try_statement" | "catch_clause" | "else_clause" | "ternary_expression" => {
                 self.branches.push(self.branch_for(node, &parents));
             }
             _ => {}
@@ -360,13 +489,24 @@ impl TypeScriptCollector<'_, '_> {
                     node_kind: kind.to_string(),
                     named_child_count: node.named_child_count(),
                 });
+            let can_parent = matches!(
+                symbol_kind,
+                TypeScriptSymbolKind::Class
+                    | TypeScriptSymbolKind::Function
+                    | TypeScriptSymbolKind::Method
+                    | TypeScriptSymbolKind::Constructor
+                    | TypeScriptSymbolKind::Interface
+                    | TypeScriptSymbolKind::Enum
+                    | TypeScriptSymbolKind::Namespace
+            );
             self.symbols.push(TypeScriptSymbol {
                 id: id.clone(),
                 name: name.clone(),
-                qualified_name,
+                qualified_name: qualified_name.clone(),
                 kind: symbol_kind,
                 language: match self.dialect {
                     TypeScriptDialect::TypeScript => "typescript",
+                    TypeScriptDialect::JavaScript => "javascript",
                     TypeScriptDialect::Tsx => "tsx",
                     TypeScriptDialect::Jsx => "jsx",
                 }
@@ -374,15 +514,20 @@ impl TypeScriptCollector<'_, '_> {
                 path: self.source_path.clone(),
                 range: self.range(node),
                 visibility: self.visibility_for(node),
-                parent: parents.last().map(|parent| parent.id.clone()),
+                parent: parents.last().map(|parent| parent.qualified_name.clone()),
                 modifiers: self.modifiers_for(node),
                 decorators: self.decorators_for(node),
+                extends: self.heritage_for(node, "extends"),
+                implements: self.heritage_for(node, "implements"),
                 doc: self.doc_before(node),
                 syntax,
             });
             let mut child_parents = parents;
-            if is_parent_symbol(kind) {
-                child_parents.push(ParentSymbol { id, name });
+            if can_parent {
+                child_parents.push(ParentSymbol {
+                    name,
+                    qualified_name,
+                });
             }
             self.walk_children(node, child_parents);
             return;
@@ -393,7 +538,7 @@ impl TypeScriptCollector<'_, '_> {
 
     fn walk_children(&mut self, node: Node, parents: Vec<ParentSymbol>) {
         let mut cursor = node.walk();
-        for child in node.named_children(&mut cursor) {
+        for child in node.children(&mut cursor) {
             self.walk(child, parents.clone());
         }
     }
@@ -505,7 +650,7 @@ impl TypeScriptCollector<'_, '_> {
                 .or_else(|| self.field_source(node, "right")),
             operator: assignment_operator(self.source(node)),
             range: self.range(node),
-            parent: parents.last().map(|parent| parent.id.clone()),
+            parent: parents.last().map(|parent| parent.qualified_name.clone()),
         }
     }
 
@@ -514,7 +659,7 @@ impl TypeScriptCollector<'_, '_> {
             id: format!("typescript-return-{}", self.returns.len()),
             expression: return_expression(self.source(node)),
             range: self.range(node),
-            parent: parents.last().map(|parent| parent.id.clone()),
+            parent: parents.last().map(|parent| parent.qualified_name.clone()),
         }
     }
 
@@ -530,7 +675,7 @@ impl TypeScriptCollector<'_, '_> {
                 .map(|args| split_args(args.trim_matches(['(', ')'])))
                 .unwrap_or_default(),
             range: self.range(node),
-            parent: parents.last().map(|parent| parent.id.clone()),
+            parent: parents.last().map(|parent| parent.qualified_name.clone()),
         }
     }
 
@@ -540,7 +685,7 @@ impl TypeScriptCollector<'_, '_> {
             kind: node.kind().to_string(),
             condition: self.field_source(node, "condition"),
             range: self.range(node),
-            parent: parents.last().map(|parent| parent.id.clone()),
+            parent: parents.last().map(|parent| parent.qualified_name.clone()),
         }
     }
 
@@ -550,6 +695,14 @@ impl TypeScriptCollector<'_, '_> {
             .filter(|value| !value.is_empty())
     }
 
+    fn heritage_for(&self, node: Node, keyword: &str) -> Vec<String> {
+        let header = self.source(node).split('{').next().unwrap_or_default();
+        let Some((_, rest)) = header.split_once(keyword) else {
+            return Vec::new();
+        };
+        let value = rest.split("implements").next().unwrap_or(rest).trim();
+        split_args(value)
+    }
     fn visibility_for(&self, node: Node) -> TypeScriptVisibility {
         let src = self.source(node).trim_start();
         if src.starts_with("private ") || src.starts_with("#") {
@@ -658,6 +811,26 @@ impl TypeScriptCollector<'_, '_> {
         &self.text[..start]
     }
 
+    fn commonjs_export_for(&self, node: Node) -> Option<TypeScriptExport> {
+        let lhs = self.field_source(node, "left")?;
+        let names = if lhs == "module.exports" {
+            vec!["default".to_string()]
+        } else if let Some(name) = lhs
+            .strip_prefix("exports.")
+            .or_else(|| lhs.strip_prefix("module.exports."))
+        {
+            vec![name.to_string()]
+        } else {
+            return None;
+        };
+        Some(TypeScriptExport {
+            id: format!("typescript-export-{}", self.exports.len()),
+            names,
+            source: None,
+            range: self.range(node),
+        })
+    }
+
     fn line_start(&self, byte_offset: usize) -> usize {
         self.text[..byte_offset]
             .rfind('\n')
@@ -666,13 +839,110 @@ impl TypeScriptCollector<'_, '_> {
     }
 }
 
-fn is_parent_symbol(kind: &str) -> bool {
-    matches!(
-        kind,
-        "class_declaration" | "interface_declaration" | "enum_declaration" | "internal_module"
-    )
+fn parser_id(dialect: TypeScriptDialect) -> &'static str {
+    match dialect {
+        TypeScriptDialect::JavaScript => "tree-sitter-javascript",
+        TypeScriptDialect::TypeScript => "tree-sitter-typescript",
+        TypeScriptDialect::Tsx => "tree-sitter-tsx",
+        TypeScriptDialect::Jsx => "tree-sitter-jsx",
+    }
 }
 
+fn collect_comments(root: Node, text: &str, line_index: &LineIndex) -> Vec<TypeScriptComment> {
+    fn walk(node: Node, text: &str, line_index: &LineIndex, comments: &mut Vec<TypeScriptComment>) {
+        if node.kind() == "comment" {
+            let raw = &text[node.start_byte()..node.end_byte()];
+            comments.push(TypeScriptComment {
+                id: format!("typescript-comment-{}", comments.len()),
+                text: raw.to_string(),
+                doc: raw.starts_with("/**"),
+                range: SourceRange::new(node.start_byte(), node.end_byte(), line_index),
+            });
+        }
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            walk(child, text, line_index, comments);
+        }
+    }
+    let mut comments = Vec::new();
+    walk(root, text, line_index, &mut comments);
+    comments
+}
+
+fn collect_syntax_nodes(
+    root: Node,
+    text: &str,
+    line_index: &LineIndex,
+    detail: TypeScriptDetailMode,
+) -> Vec<TypeScriptSyntaxNode> {
+    fn walk(
+        node: Node,
+        parent: Option<String>,
+        text: &str,
+        line_index: &LineIndex,
+        include_named: bool,
+        include_anonymous: bool,
+        next_ordinal: &mut usize,
+        nodes: &mut Vec<TypeScriptSyntaxNode>,
+    ) {
+        let ordinal = *next_ordinal;
+        *next_ordinal += 1;
+        let include = node.is_error()
+            || node.is_missing()
+            || include_anonymous
+            || (include_named && node.is_named());
+        let id = format!(
+            "typescript-syntax-{ordinal}-{}-{}-{}",
+            node.start_byte(),
+            node.end_byte(),
+            node.kind()
+        );
+        let child_parent = if include {
+            Some(id.clone())
+        } else {
+            parent.clone()
+        };
+        if include {
+            nodes.push(TypeScriptSyntaxNode {
+                id,
+                kind: node.kind().to_string(),
+                named: node.is_named(),
+                error: node.is_error(),
+                missing: node.is_missing(),
+                parent,
+                raw: text[node.start_byte()..node.end_byte()].to_string(),
+                range: SourceRange::new(node.start_byte(), node.end_byte(), line_index),
+            });
+        }
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            walk(
+                child,
+                child_parent.clone(),
+                text,
+                line_index,
+                include_named,
+                include_anonymous,
+                next_ordinal,
+                nodes,
+            );
+        }
+    }
+
+    let mut nodes = Vec::new();
+    let mut next_ordinal = 0;
+    walk(
+        root,
+        None,
+        text,
+        line_index,
+        detail != TypeScriptDetailMode::Semantic,
+        detail == TypeScriptDetailMode::SyntaxDebug,
+        &mut next_ordinal,
+        &mut nodes,
+    );
+    nodes
+}
 fn qualify(parents: &[ParentSymbol], name: &str) -> String {
     if parents.is_empty() {
         name.to_string()

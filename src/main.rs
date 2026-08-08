@@ -231,6 +231,18 @@ enum ParseCommand {
         #[arg(long, value_enum, default_value_t = PythonDetailArg::Semantic)]
         detail: PythonDetailArg,
     },
+    /// Parse JavaScript or JSX code with tree-sitter-javascript.
+    #[command(name = "javascript", alias = "js")]
+    JavaScript {
+        /// Input path or `-` for stdin.
+        input: String,
+        /// JavaScript parser dialect.
+        #[arg(long, value_enum, default_value_t = JavaScriptDialectArg::JavaScript)]
+        dialect: JavaScriptDialectArg,
+        /// Semantic/syntax detail level.
+        #[arg(long, value_enum, default_value_t = JavaScriptDetailArg::Semantic)]
+        detail: JavaScriptDetailArg,
+    },
     /// Parse LaTeX documents, preserving unknown commands as raw nodes.
     Latex {
         /// Input path or `-` for stdin.
@@ -515,8 +527,24 @@ enum PythonDetailArg {
 
 #[cfg(feature = "cli")]
 #[derive(Debug, Clone, Copy, ValueEnum)]
+enum JavaScriptDialectArg {
+    JavaScript,
+    Jsx,
+}
+
+#[cfg(feature = "cli")]
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum JavaScriptDetailArg {
+    Semantic,
+    SemanticWithSyntax,
+    SyntaxDebug,
+}
+
+#[cfg(feature = "cli")]
+#[derive(Debug, Clone, Copy, ValueEnum)]
 enum TypeScriptDialectArg {
     TypeScript,
+    JavaScript,
     Tsx,
     Jsx,
 }
@@ -710,6 +738,26 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 print_json(&parse_registry(
                     &input,
                     "python",
+                    Some(serde_json::to_value(options)?),
+                )?)?;
+            }
+            ParseCommand::JavaScript {
+                input,
+                dialect,
+                detail,
+            } => {
+                let options = grist::javascript::JavaScriptIngestOptions {
+                    dialect: dialect.into(),
+                    detail: detail.into(),
+                };
+                let format = if options.dialect == grist::javascript::JavaScriptDialect::Jsx {
+                    "jsx"
+                } else {
+                    "javascript"
+                };
+                print_json(&parse_registry(
+                    &input,
+                    format,
                     Some(serde_json::to_value(options)?),
                 )?)?;
             }
@@ -1311,13 +1359,25 @@ fn parse_input_to_document_graph(
                 grist::rust::RustIngestOptions::default(),
             )?),
         ),
-        "ts" | "mts" | "cts" | "tsx" | "jsx" => (
-            "typescript",
+        "js" | "mjs" | "cjs" | "jsx" => (
+            if extension == "jsx" { "jsx" } else { "javascript" },
+            Some(serde_json::to_value(
+                grist::javascript::JavaScriptIngestOptions {
+                    dialect: if extension == "jsx" {
+                        grist::javascript::JavaScriptDialect::Jsx
+                    } else {
+                        grist::javascript::JavaScriptDialect::JavaScript
+                    },
+                    ..Default::default()
+                },
+            )?),
+        ),
+        "ts" | "mts" | "cts" | "tsx" => (
+            if extension == "tsx" { "tsx" } else { "typescript" },
             Some(serde_json::to_value(
                 grist::typescript::TypeScriptIngestOptions {
                     dialect: match extension.as_str() {
                         "tsx" => grist::typescript::TypeScriptDialect::Tsx,
-                        "jsx" => grist::typescript::TypeScriptDialect::Jsx,
                         _ => grist::typescript::TypeScriptDialect::TypeScript,
                     },
                     ..Default::default()
@@ -1325,7 +1385,7 @@ fn parse_input_to_document_graph(
             )?),
         ),
         _ => return Err(format!(
-            "cannot infer transform source kind for `{input}`; use a supported extension (.txt, .md, .csv, .tsv, .xlsx, .xlsm, .ods, .ots, .tex, .bib, .pdf, .odt, .ott, .odp, .otp, .py, .rs, .ts, .tsx, .jsx)"
+            "cannot infer transform source kind for `{input}`; use a supported extension (.txt, .md, .csv, .tsv, .xlsx, .xlsm, .ods, .ots, .tex, .bib, .pdf, .odt, .ott, .odp, .otp, .py, .rs, .js, .ts, .tsx, .jsx)"
         )
         .into()),
     };
@@ -1743,8 +1803,30 @@ impl From<TypeScriptDialectArg> for grist::typescript::TypeScriptDialect {
     fn from(value: TypeScriptDialectArg) -> Self {
         match value {
             TypeScriptDialectArg::TypeScript => Self::TypeScript,
+            TypeScriptDialectArg::JavaScript => Self::JavaScript,
             TypeScriptDialectArg::Tsx => Self::Tsx,
             TypeScriptDialectArg::Jsx => Self::Jsx,
+        }
+    }
+}
+
+#[cfg(feature = "cli")]
+impl From<JavaScriptDialectArg> for grist::javascript::JavaScriptDialect {
+    fn from(value: JavaScriptDialectArg) -> Self {
+        match value {
+            JavaScriptDialectArg::JavaScript => Self::JavaScript,
+            JavaScriptDialectArg::Jsx => Self::Jsx,
+        }
+    }
+}
+
+#[cfg(feature = "cli")]
+impl From<JavaScriptDetailArg> for grist::javascript::JavaScriptDetailMode {
+    fn from(value: JavaScriptDetailArg) -> Self {
+        match value {
+            JavaScriptDetailArg::Semantic => Self::Semantic,
+            JavaScriptDetailArg::SemanticWithSyntax => Self::SemanticWithSyntax,
+            JavaScriptDetailArg::SyntaxDebug => Self::SyntaxDebug,
         }
     }
 }

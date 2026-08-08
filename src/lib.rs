@@ -46,6 +46,8 @@ pub mod bibliography;
 pub mod html;
 #[cfg(feature = "xml")]
 pub mod jats;
+#[cfg(feature = "javascript")]
+pub mod javascript;
 #[cfg(feature = "latex")]
 pub mod latex;
 #[cfg(feature = "ldgr-projection")]

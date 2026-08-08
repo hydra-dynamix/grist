@@ -51,7 +51,7 @@ spreadsheets = ["spreadsheet-ooxml", "spreadsheet-odf"]
 structured-data = ["csv", "serialization", "structured-binary", "columnar", "sqlite"]
 email-message = []
 notebooks = ["markdown"]
-code = ["rust", "python", "typescript"]
+code = ["rust", "python", "javascript", "typescript"]
 archives = []
 media = []
 
@@ -77,7 +77,8 @@ rtf = ["dep:encoding_rs"]
 csv = ["dep:csv"]
 rust = ["dep:tree-sitter", "dep:tree-sitter-rust"]
 python = ["dep:tree-sitter", "dep:tree-sitter-python"]
-typescript = ["dep:tree-sitter", "dep:tree-sitter-typescript"]
+javascript = ["dep:tree-sitter", "dep:tree-sitter-javascript"]
+typescript = ["dep:tree-sitter", "dep:tree-sitter-typescript", "javascript"]
 serialization = ["dep:serde_yaml", "dep:toml", "dep:toml_edit", "dep:unsafe-libyaml", "dep:jsonschema", "xml"]
 structured-binary = []
 columnar = ["dep:flate2"]
@@ -108,6 +109,7 @@ toml_edit = { version = "0.22.27", optional = true, features = ["parse"] }
 tree-sitter = { version = "0.24", optional = true }
 tree-sitter-rust = { version = "0.23", optional = true }
 tree-sitter-python = { version = "0.23", optional = true }
+tree-sitter-javascript = { version = "0.23", optional = true }
 tree-sitter-typescript = { version = "0.23", optional = true }
 zeroize = "1.8"
 unsafe-libyaml = { version = "0.2.11", optional = true }

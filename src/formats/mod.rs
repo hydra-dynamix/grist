@@ -19,6 +19,8 @@ pub mod email;
 pub mod epub;
 #[cfg(feature = "html")]
 pub mod html;
+#[cfg(feature = "javascript")]
+pub mod javascript;
 #[cfg(feature = "notebooks")]
 pub mod jupyter;
 #[cfg(feature = "latex")]

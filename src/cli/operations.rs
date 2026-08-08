@@ -270,6 +270,10 @@ pub fn project_envelope_to_graph(
             let document: crate::rust::RustFile = serde_json::from_value(payload)?;
             Ok(document.to_document_graph(context)?)
         }
+        crate::core::ArtifactKind::JavaScriptCode => {
+            let document: crate::javascript::JavaScriptFile = serde_json::from_value(payload)?;
+            Ok(document.to_document_graph(context)?)
+        }
         crate::core::ArtifactKind::TypeScriptCode => {
             let document: crate::typescript::TypeScriptFile = serde_json::from_value(payload)?;
             Ok(document.to_document_graph(context)?)

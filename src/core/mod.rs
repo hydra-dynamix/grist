@@ -127,6 +127,7 @@ impl SchemaVersion {
     pub const CSV_V2: &'static str = "grist/csv/v2";
     pub const RUST_CODE_V1: &'static str = "grist/rust-code/v1";
     pub const PYTHON_CODE_V1: &'static str = "grist/python-code/v1";
+    pub const JAVASCRIPT_CODE_V1: &'static str = "grist/javascript-code/v1";
     pub const TYPESCRIPT_CODE_V1: &'static str = "grist/typescript-code/v1";
     pub const LATEX_V1: &'static str = "grist/latex/v1";
     pub const BIBLIOGRAPHY_V1: &'static str = "grist/bibliography/v1";
@@ -204,6 +205,8 @@ pub enum ArtifactKind {
     Csv,
     RustCode,
     PythonCode,
+    #[serde(rename = "javascript_code")]
+    JavaScriptCode,
     #[serde(rename = "typescript_code")]
     TypeScriptCode,
     Latex,

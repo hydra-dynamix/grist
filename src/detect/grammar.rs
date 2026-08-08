@@ -1,8 +1,18 @@
 use super::Signal;
-#[cfg(any(feature = "rust", feature = "python", feature = "typescript"))]
+#[cfg(any(
+    feature = "rust",
+    feature = "python",
+    feature = "javascript",
+    feature = "typescript"
+))]
 use crate::core::DetectionEvidenceKind;
 
-#[cfg(any(feature = "rust", feature = "python", feature = "typescript"))]
+#[cfg(any(
+    feature = "rust",
+    feature = "python",
+    feature = "javascript",
+    feature = "typescript"
+))]
 pub(super) fn signals(text: &str) -> Vec<Signal> {
     let mut signals = Vec::new();
     #[cfg(feature = "rust")]
@@ -17,21 +27,49 @@ pub(super) fn signals(text: &str) -> Vec<Signal> {
             signals.push(signal);
         }
     }
+    #[cfg(feature = "javascript")]
+    if javascript_markers(text) && !typescript_markers(text) && !jsx_markers(text) {
+        if let Some(signal) = probe_javascript(text) {
+            signals.push(signal);
+        }
+    }
+    #[cfg(feature = "javascript")]
+    if jsx_markers(text) && !typescript_markers(text) {
+        if let Some(signal) = probe_jsx(text) {
+            signals.push(signal);
+        }
+    }
     #[cfg(feature = "typescript")]
-    if typescript_markers(text) {
+    if typescript_markers(text) && !jsx_markers(text) {
         if let Some(signal) = probe_typescript(text) {
+            signals.push(signal);
+        }
+    }
+    #[cfg(feature = "typescript")]
+    if typescript_markers(text) && jsx_markers(text) {
+        if let Some(signal) = probe_tsx(text) {
             signals.push(signal);
         }
     }
     signals
 }
 
-#[cfg(not(any(feature = "rust", feature = "python", feature = "typescript")))]
+#[cfg(not(any(
+    feature = "rust",
+    feature = "python",
+    feature = "javascript",
+    feature = "typescript"
+)))]
 pub(super) fn signals(_text: &str) -> Vec<Signal> {
     Vec::new()
 }
 
-#[cfg(any(feature = "rust", feature = "python", feature = "typescript"))]
+#[cfg(any(
+    feature = "rust",
+    feature = "python",
+    feature = "javascript",
+    feature = "typescript"
+))]
 fn probe_signal(
     format: &str,
     media: &str,
@@ -93,6 +131,40 @@ fn probe_python(text: &str) -> Option<Signal> {
     )
 }
 
+#[cfg(feature = "javascript")]
+fn probe_javascript(text: &str) -> Option<Signal> {
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&tree_sitter_javascript::LANGUAGE.into())
+        .ok()?;
+    let tree = parser.parse(text, None)?;
+    let root = tree.root_node();
+    probe_signal(
+        "javascript",
+        "text/javascript",
+        "tree-sitter-javascript",
+        root.has_error(),
+        root.named_child_count(),
+    )
+}
+
+#[cfg(feature = "javascript")]
+fn probe_jsx(text: &str) -> Option<Signal> {
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&tree_sitter_javascript::LANGUAGE.into())
+        .ok()?;
+    let tree = parser.parse(text, None)?;
+    let root = tree.root_node();
+    probe_signal(
+        "jsx",
+        "text/jsx",
+        "tree-sitter-javascript",
+        root.has_error(),
+        root.named_child_count(),
+    )
+}
+
 #[cfg(feature = "typescript")]
 fn probe_typescript(text: &str) -> Option<Signal> {
     let mut parser = tree_sitter::Parser::new();
@@ -105,6 +177,23 @@ fn probe_typescript(text: &str) -> Option<Signal> {
         "typescript",
         "text/typescript",
         "tree-sitter-typescript",
+        root.has_error(),
+        root.named_child_count(),
+    )
+}
+
+#[cfg(feature = "typescript")]
+fn probe_tsx(text: &str) -> Option<Signal> {
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(&tree_sitter_typescript::LANGUAGE_TSX.into())
+        .ok()?;
+    let tree = parser.parse(text, None)?;
+    let root = tree.root_node();
+    probe_signal(
+        "tsx",
+        "text/tsx",
+        "tree-sitter-tsx",
         root.has_error(),
         root.named_child_count(),
     )
@@ -126,19 +215,48 @@ fn python_markers(text: &str) -> bool {
         .any(|marker| text.contains(marker))
 }
 
-#[cfg(feature = "typescript")]
+#[cfg(feature = "javascript")]
+fn javascript_markers(text: &str) -> bool {
+    [
+        "const ",
+        "let ",
+        "function ",
+        "class ",
+        "export ",
+        "import ",
+        "=>",
+        "require(",
+    ]
+    .iter()
+    .any(|marker| text.contains(marker))
+}
+
+#[cfg(any(feature = "javascript", feature = "typescript"))]
 fn typescript_markers(text: &str) -> bool {
     [
         "interface ",
         "type ",
-        "const ",
-        "let ",
-        "function ",
-        "export ",
-        "import ",
-        "=>",
+        "enum ",
+        "namespace ",
+        "declare ",
+        " implements ",
+        " satisfies ",
+        ": string",
+        ": number",
+        ": boolean",
+        ": unknown",
+        ": never",
+        ": any",
+        " as const",
         " = ",
     ]
     .iter()
     .any(|marker| text.contains(marker))
+}
+
+#[cfg(feature = "javascript")]
+fn jsx_markers(text: &str) -> bool {
+    ["</", "/>", "return <", "=> <", "=<"]
+        .iter()
+        .any(|marker| text.contains(marker))
 }

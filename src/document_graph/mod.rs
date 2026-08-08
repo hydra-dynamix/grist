@@ -378,6 +378,7 @@ pub enum DocumentKind {
     Code,
     Python,
     Rust,
+    JavaScript,
     TypeScript,
     LdgrProjection,
     Other(String),
@@ -413,6 +414,7 @@ impl DocumentKind {
             Self::Repository => "grist.repository",
             Self::Python => "grist.python",
             Self::Rust => "grist.rust",
+            Self::JavaScript => "grist.javascript",
             Self::TypeScript => "grist.typescript",
             Self::LdgrProjection => "grist.ldgr_projection",
             Self::Document | Self::Code | Self::Other(_) => "grist.document_graph",
@@ -5935,6 +5937,171 @@ impl ToDocumentGraph for crate::rust::RustFile {
     }
 }
 
+#[cfg(feature = "javascript")]
+impl ToDocumentGraph for crate::javascript::JavaScriptFile {
+    fn to_document_graph(
+        &self,
+        context: DocumentGraphContext,
+    ) -> Result<DocumentGraph, TransformError> {
+        use crate::javascript::JavaScriptSymbolKind;
+
+        let identities = context
+            .identity_generator(SchemaVersion::JAVASCRIPT_CODE_V1, "javascript")
+            .map_err(projection_transform_error)?;
+        let language = match self.dialect {
+            crate::javascript::JavaScriptDialect::JavaScript => "javascript",
+            crate::javascript::JavaScriptDialect::Jsx => "jsx",
+        };
+        let mut graph = code_graph_from_context(context, DocumentKind::JavaScript, language);
+        graph.dialect = Some(language.to_string());
+        let root_id = ensure_code_root(&mut graph, &identities, "javascript")?;
+        let symbol_ids = self
+            .symbols
+            .iter()
+            .map(|symbol| {
+                Ok((
+                    symbol.qualified_name.clone(),
+                    code_node_id(&identities, "symbol", Some(&symbol.id), Some(&symbol.range))?,
+                ))
+            })
+            .collect::<Result<BTreeMap<_, _>, TransformError>>()?;
+
+        for symbol in &self.symbols {
+            let id = code_node_id(&identities, "symbol", Some(&symbol.id), Some(&symbol.range))?;
+            let mut node = DocumentNode::new(
+                &id,
+                match symbol.kind {
+                    JavaScriptSymbolKind::Class => DocumentNodeKind::Class,
+                    JavaScriptSymbolKind::Function => DocumentNodeKind::Function,
+                    JavaScriptSymbolKind::Method => DocumentNodeKind::Method,
+                    JavaScriptSymbolKind::Constructor => DocumentNodeKind::Constructor,
+                    JavaScriptSymbolKind::Variable => DocumentNodeKind::Variable,
+                    JavaScriptSymbolKind::Field => DocumentNodeKind::Field,
+                    JavaScriptSymbolKind::Unknown => DocumentNodeKind::Symbol,
+                },
+            )
+            .with_name(symbol.name.clone())
+            .with_qualified_name(symbol.qualified_name.clone());
+            node.range = Some(symbol.range.clone());
+            let parent = symbol_parent_node(&graph.id, &symbol.qualified_name, &symbol_ids);
+            node.parent = parent.clone();
+            insert_json_attr(&mut node.attrs, "visibility", &symbol.visibility);
+            insert_json_attr(&mut node.attrs, "modifiers", &symbol.modifiers);
+            insert_json_attr(&mut node.attrs, "decorators", &symbol.decorators);
+            insert_json_attr(&mut node.attrs, "extends", &symbol.extends);
+            insert_json_attr(&mut node.attrs, "implements", &symbol.implements);
+            insert_json_attr(&mut node.attrs, "doc", &symbol.doc);
+            graph.add_node(node);
+            graph.add_contains(node_parent_or_root(&root_id, parent), &id);
+            for target in symbol.extends.iter().chain(symbol.implements.iter()) {
+                graph.add_edge(
+                    DocumentEdge::new(&id, DocumentRelation::Inherits, target)
+                        .with_range(symbol.range.clone()),
+                );
+            }
+        }
+
+        for import in &self.imports {
+            let id = code_node_id(&identities, "import", Some(&import.id), Some(&import.range))?;
+            let mut node =
+                DocumentNode::new(&id, DocumentNodeKind::Import).with_name(import.module.clone());
+            node.range = Some(import.range.clone());
+            insert_json_attr(&mut node.attrs, "names", &import.names);
+            insert_json_attr(&mut node.attrs, "default", &import.default);
+            insert_json_attr(&mut node.attrs, "namespace", &import.namespace);
+            graph.add_node(node);
+            graph.add_contains(&root_id, &id);
+            graph.add_edge(
+                DocumentEdge::new(&root_id, DocumentRelation::Imports, &id)
+                    .with_range(import.range.clone()),
+            );
+        }
+        for export in &self.exports {
+            let id = code_node_id(&identities, "export", Some(&export.id), Some(&export.range))?;
+            let mut node = DocumentNode::new(&id, DocumentNodeKind::Export);
+            node.range = Some(export.range.clone());
+            insert_json_attr(&mut node.attrs, "names", &export.names);
+            insert_json_attr(&mut node.attrs, "source", &export.source);
+            graph.add_node(node);
+            graph.add_contains(&root_id, &id);
+            graph.add_edge(
+                DocumentEdge::new(&root_id, DocumentRelation::Exports, &id)
+                    .with_range(export.range.clone()),
+            );
+        }
+
+        for assignment in &self.assignments {
+            add_code_fact_node(
+                &mut graph,
+                &identities,
+                &root_id,
+                "assignment",
+                &assignment.id,
+                DocumentNodeKind::Assignment,
+                assignment.parent.as_deref(),
+                &symbol_ids,
+                Some(assignment.range.clone()),
+                Some(assignment.lhs.clone()),
+                |attrs| {
+                    insert_json_attr(attrs, "rhs", &assignment.rhs);
+                    insert_json_attr(attrs, "operator", &assignment.operator);
+                },
+            )?;
+        }
+        for ret in &self.returns {
+            add_code_fact_node(
+                &mut graph,
+                &identities,
+                &root_id,
+                "return",
+                &ret.id,
+                DocumentNodeKind::Return,
+                ret.parent.as_deref(),
+                &symbol_ids,
+                Some(ret.range.clone()),
+                ret.expression.clone(),
+                |_| {},
+            )?;
+        }
+        for branch in &self.branches {
+            add_code_fact_node(
+                &mut graph,
+                &identities,
+                &root_id,
+                "branch",
+                &branch.id,
+                DocumentNodeKind::Branch,
+                branch.parent.as_deref(),
+                &symbol_ids,
+                Some(branch.range.clone()),
+                branch.condition.clone(),
+                |attrs| insert_json_attr(attrs, "kind", &branch.kind),
+            )?;
+        }
+        for call in &self.calls {
+            let parent = parent_lookup(call.parent.as_deref(), &symbol_ids)
+                .unwrap_or_else(|| root_id.clone());
+            let id = code_node_id(&identities, "call", Some(&call.id), Some(&call.range))?;
+            let mut node = DocumentNode::new(&id, DocumentNodeKind::Call)
+                .with_name(call.target.clone())
+                .with_text(call.target.clone());
+            node.range = Some(call.range.clone());
+            insert_json_attr(&mut node.attrs, "args", &call.args);
+            graph.add_node(node);
+            graph.add_contains(&parent, &id);
+            graph.add_edge(
+                DocumentEdge::new(&parent, DocumentRelation::Calls, call.target.clone())
+                    .with_range(call.range.clone()),
+            );
+        }
+
+        graph
+            .finalize_projection(&identities)
+            .map_err(projection_transform_error)?;
+        Ok(graph)
+    }
+}
+
 #[cfg(feature = "typescript")]
 impl ToDocumentGraph for crate::typescript::TypeScriptFile {
     fn to_document_graph(
@@ -5946,7 +6113,13 @@ impl ToDocumentGraph for crate::typescript::TypeScriptFile {
         let identities = context
             .identity_generator(SchemaVersion::TYPESCRIPT_CODE_V1, "typescript")
             .map_err(projection_transform_error)?;
-        let mut graph = code_graph_from_context(context, DocumentKind::TypeScript, "typescript");
+        let language = match self.dialect {
+            crate::typescript::TypeScriptDialect::JavaScript => "javascript",
+            crate::typescript::TypeScriptDialect::TypeScript => "typescript",
+            crate::typescript::TypeScriptDialect::Tsx => "tsx",
+            crate::typescript::TypeScriptDialect::Jsx => "jsx",
+        };
+        let mut graph = code_graph_from_context(context, DocumentKind::TypeScript, language);
         graph.dialect = Some(format!("{:?}", self.dialect).to_lowercase());
         let root_id = ensure_code_root(&mut graph, &identities, "typescript")?;
         let symbol_ids = self
@@ -5985,6 +6158,8 @@ impl ToDocumentGraph for crate::typescript::TypeScriptFile {
             insert_json_attr(&mut node.attrs, "visibility", &symbol.visibility);
             insert_json_attr(&mut node.attrs, "modifiers", &symbol.modifiers);
             insert_json_attr(&mut node.attrs, "decorators", &symbol.decorators);
+            insert_json_attr(&mut node.attrs, "extends", &symbol.extends);
+            insert_json_attr(&mut node.attrs, "implements", &symbol.implements);
             insert_json_attr(&mut node.attrs, "doc", &symbol.doc);
             graph.add_node(node);
             graph.add_contains(
@@ -5994,6 +6169,12 @@ impl ToDocumentGraph for crate::typescript::TypeScriptFile {
                 ),
                 &id,
             );
+            for target in symbol.extends.iter().chain(symbol.implements.iter()) {
+                graph.add_edge(
+                    DocumentEdge::new(&id, DocumentRelation::Inherits, target)
+                        .with_range(symbol.range.clone()),
+                );
+            }
         }
 
         for import in &self.imports {
@@ -6097,7 +6278,12 @@ impl ToDocumentGraph for crate::typescript::TypeScriptFile {
     }
 }
 
-#[cfg(any(feature = "python", feature = "rust", feature = "typescript"))]
+#[cfg(any(
+    feature = "javascript",
+    feature = "python",
+    feature = "rust",
+    feature = "typescript"
+))]
 fn code_graph_from_context(
     context: DocumentGraphContext,
     kind: DocumentKind,
@@ -6113,6 +6299,11 @@ fn code_graph_from_context(
             "rust-code",
             SchemaVersion::RUST_CODE_V1,
             "grist.rust.to-document-graph.v2",
+        ),
+        DocumentKind::JavaScript => (
+            "javascript-code",
+            SchemaVersion::JAVASCRIPT_CODE_V1,
+            "grist.javascript.to-document-graph.v2",
         ),
         DocumentKind::TypeScript => (
             "typescript-code",
@@ -6141,7 +6332,12 @@ fn code_graph_from_context(
     graph
 }
 
-#[cfg(any(feature = "python", feature = "rust", feature = "typescript"))]
+#[cfg(any(
+    feature = "javascript",
+    feature = "python",
+    feature = "rust",
+    feature = "typescript"
+))]
 fn ensure_code_root(
     graph: &mut DocumentGraph,
     identities: &GraphIdGenerator,
@@ -6158,7 +6354,12 @@ fn ensure_code_root(
     Ok(root_id)
 }
 
-#[cfg(any(feature = "python", feature = "rust", feature = "typescript"))]
+#[cfg(any(
+    feature = "javascript",
+    feature = "python",
+    feature = "rust",
+    feature = "typescript"
+))]
 fn code_node_id(
     identities: &GraphIdGenerator,
     category: &str,
@@ -6177,6 +6378,7 @@ fn code_node_id(
 
 #[cfg(any(
     feature = "latex",
+    feature = "javascript",
     feature = "python",
     feature = "rust",
     feature = "typescript"
@@ -6189,7 +6391,7 @@ fn insert_json_attr<T: Serialize>(attrs: &mut AttrMap, key: &str, value: &T) {
     }
 }
 
-#[cfg(any(feature = "python", feature = "typescript"))]
+#[cfg(any(feature = "javascript", feature = "python", feature = "typescript"))]
 fn symbol_parent_node(
     _graph_id: &str,
     qualified_name: &str,
@@ -6199,7 +6401,12 @@ fn symbol_parent_node(
     symbol_ids.get(parent).cloned()
 }
 
-#[cfg(any(feature = "python", feature = "rust", feature = "typescript"))]
+#[cfg(any(
+    feature = "javascript",
+    feature = "python",
+    feature = "rust",
+    feature = "typescript"
+))]
 fn parent_lookup(parent: Option<&str>, symbol_ids: &BTreeMap<String, String>) -> Option<String> {
     let parent = parent?;
     symbol_ids.get(parent).cloned().or_else(|| {
@@ -6211,19 +6418,24 @@ fn parent_lookup(parent: Option<&str>, symbol_ids: &BTreeMap<String, String>) ->
     })
 }
 
-#[cfg(any(feature = "python", feature = "rust", feature = "typescript"))]
+#[cfg(any(
+    feature = "javascript",
+    feature = "python",
+    feature = "rust",
+    feature = "typescript"
+))]
 fn node_parent_or_root(root_id: &str, parent: Option<String>) -> String {
     parent.unwrap_or_else(|| root_id.to_string())
 }
 
-#[cfg(any(feature = "python", feature = "typescript"))]
+#[cfg(any(feature = "javascript", feature = "python", feature = "typescript"))]
 #[allow(clippy::too_many_arguments)]
 fn add_code_fact_node<F>(
     graph: &mut DocumentGraph,
     identities: &GraphIdGenerator,
     root_id: &str,
     category: &str,
-    _id: &str,
+    id: &str,
     kind: DocumentNodeKind,
     parent: Option<&str>,
     symbol_ids: &BTreeMap<String, String>,
@@ -6235,7 +6447,7 @@ where
     F: FnOnce(&mut AttrMap),
 {
     let parent = parent_lookup(parent, symbol_ids).unwrap_or_else(|| root_id.to_string());
-    let node_id = code_node_id(identities, category, None, range.as_ref())?;
+    let node_id = code_node_id(identities, category, Some(id), range.as_ref())?;
     let mut node = DocumentNode::new(&node_id, kind);
     node.range = range;
     node.text = text;

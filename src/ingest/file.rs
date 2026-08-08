@@ -170,15 +170,30 @@ fn parse_detected_text(text: &str, source: SourceInfo, detection: &Detection) ->
             &crate::python::PythonIngestOptions::default(),
         ))
         .ok(),
+        #[cfg(feature = "javascript")]
+        ContentKind::JavaScript | ContentKind::Jsx => {
+            serde_json::to_value(crate::javascript::parse_javascript(
+                text,
+                source,
+                &crate::javascript::JavaScriptIngestOptions {
+                    dialect: if detection.content_kind == ContentKind::Jsx {
+                        crate::javascript::JavaScriptDialect::Jsx
+                    } else {
+                        crate::javascript::JavaScriptDialect::JavaScript
+                    },
+                    ..Default::default()
+                },
+            ))
+            .ok()
+        }
         #[cfg(feature = "typescript")]
-        ContentKind::TypeScript | ContentKind::Tsx | ContentKind::Jsx => {
+        ContentKind::TypeScript | ContentKind::Tsx => {
             serde_json::to_value(crate::typescript::parse_typescript(
                 text,
                 source,
                 &crate::typescript::TypeScriptIngestOptions {
                     dialect: match detection.content_kind {
                         ContentKind::Tsx => crate::typescript::TypeScriptDialect::Tsx,
-                        ContentKind::Jsx => crate::typescript::TypeScriptDialect::Jsx,
                         _ => crate::typescript::TypeScriptDialect::TypeScript,
                     },
                     ..Default::default()

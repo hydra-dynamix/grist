@@ -77,6 +77,7 @@ fn descriptor(
             | ArtifactKind::Notebook
             | ArtifactKind::RustCode
             | ArtifactKind::PythonCode
+            | ArtifactKind::JavaScriptCode
             | ArtifactKind::TypeScriptCode
     ) {
         capabilities.insert(Capability::DocumentGraphProjection);
@@ -199,6 +200,7 @@ fn register_feature_parsers(registry: &mut ParserRegistry) -> Result<(), ParserR
     register_bibliography(registry)?;
     register_rust(registry)?;
     register_python(registry)?;
+    register_javascript(registry)?;
     register_typescript(registry)?;
     register_serialization(registry)?;
     register_columnar(registry)?;
@@ -1395,29 +1397,108 @@ fn register_python(registry: &mut ParserRegistry) -> Result<(), ParserRegistryEr
     register_disabled(registry, metadata, "python")
 }
 
+#[cfg(feature = "javascript")]
+fn register_javascript(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    for (format_id, extensions, dialect) in [
+        (
+            "javascript",
+            &["js", "mjs", "cjs"][..],
+            crate::javascript::JavaScriptDialect::JavaScript,
+        ),
+        (
+            "jsx",
+            &["jsx"][..],
+            crate::javascript::JavaScriptDialect::Jsx,
+        ),
+    ] {
+        let media_type = if format_id == "jsx" {
+            "text/jsx"
+        } else {
+            "text/javascript"
+        };
+        let parser_id = if format_id == "jsx" {
+            "tree-sitter-javascript-jsx"
+        } else {
+            "tree-sitter-javascript"
+        };
+        let format = FormatMetadata::new(format_id, ArtifactKind::JavaScriptCode)
+            .with_media_types([media_type])
+            .with_extensions(extensions.iter().copied());
+        let options = crate::javascript::JavaScriptIngestOptions {
+            dialect,
+            ..Default::default()
+        };
+        register(
+            registry,
+            descriptor(
+                parser_id,
+                format,
+                ParserInfo::new("tree-sitter-javascript")
+                    .with_implementation("tree-sitter-javascript", "0.23")
+                    .with_grammar_version("0.23")
+                    .with_feature("javascript"),
+                crate::core::SchemaVersion::JAVASCRIPT_CODE_V1,
+                Some("javascript"),
+                serde_json::to_value(options).unwrap_or_default(),
+            ),
+            parse_javascript,
+        )?;
+    }
+    Ok(())
+}
+
+#[cfg(feature = "javascript")]
+fn parse_javascript(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserError> {
+    let options = decode_options::<crate::javascript::JavaScriptIngestOptions>(context)?;
+    let text = context.utf8_text()?;
+    context.consume_decoded_characters(text.chars().count() as u64)?;
+    output(crate::javascript::parse_javascript(
+        text,
+        context.source().clone(),
+        &options,
+    ))
+}
+
+#[cfg(not(feature = "javascript"))]
+fn register_javascript(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    for (format_id, extension) in [("javascript", "js"), ("jsx", "jsx")] {
+        let parser_id = if format_id == "jsx" {
+            "tree-sitter-javascript-jsx"
+        } else {
+            "tree-sitter-javascript"
+        };
+        let format = FormatMetadata::new(format_id, ArtifactKind::JavaScriptCode)
+            .with_extensions([extension]);
+        let metadata = descriptor(
+            parser_id,
+            format,
+            ParserInfo::new("tree-sitter-javascript").with_feature("javascript"),
+            crate::core::SchemaVersion::JAVASCRIPT_CODE_V1,
+            Some("javascript"),
+            serde_json::json!({}),
+        );
+        register_disabled(registry, metadata, "javascript")?;
+    }
+    Ok(())
+}
+
 #[cfg(feature = "typescript")]
 fn register_typescript(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
     register_typescript_dialect(
         registry,
         "typescript",
         "tree-sitter-typescript",
-        "ts",
+        &["ts", "mts", "cts"],
         crate::typescript::TypeScriptDialect::TypeScript,
     )?;
     register_typescript_dialect(
         registry,
         "tsx",
         "tree-sitter-tsx",
-        "tsx",
+        &["tsx"],
         crate::typescript::TypeScriptDialect::Tsx,
     )?;
-    register_typescript_dialect(
-        registry,
-        "jsx",
-        "tree-sitter-jsx",
-        "jsx",
-        crate::typescript::TypeScriptDialect::Jsx,
-    )
+    Ok(())
 }
 
 #[cfg(feature = "typescript")]
@@ -1425,11 +1506,16 @@ fn register_typescript_dialect(
     registry: &mut ParserRegistry,
     format_id: &str,
     parser_id: &str,
-    extension: &str,
+    extensions: &[&str],
     dialect: crate::typescript::TypeScriptDialect,
 ) -> Result<(), ParserRegistryError> {
-    let format =
-        FormatMetadata::new(format_id, ArtifactKind::TypeScriptCode).with_extensions([extension]);
+    let format = FormatMetadata::new(format_id, ArtifactKind::TypeScriptCode)
+        .with_media_types([if format_id == "tsx" {
+            "text/tsx"
+        } else {
+            "text/typescript"
+        }])
+        .with_extensions(extensions.iter().copied());
     let options = crate::typescript::TypeScriptIngestOptions {
         dialect,
         ..Default::default()
@@ -1468,7 +1554,6 @@ fn register_typescript(registry: &mut ParserRegistry) -> Result<(), ParserRegist
     for (format_id, parser_id, extension) in [
         ("typescript", "tree-sitter-typescript", "ts"),
         ("tsx", "tree-sitter-tsx", "tsx"),
-        ("jsx", "tree-sitter-jsx", "jsx"),
     ] {
         let format = FormatMetadata::new(format_id, ArtifactKind::TypeScriptCode)
             .with_extensions([extension]);
@@ -2246,6 +2331,8 @@ fn unimplemented_formats() -> &'static [(&'static str, &'static str, &'static st
         ("tnef", "dat", "email-message"),
         ("smime", "p7m", "email-message"),
         ("javascript", "js", "code"),
+        ("r_markdown", "rmd", "notebooks"),
+        ("quarto", "qmd", "notebooks"),
         ("go", "go", "code"),
         ("java", "java", "code"),
         ("kotlin", "kt", "code"),

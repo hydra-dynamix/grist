@@ -1935,6 +1935,36 @@ fn registrations() -> Vec<Registration> {
             crate::typescript::TypeScriptIngestOptions
         );
     }
+    #[cfg(feature = "javascript")]
+    {
+        add!(
+            "javascript-code",
+            "javascript-code",
+            SchemaVersion::JAVASCRIPT_CODE_V1,
+            SchemaKind::Payload,
+            "grist.javascript-code.v1.schema.json",
+            true,
+            crate::javascript::JavaScriptFile
+        );
+        add!(
+            "javascript-code-envelope",
+            "envelope",
+            SchemaVersion::ENVELOPE_V2,
+            SchemaKind::Envelope,
+            "grist.javascript-code-envelope.v2.schema.json",
+            true,
+            crate::core::Envelope<crate::javascript::JavaScriptFile>
+        );
+        add!(
+            "javascript-code-options",
+            "javascript-code-options",
+            "grist/javascript-code-options/v1",
+            SchemaKind::Options,
+            "grist.javascript-code-options.v1.schema.json",
+            false,
+            crate::javascript::JavaScriptIngestOptions
+        );
+    }
     #[cfg(feature = "latex")]
     {
         add!(
