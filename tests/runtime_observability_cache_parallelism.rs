@@ -1,8 +1,11 @@
+#[cfg(feature = "markdown")]
 use grist::core::{
-    BudgetProfile, BudgetSelection, ContentIdentity, Input, OperationKind, ParseRequest,
-    ParserInfo, ProviderSet, RequestId, SourceInfo, canonical_json_bytes, options_digest,
-    sha256_hex,
+    BudgetProfile, BudgetSelection, Input, ParseRequest, ProviderSet, RequestId, SourceInfo,
 };
+use grist::core::{
+    ContentIdentity, OperationKind, ParserInfo, canonical_json_bytes, options_digest, sha256_hex,
+};
+#[cfg(feature = "markdown")]
 use grist::ingest::Ingestor;
 use grist::runtime::{
     CacheEntry, CacheKey, CanonicalOrderKey, ContentAddressedCache, MetricEvent, MetricsHook,
@@ -18,15 +21,18 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
+#[cfg(feature = "markdown")]
 #[derive(Clone, Default)]
 struct RecordingMetrics(Arc<Mutex<Vec<MetricEvent>>>);
 
+#[cfg(feature = "markdown")]
 impl MetricsSink for RecordingMetrics {
     fn record(&self, event: &MetricEvent) {
         self.0.lock().unwrap().push(event.clone());
     }
 }
 
+#[cfg(feature = "markdown")]
 #[test]
 fn default_metrics_hook_exposes_counts_without_source_or_metadata_content() {
     let recording = RecordingMetrics::default();

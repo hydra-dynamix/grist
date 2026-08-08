@@ -216,7 +216,7 @@ fn parse_detected_text(text: &str, source: SourceInfo, detection: &Detection) ->
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "markdown"))]
 mod tests {
     use super::*;
 

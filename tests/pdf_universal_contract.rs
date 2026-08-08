@@ -1,11 +1,14 @@
 #![cfg(feature = "pdf")]
 
-use grist::core::{
-    ArtifactKind, OperationStatus, ParseRequest, SchemaVersion, SecretString, SourceInfo,
-};
+#[cfg(feature = "schemas")]
+use grist::core::ParseRequest;
+use grist::core::{ArtifactKind, OperationStatus, SchemaVersion, SecretString, SourceInfo};
+#[cfg(feature = "schemas")]
 use grist::core::{BudgetSelection, Input, ProviderSet, RequestId, ResourceBudget};
+#[cfg(feature = "schemas")]
 use grist::document_graph::{DocumentGraphContext, DocumentNodeKind, ToDocumentGraph};
 use grist::pdf::{PdfObjectLocation, PdfOptions, PdfPageLabelStyle, parse_pdf_bytes};
+#[cfg(feature = "schemas")]
 use grist::registry::{ParserSelection, builtin_parser_registry};
 // Fixtures are assembled as exact byte vectors to preserve binary stream data.
 
@@ -292,6 +295,7 @@ fn malformed_inputs_fail_without_panicking_and_output_is_deterministic() {
     );
 }
 
+#[cfg(feature = "schemas")]
 #[test]
 fn registry_graph_and_schema_surfaces_are_live() {
     let registry = builtin_parser_registry().unwrap();

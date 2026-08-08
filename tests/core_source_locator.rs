@@ -1,7 +1,9 @@
+#[cfg(feature = "schemas")]
+use grist::core::SchemaVersion;
 use grist::core::{
     BoundingBox, CellAddress, CoordinateOrigin, CoordinateUnit, DerivedNodeReference, IndexBase,
     IndexPosition, IndexRange, LineIndex, LocationComponent, LocatorConfidence, LocatorPrecision,
-    SchemaVersion, SourceLocator, SourceRange,
+    SourceLocator, SourceRange,
 };
 
 fn one(value: u64) -> IndexPosition {
@@ -258,6 +260,7 @@ fn approximate_and_synthetic_locations_have_required_evidence() {
     assert!(LocatorConfidence::new(1.01).is_err());
 }
 
+#[cfg(feature = "schemas")]
 #[test]
 fn locator_schema_exposes_all_tags_precision_and_confidence_bounds() {
     let entry = grist::schema::list_schemas()

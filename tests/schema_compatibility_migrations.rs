@@ -1,17 +1,24 @@
 use grist::core::SchemaVersion;
 use grist::schema::{
     BackendOutputManifest, BackendOutputPolicyError, CompatibilityChangeKind, CompatibilityPolicy,
-    ForwardCompatible, MigrationRegistry, SchemaKind, builtin_migration_registry,
-    canonical_examples, check_schema_compatibility, deserialize_forward_compatible,
-    enforce_backend_output_change, enforce_schema_compatibility, schema_catalog, schema_json,
-    schema_json_version, validate_schema,
+    ForwardCompatible, check_schema_compatibility, deserialize_forward_compatible,
+    enforce_backend_output_change, enforce_schema_compatibility,
+};
+#[cfg(feature = "schemas")]
+use grist::schema::{
+    MigrationRegistry, SchemaKind, builtin_migration_registry, canonical_examples, schema_catalog,
+    schema_json, schema_json_version, validate_schema,
 };
 use serde::Deserialize;
 use serde_json::json;
+#[cfg(feature = "schemas")]
 use std::collections::BTreeSet;
+#[cfg(feature = "schemas")]
 use std::fs;
+#[cfg(feature = "schemas")]
 use std::path::PathBuf;
 
+#[cfg(feature = "schemas")]
 #[test]
 fn catalog_covers_every_public_contract_class_and_emits_registered_versions() {
     let catalog = schema_catalog();
@@ -71,6 +78,7 @@ fn catalog_covers_every_public_contract_class_and_emits_registered_versions() {
     assert!(schema_json_version("serialization-envelope", SchemaVersion::ENVELOPE_V1).is_some());
 }
 
+#[cfg(feature = "schemas")]
 #[test]
 fn generated_schemas_and_canonical_examples_have_no_drift() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -87,6 +95,7 @@ fn generated_schemas_and_canonical_examples_have_no_drift() {
     assert_eq!(actual, expected, "canonical example drift");
 }
 
+#[cfg(feature = "schemas")]
 #[test]
 fn every_canonical_example_validates_against_its_registered_schema() {
     let manifest = canonical_examples().expect("canonical examples");
@@ -97,6 +106,7 @@ fn every_canonical_example_validates_against_its_registered_schema() {
     }
 }
 
+#[cfg(feature = "schemas")]
 #[test]
 fn builtin_and_consumer_migrations_use_deterministic_registered_paths() {
     let registry = builtin_migration_registry();
@@ -260,6 +270,7 @@ fn backend_manifest(
     }
 }
 
+#[cfg(feature = "schemas")]
 fn pretty_json(value: &impl serde::Serialize) -> String {
     let mut json = serde_json::to_string_pretty(value).unwrap();
     json.push('\n');

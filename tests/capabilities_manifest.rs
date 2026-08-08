@@ -1,4 +1,5 @@
 use grist::capabilities::{CapabilityManifest, discover};
+#[cfg(feature = "pdf")]
 use grist::core::{BudgetAxis, ProviderKind, SchemaVersion};
 use grist::registry::{builtin_parser_registry, builtin_provider_registry};
 use grist::transform::{
@@ -29,6 +30,7 @@ fn builtin_manifest_is_deterministic_sorted_and_schema_versioned() {
     );
 }
 
+#[cfg(feature = "pdf")]
 #[test]
 fn manifest_reports_versions_policies_requirements_and_unavailability() {
     let manifest = discover().unwrap();

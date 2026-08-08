@@ -1,6 +1,8 @@
+#[cfg(any(feature = "pdf", all(feature = "python", feature = "typescript")))]
+use grist::core::ParserAvailability;
 #[cfg(all(feature = "python", feature = "typescript"))]
 use grist::core::{ArtifactKind, FormatHint, ParserInfo};
-use grist::core::{DetectionEvidenceKind, Limits, ParserAvailability};
+use grist::core::{DetectionEvidenceKind, Limits};
 #[cfg(all(feature = "python", feature = "typescript"))]
 use grist::detect::AmbiguityPolicy;
 use grist::detect::{ContentKind, DetectionOptions, DetectionStatus, detect_with_registry};
@@ -34,6 +36,7 @@ fn detect(
     .unwrap()
 }
 
+#[cfg(feature = "pdf")]
 #[test]
 fn contradictory_extension_and_mime_cannot_override_magic() {
     let result = detect(

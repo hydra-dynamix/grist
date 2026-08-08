@@ -39,6 +39,7 @@ impl Drop for Fixture {
     }
 }
 
+#[cfg(all(feature = "serialization", feature = "pdf"))]
 #[test]
 fn inventories_every_policy_outcome_and_parses_supported_manifests() {
     let fixture = Fixture::new("inventory");

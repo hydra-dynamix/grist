@@ -53,6 +53,7 @@ impl Parser for EchoParser {
     }
 }
 
+#[cfg(feature = "pdf")]
 #[test]
 fn builtins_are_sorted_inspectable_and_pdf_is_available() {
     let registry = builtin_parser_registry().unwrap();

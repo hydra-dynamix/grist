@@ -1,9 +1,13 @@
+#[cfg(feature = "markdown")]
+use grist::core::OperationKind;
 use grist::core::{
-    BudgetProfile, BudgetSelection, CancellationToken, FormatHint, Input, OperationKind,
-    OperationStatus, ParseRequest, ProviderSet, RequestId, ResourceBudget, SourceInfo, StreamEvent,
+    BudgetProfile, BudgetSelection, CancellationToken, FormatHint, Input, OperationStatus,
+    ParseRequest, ProviderSet, RequestId, ResourceBudget, SourceInfo, StreamEvent,
 };
 use grist::ingest::Ingestor;
+#[cfg(feature = "markdown")]
 use std::fs;
+#[cfg(feature = "markdown")]
 use std::io::Cursor;
 
 fn trusted() -> BudgetSelection {
@@ -20,6 +24,7 @@ fn request(id: &str, input: Input, source_name: &str) -> ParseRequest {
     )
 }
 
+#[cfg(feature = "markdown")]
 #[test]
 fn equivalent_bytes_share_identity_and_payload_across_every_input_adapter() {
     let bytes = b"# unified\n\nbody\n".to_vec();
@@ -71,6 +76,7 @@ fn equivalent_bytes_share_identity_and_payload_across_every_input_adapter() {
     }
 }
 
+#[cfg(all(feature = "code", feature = "pdf"))]
 #[test]
 fn ambiguous_and_malformed_inputs_are_machine_readable_envelopes() {
     let ingestor = Ingestor::builtin().unwrap();
