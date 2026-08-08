@@ -94,7 +94,7 @@ Evidence keys: `E1` = `Cargo.toml`, `README.md`, `src/lib.rs`; `E2` = `src/core.
 | CP-06-06-FORMULAS | §6.6 | 3 | 0 | SECURITY | format-spreadsheet-ooxml | **conforming** — XLSX/XLSM formulas are inert source with explicitly labeled workbook-stored caches; no calculation or macro execution occurs. |
 | CP-06-07-SECURE | §6.7 | 2 | 0 | PROVIDER | format-secure-message-parts | **absent** E0. |
 | CP-06-07-CALENDAR | §6.7 | 2 | 0 | SECURITY | format-calendar-contact | **absent** E0. |
-| CP-06-08 | §6.8 | 1 | 0 | FORMAT | format-jupyter-notebook | **absent** E0. |
+| CP-06-08 | §6.8 | 1 | 0 | FORMAT | format-jupyter-notebook | **conforming** - nbformat 3/4 cells, metadata, attachments, execution counts, rich MIME/error/widget outputs, locators, stable graph/segment identities, schemas, CLI, limits, and no-execution proof are covered. |
 | CP-06-09 | §6.9 | 1 | 0 | FORMAT | ingest-repository | **partial** E3/E6 — ignore/outcomes exist; complete skip/symlink/submodule/identity contract missing. |
 | CP-06-10 | §6.10 | 1 | 0 | CONTAINER | container-safe-recursion | **absent** E0. |
 | CP-06-11-OCR | §6.11 | 1 | 0 | PROVIDER | format-image-ocr-layout | **absent** E0. |
@@ -193,7 +193,7 @@ Every row inherits §6: detection, authoritative typed payload, meaningful graph
 | Email | PST and OST | formats/outlook; `email-message` | format-outlook-store | **absent**. |
 | Email | TNEF and S/MIME | formats/secure_message; `email-message` | format-secure-message-parts | **absent**. |
 | Calendar/contact | iCalendar/ICS and vCard/VCF including MIME parts | formats/calendar_contact; `email-message` | format-calendar-contact | **conforming** - bounded inert parsing preserves folded/raw properties, events, alarms, time zones, recurrence and exceptions, attendees, multi-version contacts, URI/binary attachments, exact record locators, graph/segment/schema/CLI surfaces, and calendar MIME parts without writes, responses, or network access. |
-| Notebook | Jupyter Notebook/IPYNB | formats/jupyter; `notebooks` | format-jupyter-notebook | **absent**. |
+| Notebook | Jupyter Notebook/IPYNB | formats/jupyter; `notebooks` | format-jupyter-notebook | **conforming** - inert nbformat 3/4 parsing preserves ordered typed cells, exact source/metadata/attachments, execution counts, rich MIME/error/widget outputs, explicit notebook locators and ownership, deterministic identities, bounded malformed/deep/large handling, graph/segment/schema/CLI surfaces, and never executes cells or active output. |
 | Notebook | R Markdown and Quarto | formats/rmarkdown_quarto; `notebooks` | format-rmarkdown-quarto | **absent**. |
 | Code | Tree-sitter Rust, Python, JavaScript, TypeScript, TSX, JSX | formats/code; `code` | format-code-primary-languages | **partial** — Rust/Python/TypeScript/TSX/JSX modules; JS/full semantics incomplete. |
 | Code | Go, Java, Kotlin, C, C++, C#, Ruby, PHP, Swift, Bash, SQL, CSS registry | formats/code; `code` | format-code-language-registry | **absent**. |

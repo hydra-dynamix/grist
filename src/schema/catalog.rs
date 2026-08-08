@@ -1370,6 +1370,36 @@ fn registrations() -> Vec<Registration> {
             crate::sqlite::SqliteOptions
         );
     }
+    #[cfg(feature = "notebooks")]
+    {
+        add!(
+            "ipynb",
+            "notebooks",
+            SchemaVersion::IPYNB_V1,
+            SchemaKind::Payload,
+            "grist.ipynb.v1.schema.json",
+            true,
+            crate::notebook::NotebookDocument
+        );
+        add!(
+            "ipynb-envelope",
+            "envelope",
+            SchemaVersion::ENVELOPE_V2,
+            SchemaKind::Envelope,
+            "grist.ipynb-envelope.v2.schema.json",
+            true,
+            crate::core::Envelope<crate::notebook::NotebookDocument>
+        );
+        add!(
+            "ipynb-options",
+            "ipynb-options",
+            "grist/ipynb-options/v1",
+            SchemaKind::Options,
+            "grist.ipynb-options.v1.schema.json",
+            false,
+            crate::notebook::NotebookOptions
+        );
+    }
     #[cfg(feature = "email-message")]
     {
         add!(

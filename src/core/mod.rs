@@ -142,6 +142,7 @@ impl SchemaVersion {
     pub const OUTLOOK_MSG_V1: &'static str = "grist/outlook-msg/v1";
     pub const ICALENDAR_V1: &'static str = "grist/icalendar/v1";
     pub const VCARD_V1: &'static str = "grist/vcard/v1";
+    pub const IPYNB_V1: &'static str = "grist/ipynb/v1";
     pub const MODEL_OUTPUT_V1: &'static str = "grist/model-output/v1";
     pub const REPO_INGEST_V1: &'static str = "grist/repo-ingest/v1";
     pub const LDGR_PROJECTION_V1: &'static str = "grist.ldgr_projection.v1";
@@ -216,6 +217,7 @@ pub enum ArtifactKind {
     OutlookMsg,
     ICalendar,
     VCard,
+    Notebook,
     ModelOutput,
     RepoIngest,
     FileIngest,

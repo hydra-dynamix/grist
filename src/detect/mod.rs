@@ -11,6 +11,7 @@ use crate::core::{
 };
 use crate::registry::{ParserRegistry, ParserSelection, builtin_parser_registry};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
@@ -76,6 +77,7 @@ pub enum ContentKind {
     Msg,
     ICalendar,
     VCard,
+    JupyterNotebook,
     Sqlite,
     Png,
     Jpeg,
@@ -363,6 +365,26 @@ pub fn detect_with_registry(
         format_hint,
         registry,
     );
+    if bytes.len() <= options.max_probe_bytes
+        && let Ok(Value::Object(notebook)) = serde_json::from_slice::<Value>(bytes)
+        && notebook
+            .get("nbformat")
+            .and_then(Value::as_u64)
+            .is_some_and(|version| matches!(version, 3 | 4))
+        && (notebook.get("cells").is_some_and(Value::is_array)
+            || notebook.get("worksheets").is_some_and(Value::is_array))
+    {
+        signals.push(
+            Signal::new(
+                "ipynb",
+                Some("application/x-ipynb+json"),
+                0.96,
+                DetectionEvidenceKind::Structure,
+                "Jupyter nbformat object with cells or worksheets",
+            )
+            .decisive(),
+        );
+    }
     signals.extend(text::signals(
         bytes,
         options.max_probe_bytes,
@@ -955,6 +977,7 @@ fn extension_identity(extension: &str) -> Option<(&'static str, &'static str)> {
         "mbox" => ("mbox", "application/mbox"),
         "ics" | "ifb" => ("icalendar", "text/calendar"),
         "vcf" | "vcard" => ("vcard", "text/vcard"),
+        "ipynb" => ("ipynb", "application/x-ipynb+json"),
         "sqlite" | "sqlite3" | "db" => ("sqlite", "application/vnd.sqlite3"),
         "png" => ("png", "image/png"),
         "jpg" | "jpeg" => ("jpeg", "image/jpeg"),
@@ -1059,6 +1082,7 @@ fn media_type_identity(media_type: &str) -> Option<(&'static str, &'static str)>
         "application/mbox" => ("mbox", "application/mbox"),
         "text/calendar" | "application/ics" => ("icalendar", "text/calendar"),
         "text/vcard" | "text/x-vcard" => ("vcard", "text/vcard"),
+        "application/x-ipynb+json" => ("ipynb", "application/x-ipynb+json"),
         "application/vnd.sqlite3" | "application/x-sqlite3" => {
             ("sqlite", "application/vnd.sqlite3")
         }
@@ -1119,6 +1143,7 @@ fn format_for_kind(kind: &ContentKind) -> Option<&'static str> {
         ContentKind::Msg => "msg",
         ContentKind::ICalendar => "icalendar",
         ContentKind::VCard => "vcard",
+        ContentKind::JupyterNotebook => "ipynb",
         ContentKind::Sqlite => "sqlite",
         ContentKind::Png => "png",
         ContentKind::Jpeg => "jpeg",
@@ -1180,6 +1205,7 @@ fn content_kind_for_format(format: &str) -> ContentKind {
         "msg" | "outlook_msg" => ContentKind::Msg,
         "icalendar" | "ics" | "calendar" | "text_calendar" => ContentKind::ICalendar,
         "vcard" | "vcf" | "contact" | "text_vcard" => ContentKind::VCard,
+        "ipynb" | "jupyter" | "jupyter_notebook" | "notebook" => ContentKind::JupyterNotebook,
         "sqlite" => ContentKind::Sqlite,
         "png" => ContentKind::Png,
         "jpeg" | "jpg" => ContentKind::Jpeg,

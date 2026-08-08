@@ -54,6 +54,8 @@ pub mod ldgr_projection;
 pub mod markdown;
 #[cfg(feature = "model-output")]
 pub mod model_output;
+#[cfg(feature = "notebooks")]
+pub mod notebook;
 #[cfg(feature = "odf-word")]
 pub mod odf_word;
 #[cfg(feature = "pdf")]

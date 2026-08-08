@@ -74,6 +74,7 @@ fn descriptor(
             | ArtifactKind::Email
             | ArtifactKind::Mbox
             | ArtifactKind::OutlookMsg
+            | ArtifactKind::Notebook
             | ArtifactKind::RustCode
             | ArtifactKind::PythonCode
             | ArtifactKind::TypeScriptCode
@@ -97,6 +98,7 @@ fn descriptor(
             | ArtifactKind::Email
             | ArtifactKind::Mbox
             | ArtifactKind::OutlookMsg
+            | ArtifactKind::Notebook
     ) {
         capabilities.insert(Capability::EmbeddedArtifacts);
     }
@@ -205,6 +207,7 @@ fn register_feature_parsers(registry: &mut ParserRegistry) -> Result<(), ParserR
     register_outlook_msg(registry)?;
     register_icalendar(registry)?;
     register_vcard(registry)?;
+    register_ipynb(registry)?;
     register_structured_binary(registry)?;
     register_model_output(registry)?;
     register_ldgr_projection(registry)?;
@@ -1652,6 +1655,54 @@ fn parse_vcard(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserEr
     ))
 }
 
+#[cfg(feature = "notebooks")]
+fn register_ipynb(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    let format = FormatMetadata::new("ipynb", ArtifactKind::Notebook)
+        .with_aliases(["jupyter", "jupyter_notebook", "notebook"])
+        .with_extensions(["ipynb"])
+        .with_media_types(["application/x-ipynb+json"]);
+    register(
+        registry,
+        descriptor(
+            "grist.ipynb",
+            format,
+            crate::notebook::parser_info(),
+            crate::core::SchemaVersion::IPYNB_V1,
+            Some("notebooks"),
+            serde_json::to_value(crate::notebook::NotebookOptions::default())
+                .expect("notebook options serialize"),
+        ),
+        parse_ipynb,
+    )
+}
+
+#[cfg(feature = "notebooks")]
+fn parse_ipynb(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserError> {
+    let options = decode_options::<crate::notebook::NotebookOptions>(context)?;
+    output(crate::notebook::parse_notebook_with_operation_control(
+        context.bytes(),
+        context.source().clone(),
+        &options,
+        context.control(),
+    ))
+}
+
+#[cfg(not(feature = "notebooks"))]
+fn register_ipynb(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    let metadata = descriptor(
+        "grist.ipynb",
+        FormatMetadata::new("ipynb", ArtifactKind::Notebook)
+            .with_aliases(["jupyter", "jupyter_notebook", "notebook"])
+            .with_extensions(["ipynb"])
+            .with_media_types(["application/x-ipynb+json"]),
+        ParserInfo::new("grist.ipynb").with_feature("notebooks"),
+        crate::core::SchemaVersion::IPYNB_V1,
+        Some("notebooks"),
+        serde_json::json!({}),
+    );
+    register_disabled(registry, metadata, "notebooks")
+}
+
 #[cfg(not(feature = "email-message"))]
 fn register_outlook_msg(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
     let metadata = descriptor(
@@ -2133,7 +2184,6 @@ fn unimplemented_formats() -> &'static [(&'static str, &'static str, &'static st
         ("ost", "ost", "email-message"),
         ("tnef", "dat", "email-message"),
         ("smime", "p7m", "email-message"),
-        ("ipynb", "ipynb", "notebooks"),
         ("r_markdown", "rmd", "notebooks"),
         ("quarto", "qmd", "notebooks"),
         ("javascript", "js", "code"),
