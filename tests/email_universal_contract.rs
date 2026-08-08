@@ -41,7 +41,8 @@ fn mime_hierarchy_alternatives_inline_resources_attachments_and_graph_survive() 
         "<img src=https://example.test/pixel><img src=cid:logo>html\r\n--alt--\r\n",
         "--mix\r\nContent-Type: image/png\r\nContent-ID: <logo>\r\n",
         "Content-Disposition: inline; filename=logo.png\r\n",
-        "Content-Transfer-Encoding: base64\r\n\r\naGVsbG8=\r\n",
+        "Content-Transfer-Encoding: base64\r\n\r\n",
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGNgAAAAAgABSK+kcQAAAABJRU5ErkJggg==\r\n",
         "--mix--\r\n"
     );
     let envelope = parse_email(
