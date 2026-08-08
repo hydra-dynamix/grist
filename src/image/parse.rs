@@ -73,8 +73,9 @@ pub(crate) fn parse_document_controlled<'a>(
         || options.max_svg_elements == 0
         || options.max_svg_depth == 0
         || options.max_svg_path_bytes == 0
+        || options.ocr.max_scopes == 0
     {
-        return Err("image limits must all be greater than zero".into());
+        return Err("image limits, including ocr.max_scopes, must all be greater than zero".into());
     }
     let format =
         sniff_format(bytes).ok_or_else(|| "input has no supported image signature".to_string())?;
@@ -470,6 +471,7 @@ impl<'a> Builder<'a> {
         }) {
             return Err("image frame dimensions exceed ImageOptions::max_dimension".into());
         }
+        let text = super::ocr::native_text_content(&self.embedded_text)?;
         Ok(ImageDocument {
             schema_version: crate::core::SchemaVersion::IMAGE_V1.into(),
             format: self.format,
@@ -479,6 +481,7 @@ impl<'a> Builder<'a> {
             orientation: self.orientation,
             metadata: self.metadata,
             embedded_text: self.embedded_text,
+            text,
             chunks: self.chunks,
             vector: self.vector,
             links: self.links,

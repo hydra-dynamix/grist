@@ -426,6 +426,18 @@ fn selected(node: &DocumentNode, options: &SegmentOptions) -> bool {
     {
         return false;
     }
+    let representation_explicitly_selected =
+        selection.required_metadata.contains_key("text_origin")
+            || selection.required_metadata.contains_key("segment_primary");
+    if !representation_explicitly_selected
+        && node
+            .attrs
+            .get("segment_primary")
+            .and_then(serde_json::Value::as_bool)
+            == Some(false)
+    {
+        return false;
+    }
     selection.required_metadata.iter().all(|(key, expected)| {
         node.attrs.get(key).is_some_and(|actual| {
             actual.as_str() == Some(expected)

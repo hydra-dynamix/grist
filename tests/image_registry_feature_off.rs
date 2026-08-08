@@ -16,6 +16,13 @@ fn disabled_image_descriptors_retain_options_and_capability_metadata() {
         "max_svg_elements": 1_000_000,
         "max_svg_depth": 256,
         "max_svg_path_bytes": 64 * 1024,
+        "ocr": {
+            "mode": "all_frames",
+            "language_hints": [],
+            "recognize_tables": false,
+            "max_scopes": 10_000,
+            "reconcile": true,
+        },
     });
     for format in ["png", "jpeg", "tiff", "webp", "gif", "bmp", "heif", "svg"] {
         let ParserSelection::Unsupported { unavailable, .. } = registry.select_format(format)

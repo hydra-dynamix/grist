@@ -38,6 +38,40 @@ SVG script elements, event-handler attributes, JavaScript URIs, CSS `url()` and
 media, and SMIL animation or timing attributes are typed inventory records. They
 remain source data; the parser has no execution, rendering, or network path.
 
+## OCR and layout
+
+OCR runs only when the caller explicitly selects an `Ocr` provider. The default
+`ImageOcrMode::AllFrames` makes one digest-bearing request per retained frame in
+stable frame order; `Disabled` makes no provider calls. `max_scopes` bounds the
+requests, and every request includes a zero-based `ImageRegion` frame locator.
+Provider regions retain recognition, reading-order, and layout confidence plus
+provider/model/configuration/input/output identity. Normalized provider boxes are
+projected into frame pixel coordinates without discarding the original response.
+Pixel boxes are validated in frame-relative coordinates and normalized to a
+top-left origin; point boxes remain attributed but emit a partial diagnostic
+because a pixel frame has no implicit point scale. Invalid or out-of-frame boxes
+remain in the provider response but are not promoted to image-region locators.
+
+Before OCR output is cloned or reconciled, it is checkpointed and charged to the
+shared decoded-character, node, record, and memory budgets. A single scope is
+also capped at 10,000 regions and 16 Mi decoded characters, so a selected but
+malicious provider cannot bypass parser resource controls.
+
+`ImageTextContent` keeps source-native embedded text, append-only OCR attempts,
+and optional identity-bearing reconciliation as independent facts. Provider
+failure preserves native metadata and text. Reconciliation can be disabled
+without discarding OCR output, and an empty `ProviderSet` cannot invoke OCR or
+grant network access.
+
+When provider full text differs from its region text, both remain projected:
+the full text is an `ocr_overall` source fact and reconciliation declares
+`structure_flattened` instead of claiming a lossless region mapping. Default
+segmentation selects only the primary reconciled representation; callers can
+still select `text_origin=native`, `ocr`, or `ocr_overall` explicitly. Legacy v1
+payloads without `ImageTextContent` derive their native representation from
+`embedded_text`; contradictory duplicate native facts are rejected by graph
+projection.
+
 ## Public surfaces and limits
 
 `ImageOptions` controls dimensions, frames, chunks, metadata, unknown retained
@@ -59,4 +93,5 @@ Focused verification uses:
 
 ```text
 cargo test --locked --no-default-features --features media,schemas,document-graph --test image_universal_contract
+cargo test --locked --no-default-features --features media,schemas,document-graph --test image_ocr_layout
 ```

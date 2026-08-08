@@ -6,6 +6,8 @@
 mod graph;
 pub(crate) mod metadata;
 mod model;
+mod ocr;
+mod ocr_graph;
 mod parse;
 mod svg;
 
@@ -77,7 +79,7 @@ pub(crate) fn parse_registered(
     }
     let options: ImageOptions = serde_json::from_value(context.options().clone())
         .map_err(|error| Box::new(Diagnostic::malformed(PARSER, error.to_string())))?;
-    let document = match parse::parse_document_controlled(
+    let mut document = match parse::parse_document_controlled(
         context.bytes(),
         &options,
         Some(context.control()),
@@ -109,7 +111,17 @@ pub(crate) fn parse_registered(
             ),
         )));
     }
+    let ocr = ocr::apply_selected_ocr(context, &mut document, &options);
     let payload = serde_json::to_value(document)
         .map_err(|error| Box::new(Diagnostic::parser_defect(PARSER, error.to_string())))?;
-    Ok(ParserOutput::complete(payload))
+    let mut output = if ocr.diagnostics.iter().any(|diagnostic| diagnostic.partial) {
+        ParserOutput::partial(Some(payload), ocr.diagnostics)
+    } else {
+        let mut output = ParserOutput::complete(payload);
+        output.diagnostics = ocr.diagnostics;
+        output
+    };
+    output.providers = ocr.invocations;
+    output.provenance = ocr.provenance;
+    Ok(output)
 }

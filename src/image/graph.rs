@@ -177,6 +177,7 @@ impl ToDocumentGraph for ImageDocument {
             graph.add_node(node);
             graph.add_contains(&root, &id);
         }
+        super::ocr_graph::project_text_representations(&mut graph, &ids, &root, self)?;
         graph.finalize_projection(&ids).map_err(error)?;
         Ok(graph)
     }

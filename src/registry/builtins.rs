@@ -640,6 +640,12 @@ fn register_image(registry: &mut ParserRegistry) -> Result<(), ParserRegistryErr
             SchemaMetadata::new("image-options", "grist/image-options/v1"),
             defaults,
         );
+        metadata
+            .allowed_providers
+            .insert(crate::core::ProviderKind::Ocr);
+        metadata
+            .capabilities
+            .insert(Capability::ProviderDerivedContent);
         register(registry, metadata, crate::image::parse_registered)?;
     }
     Ok(())
@@ -683,6 +689,13 @@ fn image_options_defaults() -> serde_json::Value {
         "max_svg_elements": 1_000_000,
         "max_svg_depth": 256,
         "max_svg_path_bytes": 64 * 1024,
+        "ocr": {
+            "mode": "all_frames",
+            "language_hints": [],
+            "recognize_tables": false,
+            "max_scopes": 10_000,
+            "reconcile": true,
+        },
     })
 }
 

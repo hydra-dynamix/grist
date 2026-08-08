@@ -135,6 +135,7 @@ fn minimal_png() -> Vec<u8> {
     ihdr.extend_from_slice(&1u32.to_be_bytes());
     ihdr.extend_from_slice(&[8, 6, 0, 0, 0]);
     bytes.extend(png_chunk(b"IHDR", &ihdr));
+    bytes.extend(png_chunk(b"tEXt", b"Label\0CLI native text"));
     bytes.extend(png_chunk(
         b"IDAT",
         &[0x78, 0x9c, 0x63, 0x60, 0, 0, 0, 2, 0, 1],
@@ -161,6 +162,18 @@ fn transform_projects_images_and_archives_to_document_graph() {
             .as_array()
             .is_some_and(|nodes| !nodes.is_empty())
     );
+    let image_nodes = image_graph["payload"]["graph"]["nodes"]
+        .as_array()
+        .expect("image graph nodes");
+    assert!(image_nodes.iter().any(|node| {
+        node["text"] == "CLI native text" && node["attrs"]["text_origin"] == "native"
+    }));
+    assert!(image_nodes.iter().all(|node| {
+        !matches!(
+            node["attrs"]["text_origin"].as_str(),
+            Some("ocr" | "ocr_overall" | "reconciled")
+        )
+    }));
 
     let archive = dir.join("empty.zip");
     fs::write(&archive, b"PK\x05\x06\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0").expect("archive");

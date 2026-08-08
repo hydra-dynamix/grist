@@ -4,7 +4,7 @@ use flate2::Compression;
 use flate2::write::ZlibEncoder;
 use grist::core::{
     BudgetProfile, BudgetSelection, CancellationToken, Input, Limits, OperationStatus,
-    ParseRequest, ProviderSet, RequestId, ResourceBudget, SourceInfo,
+    ParseRequest, ProviderKind, ProviderSet, RequestId, ResourceBudget, SourceInfo,
 };
 use grist::detect::{ContentKind, DetectionOptions, DetectionStatus, detect_with_registry};
 use grist::document_graph::{
@@ -951,9 +951,9 @@ fn detection_registry_schema_and_explicit_format_gate_are_integrated() {
             );
             assert_eq!(descriptor.options.schema.name, "image-options");
             assert_eq!(descriptor.options.schema.version, "grist/image-options/v1");
-            assert!(descriptor.allowed_providers.is_empty());
+            assert!(descriptor.allowed_providers.contains(&ProviderKind::Ocr));
             assert!(
-                !descriptor
+                descriptor
                     .capabilities
                     .contains(&Capability::ProviderDerivedContent)
             );
