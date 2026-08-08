@@ -1682,12 +1682,19 @@ impl LocalReferenceResolver {
         let base = source.path.as_deref().and_then(|path| {
             let source_path = Path::new(path);
             let parent = source_path.parent()?;
-            let candidate = if source_path.is_absolute() {
-                parent.to_path_buf()
-            } else {
-                root.as_ref()?.join(parent)
-            };
-            fs::canonicalize(candidate).ok()
+            if source_path.is_absolute() {
+                return fs::canonicalize(parent).ok();
+            }
+
+            let root = root.as_ref()?;
+            // A relative source path may be either cwd-relative (as returned by
+            // `SourceInfo::from_path`) or project-root-relative (a virtual
+            // source label). Prefer an existing cwd-relative parent when it is
+            // contained by the explicit root, then fall back to root-relative.
+            fs::canonicalize(parent)
+                .ok()
+                .filter(|candidate| candidate.starts_with(root))
+                .or_else(|| fs::canonicalize(root.join(parent)).ok())
         });
         Self {
             root,
