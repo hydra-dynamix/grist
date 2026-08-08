@@ -161,46 +161,6 @@
       ],
       "type": "string"
     },
-    "AtomicityOptions": {
-      "properties": {
-        "code": {
-          "type": "boolean"
-        },
-        "equations": {
-          "type": "boolean"
-        },
-        "figure_captions": {
-          "type": "boolean"
-        },
-        "tables": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "code",
-        "equations",
-        "figure_captions",
-        "tables"
-      ],
-      "type": "object"
-    },
-    "BoundaryKind": {
-      "enum": [
-        "document",
-        "section",
-        "paragraph",
-        "list_item",
-        "table_row",
-        "code_symbol",
-        "page",
-        "slide",
-        "sheet_range",
-        "message",
-        "notebook_cell",
-        "transcript_cue"
-      ],
-      "type": "string"
-    },
     "BoundingBox": {
       "description": "A rectangle in a declared coordinate system.",
       "properties": {
@@ -715,6 +675,519 @@
         "size_bytes"
       ],
       "type": "object"
+    },
+    "ImageActiveContent": {
+      "properties": {
+        "disposition": {
+          "$ref": "#/definitions/ImageActiveContentDisposition"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "value_sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "disposition",
+        "kind",
+        "locator",
+        "value_sha256"
+      ],
+      "type": "object"
+    },
+    "ImageActiveContentDisposition": {
+      "enum": [
+        "inventoried_not_executed"
+      ],
+      "type": "string"
+    },
+    "ImageCameraMetadata": {
+      "properties": {
+        "captured_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "exposure_time": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "f_number": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "focal_length": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "gps_latitude": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "gps_longitude": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "iso_speed": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lens_model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "make": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tags": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "tags"
+      ],
+      "type": "object"
+    },
+    "ImageChunk": {
+      "properties": {
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "known": {
+          "type": "boolean"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "raw_bytes": {
+          "items": {
+            "format": "uint8",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "byte_length",
+        "kind",
+        "known",
+        "locator",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "ImageColorInfo": {
+      "properties": {
+        "alpha": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "bits_per_component": {
+          "format": "uint8",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "color_space": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "component_count": {
+          "format": "uint8",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "icc_profile_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "ImageDimensions": {
+      "properties": {
+        "height": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "width": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "height",
+        "width"
+      ],
+      "type": "object"
+    },
+    "ImageDocument": {
+      "properties": {
+        "active_content": {
+          "items": {
+            "$ref": "#/definitions/ImageActiveContent"
+          },
+          "type": "array"
+        },
+        "chunks": {
+          "items": {
+            "$ref": "#/definitions/ImageChunk"
+          },
+          "type": "array"
+        },
+        "color": {
+          "$ref": "#/definitions/ImageColorInfo"
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "dimensions": {
+          "$ref": "#/definitions/ImageDimensions"
+        },
+        "embedded_text": {
+          "items": {
+            "$ref": "#/definitions/ImageText"
+          },
+          "type": "array"
+        },
+        "format": {
+          "$ref": "#/definitions/ImageFormat"
+        },
+        "frames": {
+          "items": {
+            "$ref": "#/definitions/ImageFrame"
+          },
+          "type": "array"
+        },
+        "links": {
+          "items": {
+            "$ref": "#/definitions/ImageLink"
+          },
+          "type": "array"
+        },
+        "metadata": {
+          "$ref": "#/definitions/ImageMetadata"
+        },
+        "orientation": {
+          "$ref": "#/definitions/ImageOrientation"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "vector": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SvgContent"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "active_content",
+        "chunks",
+        "color",
+        "complete",
+        "dimensions",
+        "embedded_text",
+        "format",
+        "frames",
+        "links",
+        "metadata",
+        "orientation",
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "ImageFormat": {
+      "enum": [
+        "png",
+        "jpeg",
+        "tiff",
+        "webp",
+        "gif",
+        "bmp",
+        "heif",
+        "svg"
+      ],
+      "type": "string"
+    },
+    "ImageFrame": {
+      "properties": {
+        "blend": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "dimensions": {
+          "$ref": "#/definitions/ImageDimensions"
+        },
+        "disposal": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "duration_ms": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "x": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "y": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "dimensions",
+        "index",
+        "locator",
+        "x",
+        "y"
+      ],
+      "type": "object"
+    },
+    "ImageLink": {
+      "properties": {
+        "disposition": {
+          "$ref": "#/definitions/ImageActiveContentDisposition"
+        },
+        "external": {
+          "type": "boolean"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "target": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "disposition",
+        "external",
+        "locator",
+        "target"
+      ],
+      "type": "object"
+    },
+    "ImageMetadata": {
+      "properties": {
+        "blocks": {
+          "items": {
+            "$ref": "#/definitions/ImageMetadataBlock"
+          },
+          "type": "array"
+        },
+        "camera": {
+          "$ref": "#/definitions/ImageCameraMetadata"
+        }
+      },
+      "required": [
+        "blocks",
+        "camera"
+      ],
+      "type": "object"
+    },
+    "ImageMetadataBlock": {
+      "properties": {
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "fields": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "kind": {
+          "$ref": "#/definitions/ImageMetadataKind"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "raw_bytes": {
+          "items": {
+            "format": "uint8",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "text": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "byte_length",
+        "fields",
+        "kind",
+        "locator",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "ImageMetadataKind": {
+      "enum": [
+        "exif",
+        "xmp",
+        "iptc",
+        "icc",
+        "text",
+        "comment"
+      ],
+      "type": "string"
+    },
+    "ImageOrientation": {
+      "properties": {
+        "exif_value": {
+          "format": "uint16",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "mirrored": {
+          "type": "boolean"
+        },
+        "rotation_degrees": {
+          "format": "int16",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "mirrored",
+        "rotation_degrees"
+      ],
+      "type": "object"
+    },
+    "ImageText": {
+      "properties": {
+        "kind": {
+          "$ref": "#/definitions/ImageTextKind"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "locator",
+        "text"
+      ],
+      "type": "object"
+    },
+    "ImageTextKind": {
+      "enum": [
+        "metadata",
+        "comment",
+        "vector_text",
+        "vector_title",
+        "vector_description"
+      ],
+      "type": "string"
     },
     "IndexBase": {
       "description": "Whether an ordinal is counted from zero or one.\n\nEvery format component carrying a page, slide, cell, frame, token, output, member, track, or record ordinal uses this type rather than relying on an undocumented convention.",
@@ -1249,32 +1722,6 @@
       "minimum": 0.0,
       "type": "number"
     },
-    "NodeSelectionRules": {
-      "properties": {
-        "exclude_kinds": {
-          "default": [],
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "include_kinds": {
-          "default": [],
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "required_metadata": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "default": {},
-          "type": "object"
-        }
-      },
-      "type": "object"
-    },
     "OperationKind": {
       "description": "The public operation that produced an envelope.",
       "enum": [
@@ -1530,393 +1977,6 @@
     "SchemaVersion": {
       "type": "string"
     },
-    "Segment": {
-      "description": "A source-traceable structural segment. Engines must reuse `node_ids` for overlap.",
-      "properties": {
-        "context": {
-          "$ref": "#/definitions/SegmentContext"
-        },
-        "counts": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/SegmentCounts"
-            }
-          ],
-          "default": {
-            "bytes": 0,
-            "tokens": null,
-            "unicode_scalars": 0
-          }
-        },
-        "diagnostics": {
-          "default": [],
-          "items": {
-            "$ref": "#/definitions/Diagnostic"
-          },
-          "type": "array"
-        },
-        "document_identity": {
-          "$ref": "#/definitions/ContentIdentity"
-        },
-        "id": {
-          "type": "string"
-        },
-        "locators": {
-          "items": {
-            "$ref": "#/definitions/SourceLocator"
-          },
-          "type": "array"
-        },
-        "metadata": {
-          "additionalProperties": true,
-          "default": {},
-          "type": "object"
-        },
-        "node_ids": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "node_references": {
-          "default": [],
-          "description": "Ordered, exact rendered-span mappings. Legacy `node_ids` and `locators` are projections of this collection for v1 consumers.",
-          "items": {
-            "$ref": "#/definitions/SegmentNodeReference"
-          },
-          "type": "array"
-        },
-        "options_digest": {
-          "type": "string"
-        },
-        "overlaps": {
-          "default": [],
-          "items": {
-            "$ref": "#/definitions/SegmentOverlap"
-          },
-          "type": "array"
-        },
-        "renderer": {
-          "type": "string"
-        },
-        "renderer_digest": {
-          "default": "",
-          "description": "Canonical digest of the renderer name, version, and separator policy.",
-          "type": "string"
-        },
-        "renderer_version": {
-          "type": "string"
-        },
-        "schema_version": {
-          "type": "string"
-        },
-        "size": {
-          "format": "uint",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "source_identity": {
-          "$ref": "#/definitions/ContentIdentity"
-        },
-        "text": {
-          "type": "string"
-        },
-        "token_count": {
-          "format": "uint",
-          "minimum": 0.0,
-          "type": [
-            "integer",
-            "null"
-          ]
-        },
-        "tokenizer": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/TokenizerSpec"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "required": [
-        "context",
-        "document_identity",
-        "id",
-        "locators",
-        "node_ids",
-        "options_digest",
-        "renderer",
-        "renderer_version",
-        "schema_version",
-        "size",
-        "source_identity",
-        "text"
-      ],
-      "type": "object"
-    },
-    "SegmentCollection": {
-      "properties": {
-        "diagnostics": {
-          "default": [],
-          "items": {
-            "$ref": "#/definitions/Diagnostic"
-          },
-          "type": "array"
-        },
-        "document_graph_schema_version": {
-          "type": "string"
-        },
-        "options": {
-          "$ref": "#/definitions/SegmentOptions"
-        },
-        "options_digest": {
-          "type": "string"
-        },
-        "schema_version": {
-          "type": "string"
-        },
-        "segments": {
-          "items": {
-            "$ref": "#/definitions/Segment"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "document_graph_schema_version",
-        "options",
-        "options_digest",
-        "schema_version",
-        "segments"
-      ],
-      "type": "object"
-    },
-    "SegmentContext": {
-      "properties": {
-        "document_title": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "section_titles": {
-          "default": [],
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "structural_path": {
-          "default": [],
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        }
-      },
-      "type": "object"
-    },
-    "SegmentCounts": {
-      "description": "Unit-independent counts retained even when `size` selects only one unit.",
-      "properties": {
-        "bytes": {
-          "format": "uint",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "tokens": {
-          "format": "uint",
-          "minimum": 0.0,
-          "type": [
-            "integer",
-            "null"
-          ]
-        },
-        "unicode_scalars": {
-          "format": "uint",
-          "minimum": 0.0,
-          "type": "integer"
-        }
-      },
-      "required": [
-        "bytes",
-        "unicode_scalars"
-      ],
-      "type": "object"
-    },
-    "SegmentNodeReference": {
-      "description": "Exact mapping from one contiguous rendered span to its original graph node.",
-      "properties": {
-        "locator": {
-          "$ref": "#/definitions/SourceLocator"
-        },
-        "node_id": {
-          "type": "string"
-        },
-        "role": {
-          "$ref": "#/definitions/SegmentNodeRole"
-        },
-        "segment_byte_end": {
-          "format": "uint",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "segment_byte_start": {
-          "format": "uint",
-          "minimum": 0.0,
-          "type": "integer"
-        }
-      },
-      "required": [
-        "locator",
-        "node_id",
-        "role",
-        "segment_byte_end",
-        "segment_byte_start"
-      ],
-      "type": "object"
-    },
-    "SegmentNodeRole": {
-      "enum": [
-        "ancestry",
-        "overlap",
-        "content"
-      ],
-      "type": "string"
-    },
-    "SegmentOptions": {
-      "additionalProperties": false,
-      "description": "A serializable, versioned segmentation options file.",
-      "properties": {
-        "atomicity": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/AtomicityOptions"
-            }
-          ],
-          "default": {
-            "code": true,
-            "equations": true,
-            "figure_captions": true,
-            "tables": true
-          }
-        },
-        "include_heading_ancestry": {
-          "default": true,
-          "type": "boolean"
-        },
-        "maximum_size": {
-          "default": 1500,
-          "format": "uint",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "metadata": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "default": {},
-          "type": "object"
-        },
-        "overlap_source_nodes": {
-          "default": 0,
-          "format": "uint",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "preferred_boundaries": {
-          "default": [
-            "section",
-            "paragraph",
-            "list_item",
-            "table_row",
-            "code_symbol"
-          ],
-          "items": {
-            "$ref": "#/definitions/BoundaryKind"
-          },
-          "type": "array"
-        },
-        "project_metadata": {
-          "default": [],
-          "description": "Node attribute keys copied into deterministic, source-node-keyed metadata arrays.",
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "schema_version": {
-          "default": "grist/segment-options/v1",
-          "type": "string"
-        },
-        "selection": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/NodeSelectionRules"
-            }
-          ],
-          "default": {
-            "exclude_kinds": [],
-            "include_kinds": [],
-            "required_metadata": {}
-          }
-        },
-        "size_unit": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/SegmentSizeUnit"
-            }
-          ],
-          "default": "unicode_scalars"
-        },
-        "target_size": {
-          "default": 1000,
-          "format": "uint",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "tokenizer": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/TokenizerSpec"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        }
-      },
-      "type": "object"
-    },
-    "SegmentOverlap": {
-      "properties": {
-        "node_ids": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "segment_id": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "node_ids",
-        "segment_id"
-      ],
-      "type": "object"
-    },
-    "SegmentSizeUnit": {
-      "enum": [
-        "unicode_scalars",
-        "bytes",
-        "tokens"
-      ],
-      "type": "string"
-    },
     "Severity": {
       "description": "Diagnostic importance at the public API boundary.",
       "enum": [
@@ -2121,22 +2181,35 @@
       ],
       "type": "object"
     },
-    "TokenizerSpec": {
+    "SvgContent": {
       "properties": {
-        "configuration_digest": {
-          "type": "string"
+        "element_count": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
         },
-        "name": {
-          "type": "string"
+        "unknown_elements": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
-        "version": {
-          "type": "string"
+        "view_box": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "type": [
+            "array",
+            "null"
+          ]
         }
       },
       "required": [
-        "configuration_digest",
-        "name",
-        "version"
+        "element_count",
+        "unknown_elements"
       ],
       "type": "object"
     }
@@ -2186,7 +2259,7 @@
     "payload": {
       "anyOf": [
         {
-          "$ref": "#/definitions/SegmentCollection"
+          "$ref": "#/definitions/ImageDocument"
         },
         {
           "type": "null"
@@ -2231,6 +2304,6 @@
     "source",
     "status"
   ],
-  "title": "Envelope_for_SegmentCollection",
+  "title": "Envelope_for_ImageDocument",
   "type": "object"
 }

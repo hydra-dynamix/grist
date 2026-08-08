@@ -10,6 +10,7 @@
         "html",
         "epub",
         "pdf",
+        "image",
         "word_ooxml",
         "presentation_ooxml",
         "spreadsheet_ooxml",

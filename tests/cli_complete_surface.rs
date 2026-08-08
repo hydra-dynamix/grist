@@ -102,6 +102,81 @@ fn write_graph_fixture(dir: &Path) -> PathBuf {
     graph
 }
 
+fn png_crc32(bytes: &[u8]) -> u32 {
+    let mut table = [0u32; 256];
+    for (index, entry) in table.iter_mut().enumerate() {
+        let mut value = index as u32;
+        for _ in 0..8 {
+            let mask = (value & 1).wrapping_neg();
+            value = (value >> 1) ^ (0xedb8_8320 & mask);
+        }
+        *entry = value;
+    }
+    let mut crc = u32::MAX;
+    for byte in bytes {
+        crc = table[((crc as u8) ^ *byte) as usize] ^ (crc >> 8);
+    }
+    !crc
+}
+
+fn png_chunk(kind: &[u8; 4], data: &[u8]) -> Vec<u8> {
+    let mut chunk = Vec::new();
+    chunk.extend_from_slice(&(data.len() as u32).to_be_bytes());
+    chunk.extend_from_slice(kind);
+    chunk.extend_from_slice(data);
+    chunk.extend_from_slice(&png_crc32(&chunk[4..]).to_be_bytes());
+    chunk
+}
+
+fn minimal_png() -> Vec<u8> {
+    let mut bytes = b"\x89PNG\r\n\x1a\n".to_vec();
+    let mut ihdr = Vec::new();
+    ihdr.extend_from_slice(&1u32.to_be_bytes());
+    ihdr.extend_from_slice(&1u32.to_be_bytes());
+    ihdr.extend_from_slice(&[8, 6, 0, 0, 0]);
+    bytes.extend(png_chunk(b"IHDR", &ihdr));
+    bytes.extend(png_chunk(
+        b"IDAT",
+        &[0x78, 0x9c, 0x63, 0x60, 0, 0, 0, 2, 0, 1],
+    ));
+    bytes.extend(png_chunk(b"IEND", &[]));
+    bytes
+}
+
+#[test]
+fn transform_projects_images_and_archives_to_document_graph() {
+    let dir = temp_dir("image-archive-graph");
+    let image = dir.join("image.png");
+    fs::write(&image, minimal_png()).expect("image");
+    let image_graph = run_json(&[
+        "transform",
+        image.to_str().expect("image path"),
+        "--to",
+        "graph",
+    ]);
+    assert_eq!(image_graph["kind"], "graph_transform_result");
+    assert_eq!(image_graph["payload"]["graph"]["kind"], "image");
+    assert!(
+        image_graph["payload"]["graph"]["nodes"]
+            .as_array()
+            .is_some_and(|nodes| !nodes.is_empty())
+    );
+
+    let archive = dir.join("empty.zip");
+    fs::write(&archive, b"PK\x05\x06\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0").expect("archive");
+    let archive_graph = run_json(&[
+        "transform",
+        archive.to_str().expect("archive path"),
+        "--to",
+        "graph",
+    ]);
+    assert_eq!(archive_graph["kind"], "graph_transform_result");
+    assert_eq!(
+        archive_graph["payload"]["graph"]["kind"],
+        serde_json::json!({ "other": "archive" })
+    );
+}
+
 #[test]
 fn detection_and_auto_parse_honor_stdin_hints() {
     let detected = run_stdin(

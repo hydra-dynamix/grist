@@ -8,7 +8,7 @@ use grist::container::{
     ArtifactContent, ContainerArtifactMode, ContainerChildStatus, ContainerParseOptions,
     ContainerParseRequest, ContainerRecursor,
 };
-#[cfg(feature = "manifests")]
+#[cfg(any(feature = "manifests", feature = "media"))]
 use grist::core::ArtifactKind;
 use grist::core::{
     BudgetProfile, BudgetSelection, CancellationToken, OperationStatus, RequestId, ResourceBudget,
@@ -402,6 +402,107 @@ fn compressed_manifest_leaf_retains_typed_source_parent_provenance() {
             .map(|value| value.display_name.as_str()),
         Some("bundle.gz")
     );
+}
+
+#[cfg(feature = "media")]
+fn png_crc32(bytes: &[u8]) -> u32 {
+    let mut table = [0u32; 256];
+    for (index, entry) in table.iter_mut().enumerate() {
+        let mut value = index as u32;
+        for _ in 0..8 {
+            let mask = (value & 1).wrapping_neg();
+            value = (value >> 1) ^ (0xedb8_8320 & mask);
+        }
+        *entry = value;
+    }
+    let mut crc = u32::MAX;
+    for byte in bytes {
+        crc = table[((crc as u8) ^ *byte) as usize] ^ (crc >> 8);
+    }
+    !crc
+}
+
+#[cfg(feature = "media")]
+fn png_chunk(kind: &[u8; 4], data: &[u8]) -> Vec<u8> {
+    let mut chunk = Vec::new();
+    chunk.extend_from_slice(&(data.len() as u32).to_be_bytes());
+    chunk.extend_from_slice(kind);
+    chunk.extend_from_slice(data);
+    chunk.extend_from_slice(&png_crc32(&chunk[4..]).to_be_bytes());
+    chunk
+}
+
+#[cfg(feature = "media")]
+fn minimal_png() -> Vec<u8> {
+    let mut bytes = b"\x89PNG\r\n\x1a\n".to_vec();
+    let mut ihdr = Vec::new();
+    ihdr.extend_from_slice(&1u32.to_be_bytes());
+    ihdr.extend_from_slice(&1u32.to_be_bytes());
+    ihdr.extend_from_slice(&[8, 6, 0, 0, 0]);
+    bytes.extend(png_chunk(b"IHDR", &ihdr));
+    bytes.extend(png_chunk(
+        b"IDAT",
+        &[0x78, 0x9c, 0x63, 0x60, 0, 0, 0, 2, 0, 1],
+    ));
+    bytes.extend(png_chunk(b"IEND", &[]));
+    bytes
+}
+
+#[cfg(feature = "media")]
+#[test]
+fn compressed_and_seven_zip_image_leaves_route_to_typed_image_with_parent_provenance() {
+    let png = minimal_png();
+    let fixtures = [
+        (
+            "gzip-image",
+            gzip_member(&png, "image.png", "image leaf", 1_700_000_005),
+            "gzip",
+            "bundle.png.gz",
+        ),
+        (
+            "seven-zip-image",
+            seven_zip_entries(
+                &[SevenZipFixtureEntry {
+                    name: "image.png",
+                    bytes: &png,
+                    attributes: None,
+                    modified_time: None,
+                }],
+                false,
+            ),
+            "7z",
+            "bundle.7z",
+        ),
+    ];
+    let ingestor = Ingestor::builtin().unwrap();
+    let decoders = builtin_decoder_registry().unwrap();
+    for (request_id, bytes, format, source_name) in fixtures {
+        let traversal = ContainerRecursor::new(&ingestor, &decoders)
+            .parse(
+                ContainerParseRequest::new(
+                    RequestId::new(request_id).unwrap(),
+                    bytes,
+                    SourceInfo::new(source_name),
+                    format,
+                    ContainerParseOptions::new(ContainerArtifactMode::InlinePayload),
+                    BudgetSelection::Profile(BudgetProfile::TrustedUnboundedV1),
+                ),
+                None,
+            )
+            .unwrap();
+        let parsed = traversal.children[0].parsed.as_ref().unwrap();
+        assert_eq!(parsed.kind, ArtifactKind::Image, "{format}");
+        assert_eq!(parsed.source.display_name, "image.png", "{format}");
+        assert_eq!(
+            parsed
+                .source
+                .parent
+                .as_ref()
+                .map(|value| value.display_name.as_str()),
+            Some(source_name),
+            "{format}"
+        );
+    }
 }
 
 #[test]

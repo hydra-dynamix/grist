@@ -1,111 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "definitions": {
-    "AggregateContentIdentity": {
-      "description": "Content identity for a compound input.\n\nMembers are sorted by member index, then path and identity fields. `sha256` hashes canonical JSON v1 of `schema_version`, `canonicalization`, and the sorted `members` array. Summary fields and the digest itself are excluded.",
-      "properties": {
-        "canonicalization": {
-          "$ref": "#/definitions/CanonicalJsonVersion"
-        },
-        "manifest_byte_length": {
-          "format": "uint64",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "member_count": {
-          "format": "uint64",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "members": {
-          "items": {
-            "$ref": "#/definitions/AggregateMemberIdentity"
-          },
-          "type": "array"
-        },
-        "schema_version": {
-          "type": "string"
-        },
-        "sha256": {
-          "type": "string"
-        },
-        "total_byte_length": {
-          "format": "uint64",
-          "minimum": 0.0,
-          "type": "integer"
-        }
-      },
-      "required": [
-        "canonicalization",
-        "manifest_byte_length",
-        "member_count",
-        "members",
-        "schema_version",
-        "sha256",
-        "total_byte_length"
-      ],
-      "type": "object"
-    },
-    "AggregateMemberIdentity": {
-      "description": "Stable member summary used in a compound-input aggregate manifest.",
-      "properties": {
-        "aggregate_sha256": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "byte_length": {
-          "format": "uint64",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "canonical_payload_sha256": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "decoded_sha256": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "format": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/FormatIdentity"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "member_index": {
-          "format": "uint64",
-          "minimum": 0.0,
-          "type": [
-            "integer",
-            "null"
-          ]
-        },
-        "member_path": {
-          "type": "string"
-        },
-        "raw_sha256": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "required": [
-        "byte_length",
-        "member_path"
-      ],
-      "type": "object"
-    },
     "BoundingBox": {
       "description": "A rectangle in a declared coordinate system.",
       "properties": {
@@ -142,39 +37,6 @@
       ],
       "type": "object"
     },
-    "CanonicalJsonVersion": {
-      "description": "Canonical JSON compatibility boundary.\n\nNew algorithms require new enum variants. Changing `V1` would change payload and aggregate identities and is an incompatible change.",
-      "enum": [
-        "grist/canonical-json/v1"
-      ],
-      "type": "string"
-    },
-    "CanonicalPayloadIdentity": {
-      "description": "SHA-256 of the exact canonical JSON bytes of an authoritative payload.",
-      "properties": {
-        "byte_length": {
-          "format": "uint64",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "canonicalization": {
-          "$ref": "#/definitions/CanonicalJsonVersion"
-        },
-        "payload_schema_version": {
-          "$ref": "#/definitions/SchemaVersion"
-        },
-        "sha256": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "byte_length",
-        "canonicalization",
-        "payload_schema_version",
-        "sha256"
-      ],
-      "type": "object"
-    },
     "CellAddress": {
       "description": "A sheet cell address with explicit row and column bases.",
       "properties": {
@@ -199,146 +61,6 @@
       ],
       "type": "object"
     },
-    "ContentIdentity": {
-      "description": "Complete singular or compound content identity retained by an envelope.",
-      "properties": {
-        "aggregate": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/AggregateContentIdentity"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "canonical_payload": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/CanonicalPayloadIdentity"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "decoded": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/DecodedContentIdentity"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "detection_candidates": {
-          "default": [],
-          "items": {
-            "$ref": "#/definitions/DetectionCandidate"
-          },
-          "type": "array"
-        },
-        "format": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/FormatIdentity"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "raw": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/RawContentIdentity"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "type": "object"
-    },
-    "ContentKind": {
-      "enum": [
-        "markdown",
-        "restructured_text",
-        "ascii_doc",
-        "html",
-        "xml",
-        "rust",
-        "python",
-        "java_script",
-        "typescript",
-        "tsx",
-        "jsx",
-        "go",
-        "java",
-        "kotlin",
-        "c",
-        "cpp",
-        "csharp",
-        "ruby",
-        "php",
-        "swift",
-        "shell",
-        "sql",
-        "css",
-        "latex",
-        "bibliography",
-        "csv",
-        "json",
-        "jsonl",
-        "yaml",
-        "toml",
-        "manifest",
-        "cbor",
-        "message_pack",
-        "protobuf",
-        "arrow",
-        "text",
-        "pdf",
-        "zip",
-        "tar",
-        "docx",
-        "pptx",
-        "xlsx",
-        "xlsm",
-        "epub",
-        "odt",
-        "odp",
-        "ods",
-        "rtf",
-        "eml",
-        "mbox",
-        "msg",
-        "i_calendar",
-        "v_card",
-        "jupyter_notebook",
-        "sqlite",
-        "png",
-        "jpeg",
-        "gif",
-        "tiff",
-        "webp",
-        "bmp",
-        "heif",
-        "svg",
-        "gzip",
-        "bzip2",
-        "xz",
-        "zstd",
-        "seven_zip",
-        "parquet",
-        "ole_compound",
-        "binary",
-        "unknown"
-      ],
-      "type": "string"
-    },
     "CoordinateOrigin": {
       "description": "Coordinate-system origin for rectangular source regions.",
       "enum": [
@@ -355,32 +77,6 @@
         "normalized"
       ],
       "type": "string"
-    },
-    "DecodedContentIdentity": {
-      "description": "SHA-256 of decoded text's UTF-8 bytes, including replacements when lossy.\n\nEncoding, loss state, and diagnostics are metadata outside the hashed bytes.",
-      "properties": {
-        "byte_length": {
-          "format": "uint64",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "encoding": {
-          "type": "string"
-        },
-        "lossy": {
-          "type": "boolean"
-        },
-        "sha256": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "byte_length",
-        "encoding",
-        "lossy",
-        "sha256"
-      ],
-      "type": "object"
     },
     "DerivedNodeReference": {
       "description": "A reference from derived content back to the nodes and declared transforms that produced it.",
@@ -406,301 +102,360 @@
       ],
       "type": "object"
     },
-    "Detection": {
+    "ImageActiveContent": {
       "properties": {
-        "candidates": {
-          "default": [],
-          "items": {
-            "$ref": "#/definitions/DetectionCandidate"
-          },
-          "type": "array"
+        "disposition": {
+          "$ref": "#/definitions/ImageActiveContentDisposition"
         },
-        "confidence": {
-          "format": "float",
-          "type": "number"
+        "kind": {
+          "type": "string"
         },
-        "content_kind": {
-          "$ref": "#/definitions/ContentKind"
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
         },
-        "diagnostics": {
-          "items": {
-            "$ref": "#/definitions/Diagnostic"
-          },
-          "type": "array"
-        },
-        "file_kind": {
-          "$ref": "#/definitions/FileKind"
-        },
-        "language": {
+        "name": {
           "type": [
             "string",
             "null"
           ]
         },
-        "reasons": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "selected_parser": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "status": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/DetectionStatus"
-            }
-          ],
-          "default": "unknown"
+        "value_sha256": {
+          "type": "string"
         }
       },
       "required": [
-        "confidence",
-        "content_kind",
-        "diagnostics",
-        "file_kind",
-        "reasons"
+        "disposition",
+        "kind",
+        "locator",
+        "value_sha256"
       ],
       "type": "object"
     },
-    "DetectionCandidate": {
-      "description": "A ranked format candidate with all evidence retained.",
+    "ImageActiveContentDisposition": {
+      "enum": [
+        "inventoried_not_executed"
+      ],
+      "type": "string"
+    },
+    "ImageCameraMetadata": {
       "properties": {
-        "confidence": {
-          "format": "float",
-          "type": "number"
-        },
-        "evidence": {
-          "items": {
-            "$ref": "#/definitions/DetectionEvidence"
-          },
-          "type": "array"
-        },
-        "identity": {
-          "$ref": "#/definitions/FormatIdentity"
-        },
-        "parser_availability": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/ParserAvailability"
-            }
-          ],
-          "default": "unregistered"
-        },
-        "parser_id": {
+        "captured_at": {
           "type": [
             "string",
             "null"
           ]
         },
-        "rank": {
-          "description": "One-based rank; lower ranks are preferred.",
+        "exposure_time": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "f_number": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "focal_length": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "gps_latitude": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "gps_longitude": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "iso_speed": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lens_model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "make": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tags": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "tags"
+      ],
+      "type": "object"
+    },
+    "ImageChunk": {
+      "properties": {
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "known": {
+          "type": "boolean"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "raw_bytes": {
+          "items": {
+            "format": "uint8",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "byte_length",
+        "kind",
+        "known",
+        "locator",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "ImageColorInfo": {
+      "properties": {
+        "alpha": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "bits_per_component": {
+          "format": "uint8",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "color_space": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "component_count": {
+          "format": "uint8",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "icc_profile_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "ImageDimensions": {
+      "properties": {
+        "height": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "width": {
           "format": "uint32",
           "minimum": 0.0,
           "type": "integer"
         }
       },
       "required": [
-        "confidence",
-        "evidence",
-        "identity",
-        "rank"
+        "height",
+        "width"
       ],
       "type": "object"
     },
-    "DetectionEvidence": {
-      "description": "One retained reason for a ranked detection candidate.",
-      "properties": {
-        "description": {
-          "type": "string"
-        },
-        "kind": {
-          "$ref": "#/definitions/DetectionEvidenceKind"
-        }
-      },
-      "required": [
-        "description",
-        "kind"
-      ],
-      "type": "object"
-    },
-    "DetectionEvidenceKind": {
-      "description": "Signal family that contributed to a detection candidate.",
+    "ImageFormat": {
       "enum": [
-        "magic_bytes",
-        "declared_media_type",
-        "extension",
-        "filename",
-        "container_manifest",
-        "charset",
-        "structure",
-        "shebang",
-        "grammar_probe",
-        "fallback"
+        "png",
+        "jpeg",
+        "tiff",
+        "webp",
+        "gif",
+        "bmp",
+        "heif",
+        "svg"
       ],
       "type": "string"
     },
-    "DetectionStatus": {
-      "enum": [
-        "selected",
-        "ambiguous",
-        "unsupported",
-        "unknown"
-      ],
-      "type": "string"
-    },
-    "Diagnostic": {
-      "description": "A root-cause diagnostic with source attribution and structured causes.",
+    "ImageFrame": {
       "properties": {
-        "affected_ids": {
-          "default": [],
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "cause": {
-          "default": [],
-          "description": "Legacy flat causes retained for v1 wire compatibility.",
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "causes": {
-          "default": [],
-          "items": {
-            "$ref": "#/definitions/DiagnosticCause"
-          },
-          "type": "array"
-        },
-        "class": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/DiagnosticClass"
-            }
-          ],
-          "default": "unclassified"
-        },
-        "code": {
-          "type": "string"
-        },
-        "details": true,
-        "documentation_uri": {
+        "blend": {
           "type": [
             "string",
             "null"
           ]
         },
-        "explanation_key": {
+        "dimensions": {
+          "$ref": "#/definitions/ImageDimensions"
+        },
+        "disposal": {
           "type": [
             "string",
             "null"
           ]
+        },
+        "duration_ms": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
         },
         "locator": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/SourceLocator"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/SourceLocator"
         },
-        "message": {
-          "type": "string"
+        "x": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
         },
-        "module": {
-          "default": "",
-          "type": "string"
+        "y": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "dimensions",
+        "index",
+        "locator",
+        "x",
+        "y"
+      ],
+      "type": "object"
+    },
+    "ImageLink": {
+      "properties": {
+        "disposition": {
+          "$ref": "#/definitions/ImageActiveContentDisposition"
         },
-        "parser": {
-          "type": "string"
-        },
-        "partial": {
-          "default": false,
+        "external": {
           "type": "boolean"
         },
-        "range": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/SourceRange"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
         },
-        "recovery": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/RecoveryAction"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "severity": {
-          "$ref": "#/definitions/Severity"
-        },
-        "source": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "source_identity": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/ContentIdentity"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "target": {
+          "type": "string"
         }
       },
       "required": [
-        "code",
-        "message",
-        "parser",
-        "severity"
+        "disposition",
+        "external",
+        "locator",
+        "target"
       ],
       "type": "object"
     },
-    "DiagnosticCause": {
-      "description": "One nested reason beneath a diagnostic's root-cause message.",
+    "ImageMetadata": {
       "properties": {
-        "cause": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/DiagnosticCause"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "blocks": {
+          "items": {
+            "$ref": "#/definitions/ImageMetadataBlock"
+          },
+          "type": "array"
         },
-        "code": {
-          "type": "string"
+        "camera": {
+          "$ref": "#/definitions/ImageCameraMetadata"
+        }
+      },
+      "required": [
+        "blocks",
+        "camera"
+      ],
+      "type": "object"
+    },
+    "ImageMetadataBlock": {
+      "properties": {
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
         },
-        "details": true,
-        "message": {
-          "type": "string"
+        "fields": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
         },
-        "module": {
+        "kind": {
+          "$ref": "#/definitions/ImageMetadataKind"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "raw_bytes": {
+          "items": {
+            "format": "uint8",
+            "minimum": 0.0,
+            "type": "integer"
+          },
           "type": [
-            "string",
+            "array",
             "null"
           ]
         },
-        "parser": {
+        "sha256": {
+          "type": "string"
+        },
+        "text": {
           "type": [
             "string",
             "null"
@@ -708,55 +463,77 @@
         }
       },
       "required": [
-        "code",
-        "message"
+        "byte_length",
+        "fields",
+        "kind",
+        "locator",
+        "sha256"
       ],
       "type": "object"
     },
-    "DiagnosticClass": {
-      "description": "Stable top-level condition families shared by every parser and operation.",
+    "ImageMetadataKind": {
       "enum": [
-        "malformed_input",
-        "unsupported_content",
-        "lossy_normalization",
-        "provider_failure",
-        "parser_defect",
-        "security_rejection",
-        "resource_budget_exhaustion",
-        "unclassified"
+        "exif",
+        "xmp",
+        "iptc",
+        "icc",
+        "text",
+        "comment"
       ],
       "type": "string"
     },
-    "FileKind": {
-      "enum": [
-        "source",
-        "test",
-        "manifest",
-        "lockfile",
-        "generated",
-        "binary",
-        "documentation",
-        "unknown"
-      ],
-      "type": "string"
-    },
-    "FormatIdentity": {
-      "description": "Detected parser-format name paired with an Internet media type when known.",
+    "ImageOrientation": {
       "properties": {
-        "format": {
-          "type": "string"
-        },
-        "media_type": {
+        "exif_value": {
+          "format": "uint16",
+          "minimum": 0.0,
           "type": [
-            "string",
+            "integer",
             "null"
           ]
+        },
+        "mirrored": {
+          "type": "boolean"
+        },
+        "rotation_degrees": {
+          "format": "int16",
+          "type": "integer"
         }
       },
       "required": [
-        "format"
+        "mirrored",
+        "rotation_degrees"
       ],
       "type": "object"
+    },
+    "ImageText": {
+      "properties": {
+        "kind": {
+          "$ref": "#/definitions/ImageTextKind"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "locator",
+        "text"
+      ],
+      "type": "object"
+    },
+    "ImageTextKind": {
+      "enum": [
+        "metadata",
+        "comment",
+        "vector_text",
+        "vector_title",
+        "vector_description"
+      ],
+      "type": "string"
     },
     "IndexBase": {
       "description": "Whether an ordinal is counted from zero or one.\n\nEvery format component carrying a page, slide, cell, frame, token, output, member, track, or record ordinal uses this type rather than relying on an undocumented convention.",
@@ -1291,80 +1068,6 @@
       "minimum": 0.0,
       "type": "number"
     },
-    "ParserAvailability": {
-      "description": "Whether a ranked candidate can be interpreted by the active registry.",
-      "enum": [
-        "available",
-        "unavailable",
-        "unregistered"
-      ],
-      "type": "string"
-    },
-    "RawContentIdentity": {
-      "description": "SHA-256 of exactly the original input bytes, without a prefix or suffix.",
-      "properties": {
-        "byte_length": {
-          "format": "uint64",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "sha256": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "byte_length",
-        "sha256"
-      ],
-      "type": "object"
-    },
-    "RecoveryAction": {
-      "description": "A recovery action is guidance, never an action executed by Grist.",
-      "properties": {
-        "description": {
-          "type": "string"
-        },
-        "kind": {
-          "$ref": "#/definitions/RecoveryKind"
-        },
-        "retryable": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "description",
-        "kind",
-        "retryable"
-      ],
-      "type": "object"
-    },
-    "RecoveryKind": {
-      "description": "Machine-actionable recovery families.",
-      "enum": [
-        "inspect_input",
-        "select_parser",
-        "enable_feature",
-        "retry_provider",
-        "increase_budget",
-        "supply_credentials",
-        "change_options",
-        "report_parser_defect"
-      ],
-      "type": "string"
-    },
-    "SchemaVersion": {
-      "type": "string"
-    },
-    "Severity": {
-      "description": "Diagnostic importance at the public API boundary.",
-      "enum": [
-        "info",
-        "warning",
-        "error",
-        "fatal"
-      ],
-      "type": "string"
-    },
     "SourceLocator": {
       "description": "An outermost-to-innermost containment chain.\n\nComponent `n` is interpreted relative to component `n - 1`. For example, `[archive_member, email_part, ooxml_part, text_range]` identifies text in an OOXML part attached to an email stored in an archive without flattening any parent coordinate system.",
       "oneOf": [
@@ -1463,73 +1166,116 @@
       ],
       "type": "object"
     },
-    "SourceRange": {
+    "SvgContent": {
       "properties": {
-        "byte_end": {
-          "format": "uint",
+        "element_count": {
+          "format": "uint64",
           "minimum": 0.0,
           "type": "integer"
         },
-        "byte_start": {
-          "format": "uint",
-          "minimum": 0.0,
-          "type": "integer"
+        "unknown_elements": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
-        "end_column": {
-          "format": "uint",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "end_line": {
-          "format": "uint",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "start_column": {
-          "format": "uint",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "start_line": {
-          "format": "uint",
-          "minimum": 0.0,
-          "type": "integer"
+        "view_box": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "type": [
+            "array",
+            "null"
+          ]
         }
       },
       "required": [
-        "byte_end",
-        "byte_start",
-        "end_column",
-        "end_line",
-        "start_column",
-        "start_line"
+        "element_count",
+        "unknown_elements"
       ],
       "type": "object"
     }
   },
   "properties": {
-    "artifact": true,
-    "detection": {
-      "$ref": "#/definitions/Detection"
+    "active_content": {
+      "items": {
+        "$ref": "#/definitions/ImageActiveContent"
+      },
+      "type": "array"
+    },
+    "chunks": {
+      "items": {
+        "$ref": "#/definitions/ImageChunk"
+      },
+      "type": "array"
+    },
+    "color": {
+      "$ref": "#/definitions/ImageColorInfo"
+    },
+    "complete": {
+      "type": "boolean"
+    },
+    "dimensions": {
+      "$ref": "#/definitions/ImageDimensions"
+    },
+    "embedded_text": {
+      "items": {
+        "$ref": "#/definitions/ImageText"
+      },
+      "type": "array"
+    },
+    "format": {
+      "$ref": "#/definitions/ImageFormat"
+    },
+    "frames": {
+      "items": {
+        "$ref": "#/definitions/ImageFrame"
+      },
+      "type": "array"
+    },
+    "links": {
+      "items": {
+        "$ref": "#/definitions/ImageLink"
+      },
+      "type": "array"
+    },
+    "metadata": {
+      "$ref": "#/definitions/ImageMetadata"
+    },
+    "orientation": {
+      "$ref": "#/definitions/ImageOrientation"
     },
     "schema_version": {
       "type": "string"
     },
-    "skip_reason": {
-      "type": [
-        "string",
-        "null"
+    "vector": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/SvgContent"
+        },
+        {
+          "type": "null"
+        }
       ]
-    },
-    "skipped": {
-      "type": "boolean"
     }
   },
   "required": [
-    "detection",
-    "schema_version",
-    "skipped"
+    "active_content",
+    "chunks",
+    "color",
+    "complete",
+    "dimensions",
+    "embedded_text",
+    "format",
+    "frames",
+    "links",
+    "metadata",
+    "orientation",
+    "schema_version"
   ],
-  "title": "FileIngestReport",
+  "title": "ImageDocument",
   "type": "object"
 }

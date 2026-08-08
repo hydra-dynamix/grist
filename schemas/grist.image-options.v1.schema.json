@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "max_chunks": {
+      "default": 100000,
+      "format": "uint64",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_dimension": {
+      "default": 1000000,
+      "format": "uint32",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_frames": {
+      "default": 10000,
+      "format": "uint64",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_metadata_bytes": {
+      "default": 16777216,
+      "format": "uint64",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_svg_depth": {
+      "default": 256,
+      "format": "uint64",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_svg_elements": {
+      "default": 1000000,
+      "format": "uint64",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_svg_path_bytes": {
+      "default": 65536,
+      "format": "uint64",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_unknown_chunk_bytes": {
+      "default": 16777216,
+      "format": "uint64",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "retain_metadata_bytes": {
+      "default": true,
+      "type": "boolean"
+    },
+    "retain_unknown_chunk_bytes": {
+      "default": true,
+      "type": "boolean"
+    }
+  },
+  "title": "ImageOptions",
+  "type": "object"
+}

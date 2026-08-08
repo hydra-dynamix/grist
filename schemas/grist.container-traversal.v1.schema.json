@@ -122,6 +122,12 @@
     "ArchiveMemberMetadata": {
       "description": "Format-neutral archive header facts retained for every storage mode.",
       "properties": {
+        "comment": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "compressed_size": {
           "format": "uint64",
           "minimum": 0.0,
@@ -143,6 +149,14 @@
         },
         "entry_kind": {
           "$ref": "#/definitions/ArchiveEntryKind"
+        },
+        "external_attributes": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "gid": {
           "format": "uint64",
@@ -171,6 +185,12 @@
           "minimum": 0.0,
           "type": [
             "integer",
+            "null"
+          ]
+        },
+        "original_filename": {
+          "type": [
+            "string",
             "null"
           ]
         },
@@ -341,6 +361,7 @@
         "html",
         "epub",
         "pdf",
+        "image",
         "word_ooxml",
         "presentation_ooxml",
         "spreadsheet_ooxml",

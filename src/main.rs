@@ -1312,6 +1312,30 @@ fn parse_input_to_document_graph(
             "pdf",
             Some(serde_json::to_value(grist::pdf::PdfOptions::default())?),
         ),
+        "png" | "jpg" | "jpeg" | "gif" | "tif" | "tiff" | "webp" | "bmp" | "heif"
+        | "heic" | "avif" | "svg" => (
+            match extension.as_str() {
+                "jpg" => "jpeg",
+                "tif" => "tiff",
+                "heic" | "avif" => "heif",
+                value => value,
+            },
+            Some(serde_json::to_value(
+                grist::image::ImageOptions::default(),
+            )?),
+        ),
+        "zip" | "tar" | "gz" | "gzip" | "bz2" | "bzip2" | "xz" | "zst" | "zstd"
+        | "7z" => (
+            match extension.as_str() {
+                "gz" => "gzip",
+                "bz2" => "bzip2",
+                "zst" => "zstd",
+                value => value,
+            },
+            Some(serde_json::to_value(
+                grist::archive::ArchiveOptions::default(),
+            )?),
+        ),
         "odt" | "ott" => (
             extension.as_str(),
             Some(serde_json::to_value(
@@ -1385,7 +1409,7 @@ fn parse_input_to_document_graph(
             )?),
         ),
         _ => return Err(format!(
-            "cannot infer transform source kind for `{input}`; use a supported extension (.txt, .md, .csv, .tsv, .xlsx, .xlsm, .ods, .ots, .tex, .bib, .pdf, .odt, .ott, .odp, .otp, .py, .rs, .js, .ts, .tsx, .jsx)"
+            "cannot infer transform source kind for `{input}`; use a supported text, office, code, image, archive, or compression extension"
         )
         .into()),
     };
