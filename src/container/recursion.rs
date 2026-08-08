@@ -136,6 +136,30 @@ impl ContainerUnavailable {
     }
 }
 
+/// Format-neutral archive header facts retained for every storage mode.
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ArchiveMemberMetadata {
+    pub entry_kind: ArchiveEntryKind,
+    pub compression_method: String,
+    pub compressed_size: u64,
+    pub uncompressed_size: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub crc32: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mode: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub uid: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gid: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub modified_time: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub link_target: Option<String>,
+    pub encrypted: bool,
+    pub zip64: bool,
+}
+
 #[derive(Debug)]
 pub enum ContainerMemberBody {
     Available(Vec<u8>),
@@ -156,6 +180,7 @@ pub struct ContainerMember {
     pub nested_container_format: Option<String>,
     pub entry_kind: ArchiveEntryKind,
     pub link_target: Option<String>,
+    pub archive_metadata: Option<ArchiveMemberMetadata>,
     pub body: ContainerMemberBody,
 }
 
@@ -178,6 +203,7 @@ impl ContainerMember {
             nested_container_format: None,
             entry_kind: ArchiveEntryKind::RegularFile,
             link_target: None,
+            archive_metadata: None,
             body: ContainerMemberBody::Available(bytes),
         }
     }
@@ -199,6 +225,7 @@ impl ContainerMember {
             nested_container_format: None,
             entry_kind: ArchiveEntryKind::RegularFile,
             link_target: None,
+            archive_metadata: None,
             body: ContainerMemberBody::Unavailable(unavailable),
         }
     }
@@ -239,6 +266,10 @@ impl ContainerMember {
         self.link_target = Some(value.into());
         self
     }
+    pub fn with_archive_metadata(mut self, value: ArchiveMemberMetadata) -> Self {
+        self.archive_metadata = Some(value);
+        self
+    }
 }
 
 /// Read-only execution context supplied to a concrete decoder.
@@ -249,6 +280,7 @@ pub struct ContainerDecodeContext<'a> {
     locator: Option<&'a SourceLocator>,
     depth: u64,
     control: &'a OperationControl,
+    archive_policy: &'a ArchiveSecurityPolicy,
 }
 
 impl<'a> ContainerDecodeContext<'a> {
@@ -281,6 +313,45 @@ impl<'a> ContainerDecodeContext<'a> {
             .budget()
             .observe_memory_bytes(bytes)
             .map_err(ContainerDecodeFailure::budget)
+    }
+    pub fn archive_security_policy(&self) -> &ArchiveSecurityPolicy {
+        self.archive_policy
+    }
+    /// Reject declared archive work before allocating or decompressing members.
+    pub fn check_archive_preflight(
+        &self,
+        member_count: u64,
+        compressed: u64,
+        expanded: u64,
+    ) -> Result<(), ContainerDecodeFailure> {
+        self.checkpoint()?;
+        self.check_archive_member_count(member_count)?;
+        let tracker = self.control.budget();
+        tracker
+            .observe_archive_expansion(compressed, expanded)
+            .map_err(ContainerDecodeFailure::budget)?;
+        tracker
+            .observe_memory_bytes(expanded)
+            .map_err(ContainerDecodeFailure::budget)
+    }
+    pub fn check_archive_member_count(
+        &self,
+        member_count: u64,
+    ) -> Result<(), ContainerDecodeFailure> {
+        let tracker = self.control.budget();
+        let usage = tracker.snapshot();
+        if let Some(limit) = tracker.budget().max_archive_members {
+            let observed = usage.archive_members.saturating_add(member_count);
+            if observed > limit {
+                return Err(ContainerDecodeFailure::budget(BudgetExceeded {
+                    axis: BudgetAxis::ArchiveMembers,
+                    limit: crate::core::BudgetAmount::Count(limit),
+                    observed: crate::core::BudgetAmount::Count(observed),
+                    usage: Box::new(usage),
+                }));
+            }
+        }
+        Ok(())
     }
 }
 
@@ -482,6 +553,8 @@ pub struct ContainerChild {
     pub status: ContainerChildStatus,
     pub artifact: EmbeddedArtifact,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub archive_metadata: Option<ArchiveMemberMetadata>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub parsed: Option<Envelope<Value>>,
     #[serde(default)]
     pub diagnostics: Vec<Diagnostic>,
@@ -544,6 +617,26 @@ impl<'a> ContainerRecursor<'a> {
         request: ContainerParseRequest,
         sink: Option<&dyn ContentAddressedArtifactSink>,
     ) -> Result<ContainerTraversal, ContainerTraversalError> {
+        let control = OperationControl::new(&request.budget, request.cancellation.clone())?;
+        self.parse_controlled(request, sink, control, false)
+    }
+
+    pub fn parse_with_control(
+        &self,
+        request: ContainerParseRequest,
+        sink: Option<&dyn ContentAddressedArtifactSink>,
+        control: OperationControl,
+    ) -> Result<ContainerTraversal, ContainerTraversalError> {
+        self.parse_controlled(request, sink, control, true)
+    }
+
+    fn parse_controlled(
+        &self,
+        request: ContainerParseRequest,
+        sink: Option<&dyn ContentAddressedArtifactSink>,
+        control: OperationControl,
+        input_already_charged: bool,
+    ) -> Result<ContainerTraversal, ContainerTraversalError> {
         if request.container_format.trim().is_empty() {
             return Err(ContainerTraversalError::InvalidContainerFormat);
         }
@@ -552,8 +645,7 @@ impl<'a> ContainerRecursor<'a> {
         {
             return Err(ContainerTraversalError::ContentAddressedSinkRequired);
         }
-        let control = OperationControl::new(&request.budget, request.cancellation.clone())?;
-        let limits = request.budget.budget();
+        let limits = control.budget().budget().clone();
         let identity =
             ContentIdentity::for_raw_bytes(&request.input).with_format(FormatIdentity::new(
                 request.container_format.clone(),
@@ -573,7 +665,7 @@ impl<'a> ContainerRecursor<'a> {
             children: Vec::new(),
         };
         let root_bytes = u64::try_from(request.input.len()).unwrap_or(u64::MAX);
-        let initial = control
+        let mut initial = control
             .checkpoint()
             .and_then(|()| {
                 control
@@ -584,15 +676,17 @@ impl<'a> ContainerRecursor<'a> {
             .and_then(|()| {
                 control
                     .budget()
-                    .consume_input_bytes(root_bytes)
-                    .map_err(Into::into)
-            })
-            .and_then(|()| {
-                control
-                    .budget()
                     .observe_memory_bytes(root_bytes)
                     .map_err(Into::into)
             });
+        if !input_already_charged {
+            initial = initial.and_then(|()| {
+                control
+                    .budget()
+                    .consume_input_bytes(root_bytes)
+                    .map_err(Into::into)
+            });
+        }
         if let Err(error) = initial {
             let failure = ContainerDecodeFailure::controlled(error);
             root.limit_hit = failure.budget_axis;
@@ -620,11 +714,12 @@ impl<'a> ContainerRecursor<'a> {
             });
         }
 
+        let cancellation = control.cancellation().clone();
         let mut state = TraversalState {
             recursor: self,
             control,
             budget_selection: request.budget,
-            cancellation: request.cancellation,
+            cancellation,
             providers: request.providers,
             parse_options: request.parse_options,
             artifact_mode: request.options.artifact_mode,
@@ -738,6 +833,7 @@ impl TraversalState<'_, '_> {
             locator,
             depth,
             control: &self.control,
+            archive_policy: &self.parse_options.security.archive,
         };
         let decoded =
             catch_unwind(AssertUnwindSafe(|| decoder.decode(&context))).map_err(|_| {
@@ -792,6 +888,7 @@ impl TraversalState<'_, '_> {
             .map_err(|error| {
                 ContainerDecodeFailure::malformed("grist.container", error.to_string())
             })?;
+        let archive_metadata = member.archive_metadata.clone();
         let known_identity = match &member.body {
             ContainerMemberBody::Available(bytes) => ContentIdentity::for_raw_bytes(bytes),
             ContainerMemberBody::Unavailable(_) => ContentIdentity::default(),
@@ -848,6 +945,7 @@ impl TraversalState<'_, '_> {
                     status: failure.status,
                     artifact,
                     parsed: None,
+                    archive_metadata: archive_metadata.clone(),
                     diagnostics: vec![diagnostic],
                     children: Vec::new(),
                 },
@@ -885,6 +983,7 @@ impl TraversalState<'_, '_> {
                     status: ContainerChildStatus::Rejected,
                     artifact,
                     parsed: None,
+                    archive_metadata: archive_metadata.clone(),
                     diagnostics: vec![diagnostic],
                     children: Vec::new(),
                 },
@@ -912,10 +1011,12 @@ impl TraversalState<'_, '_> {
                 bytes,
             )?,
         };
+        let mut child = result.0;
+        child.archive_metadata = archive_metadata;
         audit.children = result.1;
-        audit.limit_hit = result.0.diagnostics.iter().find_map(diagnostic_budget_axis);
+        audit.limit_hit = child.diagnostics.iter().find_map(diagnostic_budget_axis);
         audit.usage_after = self.control.usage();
-        Ok((result.0, audit))
+        Ok((child, audit))
     }
 
     fn charge_member(
@@ -987,6 +1088,7 @@ impl TraversalState<'_, '_> {
                 status,
                 artifact,
                 parsed: None,
+                archive_metadata: None,
                 diagnostics: vec![diagnostic],
                 children: Vec::new(),
             },
@@ -1049,6 +1151,7 @@ impl TraversalState<'_, '_> {
                         status: ContainerChildStatus::Failed,
                         diagnostics: vec![attributed(diagnostic, &artifact)],
                         artifact,
+                        archive_metadata: None,
                         parsed: None,
                         children: Vec::new(),
                     },
@@ -1144,6 +1247,7 @@ impl TraversalState<'_, '_> {
                 status,
                 artifact,
                 parsed,
+                archive_metadata: None,
                 diagnostics,
                 children,
             },

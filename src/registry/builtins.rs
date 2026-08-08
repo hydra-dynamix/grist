@@ -50,7 +50,8 @@ fn descriptor(
     let mut capabilities = BTreeSet::from([Capability::NativeExtraction, Capability::TypedPayload]);
     if matches!(
         format.artifact_kind,
-        ArtifactKind::Text
+        ArtifactKind::Archive
+            | ArtifactKind::Text
             | ArtifactKind::Markdown
             | ArtifactKind::RestructuredText
             | ArtifactKind::AsciiDoc
@@ -92,7 +93,8 @@ fn descriptor(
     }
     if matches!(
         format.artifact_kind,
-        ArtifactKind::PresentationOoxml
+        ArtifactKind::Archive
+            | ArtifactKind::PresentationOoxml
             | ArtifactKind::SpreadsheetOoxml
             | ArtifactKind::SpreadsheetOdf
             | ArtifactKind::PresentationOdf
@@ -207,6 +209,7 @@ fn register_feature_parsers(registry: &mut ParserRegistry) -> Result<(), ParserR
     register_secondary_code(registry)?;
     register_manifests(registry)?;
     register_serialization(registry)?;
+    register_archive(registry)?;
     register_columnar(registry)?;
     register_sqlite(registry)?;
     register_email(registry)?;
@@ -1599,6 +1602,100 @@ fn register_secondary_code(registry: &mut ParserRegistry) -> Result<(), ParserRe
     for config in crate::code::builtin_language_configs() {
         let feature = config.enabled_feature.clone();
         register_disabled(registry, config.descriptor(ParserOrigin::BuiltIn), &feature)?;
+    }
+    Ok(())
+}
+#[cfg(feature = "archives")]
+fn register_archive(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    for (id, media_types, parser) in [
+        (
+            "zip",
+            &["application/zip"][..],
+            parse_zip as fn(&mut ParserContext<'_>) -> Result<ParserOutput, ParserError>,
+        ),
+        (
+            "tar",
+            &["application/x-tar", "application/tar"][..],
+            parse_tar,
+        ),
+    ] {
+        let format = FormatMetadata::new(id, ArtifactKind::Archive)
+            .with_extensions([id])
+            .with_media_types(media_types.iter().copied());
+        register(
+            registry,
+            descriptor(
+                &format!("grist.archive.{id}"),
+                format,
+                crate::archive::parser_info(),
+                crate::core::SchemaVersion::ARCHIVE_V1,
+                Some("archives"),
+                serde_json::to_value(crate::archive::ArchiveOptions::default()).unwrap_or_default(),
+            ),
+            parser,
+        )?;
+    }
+    Ok(())
+}
+
+#[cfg(feature = "archives")]
+fn parse_archive(
+    context: &mut ParserContext<'_>,
+    format: &str,
+) -> Result<ParserOutput, ParserError> {
+    let options = decode_options::<crate::archive::ArchiveOptions>(context)?;
+    let archive_format = crate::archive::archive_format(context.bytes(), Some(format))
+        .ok_or_else(|| Box::new(Diagnostic::unsupported("grist.archive", format)))?;
+    let request = crate::container::ContainerParseRequest::new(
+        context.request_id().clone(),
+        context.bytes().to_vec(),
+        context.source().clone(),
+        archive_format.container_id(),
+        crate::container::ContainerParseOptions {
+            artifact_mode: options.artifact_mode,
+            parse_leaf_payloads: options.parse_leaf_payloads,
+        },
+        context.budget_selection().clone(),
+    )
+    .with_parse_options(context.parse_options().clone())
+    .with_providers(context.providers().clone());
+    let envelope = crate::archive::parse_archive_request_with_control(
+        request,
+        archive_format,
+        &options,
+        context.control().clone(),
+    )
+    .map_err(|error| Box::new(Diagnostic::malformed("grist.archive", error.to_string())))?;
+    output(envelope)
+}
+
+#[cfg(feature = "archives")]
+fn parse_zip(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserError> {
+    parse_archive(context, "zip")
+}
+
+#[cfg(feature = "archives")]
+fn parse_tar(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserError> {
+    parse_archive(context, "tar")
+}
+
+#[cfg(not(feature = "archives"))]
+fn register_archive(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    for (id, media_types) in [
+        ("zip", &["application/zip"][..]),
+        ("tar", &["application/x-tar", "application/tar"][..]),
+    ] {
+        let metadata = descriptor(
+            &format!("grist.archive.{id}"),
+            FormatMetadata::new(id, ArtifactKind::Archive)
+                .with_extensions([id])
+                .with_media_types(media_types.iter().copied()),
+            ParserInfo::new("grist.archive").with_feature("archives"),
+            crate::core::SchemaVersion::ARCHIVE_V1,
+            Some("archives"),
+            serde_json::json!({}),
+        );
+        register_disabled(registry, metadata, "archives")?;
     }
     Ok(())
 }

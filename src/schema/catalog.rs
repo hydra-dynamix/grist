@@ -1237,6 +1237,37 @@ fn registrations() -> Vec<Registration> {
             crate::html::HtmlOptions
         );
     }
+    #[cfg(feature = "archives")]
+    {
+        add!(
+            "archive",
+            "archive",
+            SchemaVersion::ARCHIVE_V1,
+            SchemaKind::Payload,
+            "grist.archive.v1.schema.json",
+            true,
+            crate::archive::ArchiveDocument
+        );
+        add!(
+            "archive-envelope",
+            "envelope",
+            SchemaVersion::ENVELOPE_V2,
+            SchemaKind::Envelope,
+            "grist.archive-envelope.v2.schema.json",
+            true,
+            crate::core::Envelope<crate::archive::ArchiveDocument>
+        );
+        add!(
+            "archive-options",
+            "archive-options",
+            "grist/archive-options/v1",
+            SchemaKind::Options,
+            "grist.archive-options.v1.schema.json",
+            false,
+            crate::archive::ArchiveOptions
+        );
+    }
+
     #[cfg(feature = "epub")]
     {
         add!(

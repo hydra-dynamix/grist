@@ -2,6 +2,8 @@
 //!
 //! New code should use these paths. The historical crate-root modules remain
 //! source-compatible aliases during the 0.x compatibility window.
+#[cfg(feature = "archives")]
+pub mod archive;
 
 #[cfg(feature = "asciidoc")]
 pub mod asciidoc;

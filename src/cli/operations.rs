@@ -150,6 +150,10 @@ pub fn project_envelope_to_graph(
         .clone();
     let context = DocumentGraphContext::new(graph_id).with_source(envelope.source.clone());
     match envelope.kind {
+        crate::core::ArtifactKind::Archive => {
+            let document: crate::archive::ArchiveDocument = serde_json::from_value(payload)?;
+            Ok(document.to_document_graph(context)?)
+        }
         crate::core::ArtifactKind::Text => {
             let document: crate::text::TextDocument = serde_json::from_value(payload)?;
             Ok(document.to_document_graph(context)?)

@@ -140,6 +140,7 @@ impl SchemaVersion {
     pub const STRUCTURED_BINARY_V1: &'static str = "grist/structured-binary/v1";
     pub const COLUMNAR_V1: &'static str = "grist/columnar/v1";
     pub const SQLITE_V1: &'static str = "grist/sqlite/v1";
+    pub const ARCHIVE_V1: &'static str = "grist/archive/v1";
     pub const EMAIL_V1: &'static str = "grist/email/v1";
     pub const MBOX_V1: &'static str = "grist/mbox/v1";
     pub const OUTLOOK_MSG_V1: &'static str = "grist/outlook-msg/v1";
@@ -190,6 +191,7 @@ impl From<&str> for SchemaVersion {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ArtifactKind {
+    Archive,
     Markdown,
     RestructuredText,
     AsciiDoc,

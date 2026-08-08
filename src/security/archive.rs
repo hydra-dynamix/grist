@@ -60,6 +60,15 @@ impl ArchiveSecurityPolicy {
         member: &ArchiveMemberDescriptor<'_>,
     ) -> Result<String, ArchiveRejection> {
         let normalized = normalize_member_path(member.path, self)?;
+        if let Some(target) = member.link_target {
+            normalize_member_path(target, self).map_err(|_| {
+                rejection(
+                    "grist.security.archive.unsafe_link_target",
+                    "archive link target is not a safe relative path",
+                    Some(normalized.clone()),
+                )
+            })?;
+        }
         match member.kind {
             ArchiveEntryKind::SymbolicLink | ArchiveEntryKind::HardLink => {
                 return Err(rejection(
@@ -79,15 +88,6 @@ impl ArchiveSecurityPolicy {
                 ));
             }
             _ => {}
-        }
-        if let Some(target) = member.link_target {
-            normalize_member_path(target, self).map_err(|_| {
-                rejection(
-                    "grist.security.archive.unsafe_link_target",
-                    "archive link target is not a safe relative path",
-                    Some(normalized.clone()),
-                )
-            })?;
         }
         Ok(normalized)
     }

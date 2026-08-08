@@ -75,6 +75,7 @@ pub enum ContentKind {
     Text,
     Pdf,
     Zip,
+    Tar,
     Docx,
     Pptx,
     Xlsx,
@@ -1078,6 +1079,7 @@ fn extension_identity(extension: &str) -> Option<(&'static str, &'static str)> {
         "txt" => ("text", "text/plain"),
         "pdf" => ("pdf", "application/pdf"),
         "zip" => ("zip", "application/zip"),
+        "tar" => ("tar", "application/x-tar"),
         "docx" => (
             "docx",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -1171,6 +1173,7 @@ fn media_type_identity(media_type: &str) -> Option<(&'static str, &'static str)>
         "application/x-bibtex" | "text/x-bibtex" => ("bibtex", "application/x-bibtex"),
         "application/pdf" => ("pdf", "application/pdf"),
         "application/zip" => ("zip", "application/zip"),
+        "application/x-tar" | "application/tar" => ("tar", "application/x-tar"),
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document" => (
             "docx",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -1290,6 +1293,7 @@ fn format_for_kind(kind: &ContentKind) -> Option<&'static str> {
         ContentKind::Text => "text",
         ContentKind::Pdf => "pdf",
         ContentKind::Zip => "zip",
+        ContentKind::Tar => "tar",
         ContentKind::Docx => "docx",
         ContentKind::Pptx => "pptx",
         ContentKind::Xlsx => "xlsx",
@@ -1366,6 +1370,7 @@ fn content_kind_for_format(format: &str) -> ContentKind {
         "text" | "plain_text" => ContentKind::Text,
         "pdf" => ContentKind::Pdf,
         "zip" => ContentKind::Zip,
+        "tar" => ContentKind::Tar,
         "docx" | "docm" | "dotx" | "dotm" => ContentKind::Docx,
         "pptx" | "pptm" | "potx" | "ppsx" => ContentKind::Pptx,
         "xlsx" => ContentKind::Xlsx,
@@ -1556,6 +1561,7 @@ fn is_binary_content(kind: &ContentKind) -> bool {
         kind,
         ContentKind::Pdf
             | ContentKind::Zip
+            | ContentKind::Tar
             | ContentKind::Docx
             | ContentKind::Pptx
             | ContentKind::Xlsx

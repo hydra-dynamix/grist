@@ -974,7 +974,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                         "archive ingestion requires --kind or a recognized filename extension",
                     )?;
                 let ingestor = grist::ingest::Ingestor::builtin()?;
-                let decoders = grist::container::ContainerDecoderRegistry::new();
+                let decoders = grist::archive::builtin_decoder_registry()?;
                 let mode = if inventory_only {
                     grist::container::ContainerArtifactMode::InventoryOnly
                 } else {

@@ -282,7 +282,7 @@ fn segment_validate_archive_and_capabilities_are_structured() {
     ]);
     assert_eq!(traversal["request_id"], "archive-1");
     assert_eq!(traversal["container_format"], "zip");
-    assert_eq!(traversal["status"], "unsupported");
+    assert_eq!(traversal["status"], "complete");
 
     let capabilities = run_json(&["capabilities"]);
     assert_eq!(

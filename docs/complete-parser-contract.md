@@ -198,7 +198,7 @@ Every row inherits §6: detection, authoritative typed payload, meaningful graph
 | Code | Tree-sitter Rust, Python, JavaScript, TypeScript, TSX, JSX | formats/code; `code` | format-code-primary-languages | **partial** — Rust/Python/TypeScript/TSX/JSX modules; JS/full semantics incomplete. |
 | Code | Go, Java, Kotlin, C, C++, C#, Ruby, PHP, Swift, Bash, SQL, CSS registry | formats/code; `code` | format-code-language-registry | **absent**. |
 | Repository | Cargo, npm/pnpm/yarn, Python packaging, Maven/Gradle, Go, Dockerfile, Compose, CI, Kubernetes manifests/lockfiles | formats/manifests; `code` | format-manifests-lockfiles | **conforming** - typed inert payloads retain raw declarations, dependency/reference provenance and exact locators; malformed and unknown syntax remain recoverable; detection, graph, schema, and registry-backed CLI routing are integrated without script, template, or network execution. |
-| Archive | ZIP, ZIP64, TAR | formats/archive; `archives` | format-archive-zip-tar | **absent**. |
+| Archive | ZIP, ZIP64, TAR | formats/archive; `archives` | format-archive-zip-tar | **conforming** — ordered path/header/compression/hash inventory, ZIP64 and TAR metadata, encrypted/unsupported outcomes, nested traversal, graph/schema/CLI surfaces, and mode-invariant identities share bounded traversal/collision/link/device/bomb policy. |
 | Compression | GZIP, BZIP2, XZ, Zstandard, 7z, compound packages | formats/compression; `archives` | format-compression-7z | **absent**. |
 | Image | PNG, JPEG, TIFF, WebP, GIF, BMP, HEIF/HEIC, SVG, camera metadata | formats/image; `media` | format-image-native | **absent**. |
 | Subtitle | SRT, WebVTT, TTML, embedded subtitle tracks | formats/subtitle; `media` | format-subtitles | **absent**. |

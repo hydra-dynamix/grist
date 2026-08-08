@@ -21,10 +21,10 @@ pub use materialize::{
     ArtifactMaterializationError, ArtifactMaterializationOutcome, MaterializationRequest,
 };
 pub use recursion::{
-    BudgetAllocationNode, ContainerArtifactMode, ContainerBudgetTree, ContainerChild,
-    ContainerChildStatus, ContainerClass, ContainerDecodeContext, ContainerDecodeFailure,
-    ContainerDecoder, ContainerDecoderRegistry, ContainerMember, ContainerMemberBody,
-    ContainerParseOptions, ContainerParseRequest, ContainerRecursor, ContainerRegistryError,
-    ContainerTraversal, ContainerTraversalError, ContainerUnavailable, ContainerUnavailableKind,
-    ParentRelativeLocator,
+    ArchiveMemberMetadata, BudgetAllocationNode, ContainerArtifactMode, ContainerBudgetTree,
+    ContainerChild, ContainerChildStatus, ContainerClass, ContainerDecodeContext,
+    ContainerDecodeFailure, ContainerDecoder, ContainerDecoderRegistry, ContainerMember,
+    ContainerMemberBody, ContainerParseOptions, ContainerParseRequest, ContainerRecursor,
+    ContainerRegistryError, ContainerTraversal, ContainerTraversalError, ContainerUnavailable,
+    ContainerUnavailableKind, ParentRelativeLocator,
 };

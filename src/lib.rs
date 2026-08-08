@@ -1,4 +1,6 @@
 //! Grist interpretation utility library.
+#[cfg(feature = "archives")]
+pub mod archive;
 
 #[cfg(feature = "basin")]
 pub mod basin;

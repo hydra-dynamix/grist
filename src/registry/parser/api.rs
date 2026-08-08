@@ -1,7 +1,8 @@
 use super::super::ParserDescriptor;
 use crate::core::{
-    DecodedContentIdentity, Diagnostic, Envelope, NetworkAccess, OperationControl, OperationStatus,
-    ProvenanceStep, Provider, ProviderInvocation, ProviderKind, ResolvedParseRequest, SourceInfo,
+    BudgetSelection, DecodedContentIdentity, Diagnostic, Envelope, NetworkAccess, OperationControl,
+    OperationStatus, ParseOptions, ProvenanceStep, Provider, ProviderInvocation, ProviderKind,
+    ProviderSet, ResolvedParseRequest, SourceInfo,
 };
 use crate::decode::{DecodeError, DecodeOptions, DecodedText, decode_text};
 use crate::provider::{ProviderContractError, ProviderRequest, ProviderResponse};
@@ -52,6 +53,9 @@ impl<'a> ParserContext<'a> {
             decoded: OnceLock::new(),
         }
     }
+    pub fn request_id(&self) -> &crate::core::RequestId {
+        &self.request.request_id
+    }
 
     pub fn bytes(&self) -> &[u8] {
         self.request.input.raw_bytes()
@@ -67,6 +71,18 @@ impl<'a> ParserContext<'a> {
 
     pub fn control(&self) -> &OperationControl {
         &self.request.control
+    }
+
+    pub fn parse_options(&self) -> &ParseOptions {
+        &self.request.options
+    }
+
+    pub fn budget_selection(&self) -> &BudgetSelection {
+        &self.request.budget
+    }
+
+    pub fn providers(&self) -> &ProviderSet {
+        &self.request.providers
     }
 
     pub fn consume_cells(&self, count: u64) -> Result<(), ParserError> {

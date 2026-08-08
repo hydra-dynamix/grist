@@ -35,6 +35,13 @@ pub(super) fn signals(bytes: &[u8], diagnostics: &mut Vec<Diagnostic>) -> Vec<Si
             "ZIP container signature",
             0.90,
         ))
+    } else if is_tar(bytes) {
+        Some(magic(
+            "tar",
+            "application/x-tar",
+            "TAR header signature and checksum",
+            0.98,
+        ))
     } else {
         image_signature(bytes).or_else(|| other_signature(bytes))
     };
@@ -170,6 +177,36 @@ fn other_signature(bytes: &[u8]) -> Option<Signal> {
     }
 }
 
+pub(super) fn is_tar(bytes: &[u8]) -> bool {
+    if bytes.len() < 512 {
+        return false;
+    }
+    if bytes[..512].iter().all(|byte| *byte == 0) {
+        return bytes.len() >= 1024 && bytes[512..1024].iter().all(|byte| *byte == 0);
+    }
+    let Some(stored) = parse_tar_octal(&bytes[148..156]) else {
+        return false;
+    };
+    let calculated = bytes[..512]
+        .iter()
+        .enumerate()
+        .map(|(index, byte)| {
+            if (148..156).contains(&index) {
+                u64::from(b' ')
+            } else {
+                u64::from(*byte)
+            }
+        })
+        .sum::<u64>();
+    stored == calculated
+}
+
+fn parse_tar_octal(bytes: &[u8]) -> Option<u64> {
+    let text = std::str::from_utf8(bytes).ok()?.trim_matches(['\0', ' ']);
+    (!text.is_empty())
+        .then(|| u64::from_str_radix(text, 8).ok())
+        .flatten()
+}
 fn contains_utf16le_ascii(bytes: &[u8], needle: &str) -> bool {
     let encoded = needle
         .bytes()
