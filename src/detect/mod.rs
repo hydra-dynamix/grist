@@ -16,7 +16,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 #[cfg(feature = "media")]
-pub(crate) use signatures::has_svg_root;
+pub(crate) use signatures::{has_svg_root, has_ttml_root};
 
 #[cfg(feature = "schemas")]
 use schemars::JsonSchema;
@@ -93,6 +93,9 @@ pub enum ContentKind {
     Msg,
     ICalendar,
     VCard,
+    Srt,
+    WebVtt,
+    Ttml,
     JupyterNotebook,
     Sqlite,
     Png,
@@ -1318,6 +1321,9 @@ fn format_for_kind(kind: &ContentKind) -> Option<&'static str> {
         ContentKind::Msg => "msg",
         ContentKind::ICalendar => "icalendar",
         ContentKind::VCard => "vcard",
+        ContentKind::Srt => "srt",
+        ContentKind::WebVtt => "webvtt",
+        ContentKind::Ttml => "ttml",
         ContentKind::JupyterNotebook => "ipynb",
         ContentKind::Sqlite => "sqlite",
         ContentKind::Png => "png",
@@ -1397,6 +1403,9 @@ fn content_kind_for_format(format: &str) -> ContentKind {
         "msg" | "outlook_msg" => ContentKind::Msg,
         "icalendar" | "ics" | "calendar" | "text_calendar" => ContentKind::ICalendar,
         "vcard" | "vcf" | "contact" | "text_vcard" => ContentKind::VCard,
+        "srt" | "subrip" => ContentKind::Srt,
+        "webvtt" | "vtt" => ContentKind::WebVtt,
+        "ttml" | "dfxp" => ContentKind::Ttml,
         "ipynb" | "jupyter" | "jupyter_notebook" | "notebook" => ContentKind::JupyterNotebook,
         "sqlite" => ContentKind::Sqlite,
         "png" => ContentKind::Png,

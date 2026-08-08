@@ -352,7 +352,13 @@ impl<'a> RenderState<'a> {
         let kind = node.kind.clone();
         let text = display_text(node).unwrap_or_default().to_string();
         match kind {
-            DocumentNodeKind::Document => self.render_children(index),
+            DocumentNodeKind::Document
+            | DocumentNodeKind::Transcript
+            | DocumentNodeKind::MediaTrack => self.render_children(index),
+            DocumentNodeKind::Cue => {
+                self.push(index, &format!("{}\n\n", escape_markdown(&text)));
+                Ok(())
+            }
             DocumentNodeKind::Heading | DocumentNodeKind::Section => {
                 let level = heading_level(node);
                 self.push(index, &format!("{} ", "#".repeat(level)));
@@ -574,7 +580,13 @@ impl<'a> RenderState<'a> {
         let kind = node.kind.clone();
         let text = display_text(node).unwrap_or_default().to_string();
         match kind {
-            DocumentNodeKind::Document => self.render_children(index),
+            DocumentNodeKind::Document
+            | DocumentNodeKind::Transcript
+            | DocumentNodeKind::MediaTrack => self.render_children(index),
+            DocumentNodeKind::Cue => {
+                self.push(index, &format!("{}\n\n", escape_latex_text(&text)));
+                Ok(())
+            }
             DocumentNodeKind::Heading | DocumentNodeKind::Section => {
                 let command = match heading_level(node) {
                     1 => "section",
@@ -677,7 +689,18 @@ impl<'a> RenderState<'a> {
         let text = display_text(node).unwrap_or_default().to_string();
         let node_id = escape_active_html(&node.id);
         match kind {
-            DocumentNodeKind::Document => {
+            DocumentNodeKind::MediaTrack => self.render_children(index),
+            DocumentNodeKind::Cue => {
+                self.push(
+                    index,
+                    &format!(
+                        r#"<p data-grist-node="{node_id}" data-grist-kind="cue">{}</p>"#,
+                        escape_active_html(&text)
+                    ),
+                );
+                Ok(())
+            }
+            DocumentNodeKind::Document | DocumentNodeKind::Transcript => {
                 self.push(index, &format!(r#"<article data-grist-node="{node_id}">"#));
                 self.render_children(index)?;
                 self.push(index, "</article>");
@@ -781,7 +804,15 @@ impl<'a> RenderState<'a> {
         let kind = node.kind.clone();
         let text = display_text(node).unwrap_or_default().to_string();
         match kind {
-            DocumentNodeKind::Document | DocumentNodeKind::List => self.render_children(index),
+            DocumentNodeKind::Document
+            | DocumentNodeKind::List
+            | DocumentNodeKind::Transcript
+            | DocumentNodeKind::MediaTrack => self.render_children(index),
+            DocumentNodeKind::Cue => {
+                self.push(index, &text);
+                self.push(index, "\n");
+                Ok(())
+            }
             DocumentNodeKind::Heading | DocumentNodeKind::Section => {
                 self.push(index, &text);
                 self.push(index, "\n");

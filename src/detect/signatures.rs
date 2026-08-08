@@ -107,7 +107,33 @@ pub(crate) fn has_svg_root(bytes: &[u8]) -> bool {
         .is_some_and(|name| name.rsplit(|byte| *byte == b':').next() == Some(b"svg"))
 }
 
-fn xml_root_name(bytes: &[u8]) -> Option<&[u8]> {
+#[cfg(feature = "media")]
+pub(crate) fn has_ttml_root(bytes: &[u8]) -> bool {
+    let Some((start, end)) = xml_root_bounds(bytes) else {
+        return false;
+    };
+    let name = &bytes[start..end];
+    if name.rsplit(|byte| *byte == b':').next() != Some(b"tt") {
+        return false;
+    }
+    let prefix = name
+        .iter()
+        .position(|byte| *byte == b':')
+        .map(|colon| &name[..colon]);
+    root_namespace(bytes, end, prefix).is_some_and(|namespace| {
+        matches!(
+            namespace,
+            b"http://www.w3.org/ns/ttml" | b"http://www.w3.org/2006/10/ttaf1"
+        )
+    })
+}
+
+pub(crate) fn xml_root_name(bytes: &[u8]) -> Option<&[u8]> {
+    let (start, end) = xml_root_bounds(bytes)?;
+    Some(&bytes[start..end])
+}
+
+fn xml_root_bounds(bytes: &[u8]) -> Option<(usize, usize)> {
     std::str::from_utf8(bytes).ok()?;
     let mut cursor = usize::from(bytes.starts_with(b"\xef\xbb\xbf")) * 3;
     loop {
@@ -136,7 +162,59 @@ fn xml_root_name(bytes: &[u8]) -> Option<&[u8]> {
         .iter()
         .take_while(|byte| !byte.is_ascii_whitespace() && !matches!(byte, b'/' | b'>'))
         .count();
-    (length > 0).then(|| &bytes[start..start + length])
+    (length > 0).then_some((start, start + length))
+}
+
+#[cfg(feature = "media")]
+fn root_namespace<'a>(
+    bytes: &'a [u8],
+    mut cursor: usize,
+    prefix: Option<&[u8]>,
+) -> Option<&'a [u8]> {
+    loop {
+        cursor += bytes
+            .get(cursor..)?
+            .iter()
+            .take_while(|byte| byte.is_ascii_whitespace())
+            .count();
+        if matches!(bytes.get(cursor), Some(b'/' | b'>')) {
+            return None;
+        }
+        let name_start = cursor;
+        cursor += bytes[cursor..]
+            .iter()
+            .take_while(|byte| !byte.is_ascii_whitespace() && !matches!(byte, b'=' | b'/' | b'>'))
+            .count();
+        let attribute_name = &bytes[name_start..cursor];
+        cursor += bytes[cursor..]
+            .iter()
+            .take_while(|byte| byte.is_ascii_whitespace())
+            .count();
+        if bytes.get(cursor) != Some(&b'=') {
+            return None;
+        }
+        cursor += 1;
+        cursor += bytes[cursor..]
+            .iter()
+            .take_while(|byte| byte.is_ascii_whitespace())
+            .count();
+        let quote = *bytes.get(cursor)?;
+        if !matches!(quote, b'\'' | b'"') {
+            return None;
+        }
+        cursor += 1;
+        let value_start = cursor;
+        cursor += bytes[cursor..].iter().position(|byte| *byte == quote)?;
+        let value = &bytes[value_start..cursor];
+        cursor += 1;
+        let is_namespace = match prefix {
+            Some(prefix) => attribute_name.starts_with(b"xmlns:") && &attribute_name[6..] == prefix,
+            None => attribute_name == b"xmlns",
+        };
+        if is_namespace {
+            return Some(value);
+        }
+    }
 }
 
 fn find_terminator(haystack: &[u8], needle: &[u8]) -> Option<usize> {

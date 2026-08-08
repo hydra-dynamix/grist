@@ -70,6 +70,8 @@ pub mod sqlite;
 pub mod structured_binary;
 #[cfg(feature = "serialization")]
 pub mod structured_text;
+#[cfg(feature = "media")]
+pub mod subtitle;
 pub mod text;
 #[cfg(feature = "typescript")]
 pub mod typescript;

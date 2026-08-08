@@ -95,6 +95,8 @@ pub mod spreadsheet_ooxml;
 pub mod sqlite;
 #[cfg(feature = "structured-binary")]
 pub mod structured_binary;
+#[cfg(feature = "media")]
+pub mod subtitle;
 pub mod summary;
 #[cfg(any(feature = "javascript", feature = "typescript"))]
 pub mod typescript;

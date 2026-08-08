@@ -4,6 +4,50 @@ use crate::registry::ParserRegistry;
 
 pub(super) fn signals(text: &str, registry: &ParserRegistry) -> Vec<Signal> {
     let mut signals = Vec::new();
+    #[cfg(feature = "media")]
+    {
+        let first_line = text
+            .strip_prefix('\u{feff}')
+            .unwrap_or(text)
+            .lines()
+            .next()
+            .unwrap_or("");
+        if first_line == "WEBVTT"
+            || first_line.strip_prefix("WEBVTT").is_some_and(|tail| {
+                (tail.starts_with(' ') || tail.starts_with('\t')) && !tail.contains("-->")
+            })
+        {
+            signals.push(
+                Signal::new(
+                    "webvtt",
+                    Some("text/vtt"),
+                    0.98,
+                    DetectionEvidenceKind::GrammarProbe,
+                    "WebVTT signature header",
+                )
+                .decisive(),
+            );
+        } else if crate::detect::has_ttml_root(text.as_bytes()) {
+            signals.push(
+                Signal::new(
+                    "ttml",
+                    Some("application/ttml+xml"),
+                    0.94,
+                    DetectionEvidenceKind::GrammarProbe,
+                    "TTML root and timed-text structure",
+                )
+                .decisive(),
+            );
+        } else if text.lines().any(is_srt_timing_line) {
+            signals.push(Signal::new(
+                "srt",
+                Some("application/x-subrip"),
+                0.82,
+                DetectionEvidenceKind::GrammarProbe,
+                "SubRip timing arrow and clock fields",
+            ));
+        }
+    }
     #[cfg(feature = "rust")]
     if rust_markers(text) {
         if let Some(signal) = probe_rust(text) {
@@ -52,6 +96,36 @@ pub(super) fn signals(text: &str, registry: &ParserRegistry) -> Vec<Signal> {
         }
     }
     signals
+}
+
+#[cfg(feature = "media")]
+fn is_srt_timing_line(line: &str) -> bool {
+    let Some((start, end)) = line.split_once("-->") else {
+        return false;
+    };
+    !end.contains("-->")
+        && is_srt_clock(start.trim())
+        && end.split_whitespace().next().is_some_and(is_srt_clock)
+}
+
+#[cfg(feature = "media")]
+fn is_srt_clock(value: &str) -> bool {
+    let Some((clock, millis)) = value.split_once(',') else {
+        return false;
+    };
+    if millis.len() != 3 || !millis.bytes().all(|byte| byte.is_ascii_digit()) {
+        return false;
+    }
+    let parts = clock.split(':').collect::<Vec<_>>();
+    parts.len() == 3
+        && parts[0].len() >= 2
+        && parts[1].len() == 2
+        && parts[2].len() == 2
+        && parts
+            .iter()
+            .all(|part| part.bytes().all(|byte| byte.is_ascii_digit()))
+        && parts[1].parse::<u8>().is_ok_and(|value| value < 60)
+        && parts[2].parse::<u8>().is_ok_and(|value| value < 60)
 }
 fn probe_signal(
     format: &str,

@@ -1357,6 +1357,33 @@ fn registrations() -> Vec<Registration> {
             false,
             crate::image::ImageOptions
         );
+        add!(
+            "subtitle",
+            "media",
+            SchemaVersion::SUBTITLE_V1,
+            SchemaKind::Payload,
+            "grist.subtitle.v1.schema.json",
+            false,
+            crate::subtitle::SubtitleDocument
+        );
+        add!(
+            "subtitle-envelope",
+            "envelope",
+            SchemaVersion::ENVELOPE_V2,
+            SchemaKind::Envelope,
+            "grist.subtitle-envelope.v2.schema.json",
+            false,
+            crate::core::Envelope<crate::subtitle::SubtitleDocument>
+        );
+        add!(
+            "subtitle-options",
+            "subtitle-options",
+            "grist/subtitle-options/v1",
+            SchemaKind::Options,
+            "grist.subtitle-options.v1.schema.json",
+            false,
+            crate::subtitle::SubtitleOptions
+        );
     }
     #[cfg(feature = "word-ooxml")]
     {

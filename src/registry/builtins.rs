@@ -59,6 +59,7 @@ fn descriptor(
             | ArtifactKind::Epub
             | ArtifactKind::Pdf
             | ArtifactKind::Image
+            | ArtifactKind::Subtitle
             | ArtifactKind::WordOoxml
             | ArtifactKind::PresentationOoxml
             | ArtifactKind::SpreadsheetOoxml
@@ -193,6 +194,7 @@ fn register_feature_parsers(registry: &mut ParserRegistry) -> Result<(), ParserR
     register_epub(registry)?;
     register_pdf(registry)?;
     register_image(registry)?;
+    register_subtitles(registry)?;
     register_word_ooxml(registry)?;
     register_presentation_ooxml(registry)?;
     register_spreadsheet_ooxml(registry)?;
@@ -671,6 +673,123 @@ fn register_image(registry: &mut ParserRegistry) -> Result<(), ParserRegistryErr
         metadata.options = OptionsMetadata::new(
             SchemaMetadata::new("image-options", "grist/image-options/v1"),
             image_options_defaults(),
+        );
+        register_disabled(registry, metadata, "media")?;
+    }
+    Ok(())
+}
+
+type SubtitleFormatDefinition = (
+    &'static str,
+    &'static [&'static str],
+    &'static [&'static str],
+    &'static [&'static str],
+);
+
+fn subtitle_format_definitions() -> &'static [SubtitleFormatDefinition] {
+    &[
+        (
+            "srt",
+            &["subrip"],
+            &["application/x-subrip", "text/srt"],
+            &["srt"],
+        ),
+        ("webvtt", &["vtt"], &["text/vtt"], &["vtt"]),
+        (
+            "ttml",
+            &["dfxp"],
+            &["application/ttml+xml"],
+            &["ttml", "dfxp"],
+        ),
+    ]
+}
+
+fn subtitle_options_defaults() -> serde_json::Value {
+    serde_json::json!({
+        "encoding": null,
+        "max_cues": 100_000,
+        "max_styles": 10_000,
+        "max_tracks": 1_000,
+        "max_regions": 10_000,
+        "max_nesting_depth": 256,
+    })
+}
+
+#[cfg(feature = "media")]
+fn register_subtitles(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    for (id, aliases, media_types, extensions) in subtitle_format_definitions() {
+        let format = FormatMetadata::new(*id, ArtifactKind::Subtitle)
+            .with_aliases(aliases.iter().copied())
+            .with_media_types(media_types.iter().copied())
+            .with_extensions(extensions.iter().copied());
+        let defaults = subtitle_options_defaults();
+        let subtitle_format = match *id {
+            "srt" => crate::subtitle::SubtitleFormat::Srt,
+            "webvtt" => crate::subtitle::SubtitleFormat::WebVtt,
+            _ => crate::subtitle::SubtitleFormat::Ttml,
+        };
+        let mut metadata = descriptor(
+            &format!("grist.{id}"),
+            format,
+            crate::subtitle::parser_info(subtitle_format),
+            crate::core::SchemaVersion::SUBTITLE_V1,
+            Some("media"),
+            defaults.clone(),
+        );
+        metadata.payload_schema =
+            SchemaMetadata::new("subtitle", crate::core::SchemaVersion::SUBTITLE_V1);
+        metadata.options = OptionsMetadata::new(
+            SchemaMetadata::new("subtitle-options", "grist/subtitle-options/v1"),
+            defaults,
+        );
+        register(registry, metadata, parse_subtitle)?;
+    }
+    Ok(())
+}
+
+#[cfg(feature = "media")]
+fn parse_subtitle(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserError> {
+    let options = decode_options::<crate::subtitle::SubtitleOptions>(context)?;
+    let format = match context.format_id() {
+        "srt" => crate::subtitle::SubtitleFormat::Srt,
+        "webvtt" => crate::subtitle::SubtitleFormat::WebVtt,
+        "ttml" => crate::subtitle::SubtitleFormat::Ttml,
+        value => {
+            return Err(Box::new(Diagnostic::parser_defect(
+                "grist.subtitle",
+                format!("unknown registered subtitle format {value}"),
+            )));
+        }
+    };
+    output(crate::subtitle::parse_subtitle_with_operation_control(
+        context.bytes(),
+        context.source().clone(),
+        format,
+        &options,
+        context.control(),
+    ))
+}
+
+#[cfg(not(feature = "media"))]
+fn register_subtitles(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    for (id, aliases, media_types, extensions) in subtitle_format_definitions() {
+        let format = FormatMetadata::new(*id, ArtifactKind::Subtitle)
+            .with_aliases(aliases.iter().copied())
+            .with_media_types(media_types.iter().copied())
+            .with_extensions(extensions.iter().copied());
+        let mut metadata = descriptor(
+            &format!("grist.{id}"),
+            format,
+            ParserInfo::new(format!("grist.{id}")).with_feature("media"),
+            crate::core::SchemaVersion::SUBTITLE_V1,
+            Some("media"),
+            subtitle_options_defaults(),
+        );
+        metadata.payload_schema =
+            SchemaMetadata::new("subtitle", crate::core::SchemaVersion::SUBTITLE_V1);
+        metadata.options = OptionsMetadata::new(
+            SchemaMetadata::new("subtitle-options", "grist/subtitle-options/v1"),
+            subtitle_options_defaults(),
         );
         register_disabled(registry, metadata, "media")?;
     }
@@ -2718,9 +2837,6 @@ fn unimplemented_formats() -> &'static [(&'static str, &'static str, &'static st
         ("bmp", "bmp", "media"),
         ("heif", "heif", "media"),
         ("svg", "svg", "media"),
-        ("srt", "srt", "media"),
-        ("webvtt", "vtt", "media"),
-        ("ttml", "ttml", "media"),
         ("mp3", "mp3", "media"),
         ("mp4", "mp4", "media"),
         ("wav", "wav", "media"),
