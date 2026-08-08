@@ -843,10 +843,22 @@ fn add_extension_signal(signals: &mut Vec<Signal>, extension: &str) {
     let Some((format, media_type)) = extension_identity(extension) else {
         return;
     };
+    // JavaScript and TypeScript deliberately share a large grammar subset.
+    // For an explicit primary-language suffix, prefer the caller's dialect
+    // label over a successful probe by the sibling grammar. Decisive magic
+    // evidence can still override this non-decisive extension signal.
+    let weight = if matches!(
+        extension,
+        "js" | "mjs" | "cjs" | "jsx" | "ts" | "mts" | "cts" | "tsx"
+    ) {
+        0.82
+    } else {
+        0.55
+    };
     signals.push(Signal::new(
         format,
         Some(media_type),
-        0.55,
+        weight,
         DetectionEvidenceKind::Extension,
         format!(".{extension} extension"),
     ));

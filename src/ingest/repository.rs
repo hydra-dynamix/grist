@@ -1147,7 +1147,11 @@ fn collect_artifact_test_hints(
         return;
     };
     let kind = artifact.get("kind").and_then(Value::as_str);
-    if kind != Some("rust_code") && kind != Some("python_code") && kind != Some("typescript_code") {
+    if kind != Some("rust_code")
+        && kind != Some("python_code")
+        && kind != Some("javascript_code")
+        && kind != Some("typescript_code")
+    {
         return;
     }
     for symbol in artifact
@@ -1180,7 +1184,7 @@ fn collect_artifact_test_hints(
             });
         }
     }
-    if kind == Some("typescript_code") {
+    if matches!(kind, Some("javascript_code" | "typescript_code")) {
         for call in artifact
             .pointer("/payload/calls")
             .and_then(Value::as_array)

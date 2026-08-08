@@ -789,7 +789,7 @@ fn cli_ingests_repo_with_jsx_detection() {
             .as_array()
             .unwrap()
             .iter()
-            .any(|artifact| artifact["kind"] == "typescript_code")
+            .any(|artifact| artifact["kind"] == "javascript_code")
     );
 }
 

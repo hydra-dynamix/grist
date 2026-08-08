@@ -140,7 +140,7 @@ fn detection_and_auto_parse_honor_stdin_hints() {
         &["parse", "jsx", "-"],
         b"export function View() { return <div>Hello</div>; }\n",
     );
-    assert_eq!(jsx["kind"], "typescript_code");
+    assert_eq!(jsx["kind"], "javascript_code");
     assert_eq!(jsx["payload"]["dialect"], "jsx");
 }
 
