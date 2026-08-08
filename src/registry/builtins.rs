@@ -1607,21 +1607,53 @@ fn register_secondary_code(registry: &mut ParserRegistry) -> Result<(), ParserRe
 }
 #[cfg(feature = "archives")]
 fn register_archive(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
-    for (id, media_types, parser) in [
+    for (id, extensions, media_types, parser) in [
         (
             "zip",
+            &["zip"][..],
             &["application/zip"][..],
             parse_zip as fn(&mut ParserContext<'_>) -> Result<ParserOutput, ParserError>,
         ),
         (
             "tar",
+            &["tar"][..],
             &["application/x-tar", "application/tar"][..],
             parse_tar,
         ),
+        (
+            "gzip",
+            &["gz", "gzip"][..],
+            &["application/gzip", "application/x-gzip"][..],
+            parse_gzip,
+        ),
+        (
+            "bzip2",
+            &["bz2"][..],
+            &["application/x-bzip2"][..],
+            parse_bzip2,
+        ),
+        ("xz", &["xz"][..], &["application/x-xz"][..], parse_xz),
+        (
+            "zstd",
+            &["zst", "zstd"][..],
+            &["application/zstd"][..],
+            parse_zstandard,
+        ),
+        (
+            "seven_zip",
+            &["7z"][..],
+            &["application/x-7z-compressed"][..],
+            parse_seven_zip,
+        ),
     ] {
-        let format = FormatMetadata::new(id, ArtifactKind::Archive)
-            .with_extensions([id])
+        let mut format = FormatMetadata::new(id, ArtifactKind::Archive)
+            .with_extensions(extensions.iter().copied())
             .with_media_types(media_types.iter().copied());
+        if id == "zstd" {
+            format = format.with_aliases(["zstandard"]);
+        } else if id == "seven_zip" {
+            format = format.with_aliases(["7z"]);
+        }
         register(
             registry,
             descriptor(
@@ -1679,17 +1711,65 @@ fn parse_tar(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserErro
     parse_archive(context, "tar")
 }
 
+#[cfg(feature = "archives")]
+fn parse_gzip(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserError> {
+    parse_archive(context, "gzip")
+}
+
+#[cfg(feature = "archives")]
+fn parse_bzip2(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserError> {
+    parse_archive(context, "bzip2")
+}
+
+#[cfg(feature = "archives")]
+fn parse_xz(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserError> {
+    parse_archive(context, "xz")
+}
+
+#[cfg(feature = "archives")]
+fn parse_zstandard(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserError> {
+    parse_archive(context, "zstandard")
+}
+
+#[cfg(feature = "archives")]
+fn parse_seven_zip(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserError> {
+    parse_archive(context, "7z")
+}
+
 #[cfg(not(feature = "archives"))]
 fn register_archive(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
-    for (id, media_types) in [
-        ("zip", &["application/zip"][..]),
-        ("tar", &["application/x-tar", "application/tar"][..]),
+    for (id, extensions, media_types) in [
+        ("zip", &["zip"][..], &["application/zip"][..]),
+        (
+            "tar",
+            &["tar"][..],
+            &["application/x-tar", "application/tar"][..],
+        ),
+        (
+            "gzip",
+            &["gz", "gzip"][..],
+            &["application/gzip", "application/x-gzip"][..],
+        ),
+        ("bzip2", &["bz2"][..], &["application/x-bzip2"][..]),
+        ("xz", &["xz"][..], &["application/x-xz"][..]),
+        ("zstd", &["zst", "zstd"][..], &["application/zstd"][..]),
+        (
+            "seven_zip",
+            &["7z"][..],
+            &["application/x-7z-compressed"][..],
+        ),
     ] {
+        let mut format = FormatMetadata::new(id, ArtifactKind::Archive)
+            .with_extensions(extensions.iter().copied())
+            .with_media_types(media_types.iter().copied());
+        if id == "zstd" {
+            format = format.with_aliases(["zstandard"]);
+        } else if id == "seven_zip" {
+            format = format.with_aliases(["7z"]);
+        }
         let metadata = descriptor(
             &format!("grist.archive.{id}"),
-            FormatMetadata::new(id, ArtifactKind::Archive)
-                .with_extensions([id])
-                .with_media_types(media_types.iter().copied()),
+            format,
             ParserInfo::new("grist.archive").with_feature("archives"),
             crate::core::SchemaVersion::ARCHIVE_V1,
             Some("archives"),
@@ -2508,13 +2588,6 @@ fn unimplemented_formats() -> &'static [(&'static str, &'static str, &'static st
         ("ost", "ost", "email-message"),
         ("tnef", "dat", "email-message"),
         ("smime", "p7m", "email-message"),
-        ("zip", "zip", "archives"),
-        ("tar", "tar", "archives"),
-        ("gzip", "gz", "archives"),
-        ("bzip2", "bz2", "archives"),
-        ("xz", "xz", "archives"),
-        ("zstandard", "zst", "archives"),
-        ("7z", "7z", "archives"),
         ("png", "png", "media"),
         ("jpeg", "jpg", "media"),
         ("tiff", "tiff", "media"),

@@ -1,14 +1,14 @@
-//! Bounded, inert ZIP/ZIP64 and TAR inventory and traversal.
+//! Bounded, inert archive and compression-container inventory and traversal.
 
 use crate::container::{
-    ArchiveMemberMetadata, ContainerArtifactMode, ContainerClass, ContainerDecodeContext,
-    ContainerDecodeFailure, ContainerDecoder, ContainerDecoderRegistry, ContainerMember,
-    ContainerParseOptions, ContainerParseRequest, ContainerRecursor, ContainerRegistryError,
-    ContainerTraversal, ContainerTraversalError, ContainerUnavailable, ContainerUnavailableKind,
-    ContentAddressedArtifactSink, ParentRelativeLocator,
+    ArchiveMemberMetadata, ContainerArtifactMode, ContainerChildStatus, ContainerClass,
+    ContainerDecodeContext, ContainerDecodeFailure, ContainerDecoder, ContainerDecoderRegistry,
+    ContainerMember, ContainerParseOptions, ContainerParseRequest, ContainerRecursor,
+    ContainerRegistryError, ContainerTraversal, ContainerTraversalError, ContainerUnavailable,
+    ContainerUnavailableKind, ContentAddressedArtifactSink, ParentRelativeLocator,
 };
 use crate::core::{
-    ArtifactKind, BudgetProfile, BudgetSelection, Envelope, FormatHint, IndexPosition,
+    ArtifactKind, BudgetProfile, BudgetSelection, Diagnostic, Envelope, FormatHint, IndexPosition,
     LocationComponent, OperationControl, OperationKind, OperationStatus, ParserInfo, RequestId,
     SchemaVersion, SourceInfo,
 };
@@ -35,6 +35,12 @@ pub enum ArchiveFormat {
     Zip,
     Zip64,
     Tar,
+    Gzip,
+    Bzip2,
+    Xz,
+    Zstandard,
+    #[serde(rename = "7z")]
+    SevenZ,
 }
 
 impl ArchiveFormat {
@@ -42,6 +48,11 @@ impl ArchiveFormat {
         match self {
             Self::Zip | Self::Zip64 => "zip",
             Self::Tar => "tar",
+            Self::Gzip => "gzip",
+            Self::Bzip2 => "bzip2",
+            Self::Xz => "xz",
+            Self::Zstandard => "zstandard",
+            Self::SevenZ => "7z",
         }
     }
 }
@@ -101,8 +112,13 @@ pub enum ArchiveParseError {
 
 pub fn parser_info() -> ParserInfo {
     ParserInfo::new(PARSER)
-        .with_implementation("zip + tar", "4.6.1/0.4.46")
-        .with_specification_version("ZIP APPNOTE 6.3.10; POSIX.1-2001 pax")
+        .with_implementation(
+            "zip + tar + compression containers",
+            "zip 4.6.1; tar 0.4.46; flate2 1.1; bzip2 0.6.1; xz2 0.1.7; zstd 0.13.3; sevenz-rust 0.6.1",
+        )
+        .with_specification_version(
+            "ZIP APPNOTE 6.3.10; POSIX.1-2001 pax; RFC 1952; XZ; Zstandard; 7z",
+        )
         .with_feature("archives")
 }
 
@@ -114,6 +130,11 @@ pub fn archive_format(bytes: &[u8], hint: Option<&str>) -> Option<ArchiveFormat>
             ArchiveFormat::Zip
         }),
         Some("tar") => Some(ArchiveFormat::Tar),
+        Some("gzip") => Some(ArchiveFormat::Gzip),
+        Some("bzip2") => Some(ArchiveFormat::Bzip2),
+        Some("xz") => Some(ArchiveFormat::Xz),
+        Some("zstandard") => Some(ArchiveFormat::Zstandard),
+        Some("7z") => Some(ArchiveFormat::SevenZ),
         Some(_) => None,
         None if is_zip(bytes) => Some(if is_zip64(bytes) {
             ArchiveFormat::Zip64
@@ -121,6 +142,11 @@ pub fn archive_format(bytes: &[u8], hint: Option<&str>) -> Option<ArchiveFormat>
             ArchiveFormat::Zip
         }),
         None if is_tar(bytes) => Some(ArchiveFormat::Tar),
+        None if is_gzip(bytes) => Some(ArchiveFormat::Gzip),
+        None if is_bzip2(bytes) => Some(ArchiveFormat::Bzip2),
+        None if is_xz(bytes) => Some(ArchiveFormat::Xz),
+        None if is_zstandard(bytes) => Some(ArchiveFormat::Zstandard),
+        None if is_seven_zip(bytes) => Some(ArchiveFormat::SevenZ),
         None => None,
     }
 }
@@ -129,6 +155,10 @@ pub fn builtin_decoder_registry() -> Result<ContainerDecoderRegistry, ContainerR
     let mut registry = ContainerDecoderRegistry::new();
     registry.register(Arc::new(ZipDecoder))?;
     registry.register(Arc::new(TarDecoder))?;
+    for format in ["gzip", "bzip2", "xz", "zstandard"] {
+        registry.register(Arc::new(CompressionDecoder(format)))?;
+    }
+    registry.register(Arc::new(SevenZipDecoder))?;
     Ok(registry)
 }
 
@@ -146,7 +176,7 @@ fn traverse_archive_controlled(
 ) -> Result<ContainerTraversal, ArchiveParseError> {
     if !matches!(
         normalize_format(&request.container_format).as_str(),
-        "zip" | "tar"
+        "zip" | "tar" | "gzip" | "bzip2" | "xz" | "zstandard" | "7z"
     ) {
         return Err(ArchiveParseError::UnsupportedFormat(
             request.container_format.clone(),
@@ -287,6 +317,291 @@ impl ContainerDecoder for TarDecoder {
     ) -> Result<Vec<ContainerMember>, ContainerDecodeFailure> {
         decode_tar(context)
     }
+}
+
+#[derive(Debug)]
+pub struct CompressionDecoder(&'static str);
+
+impl ContainerDecoder for CompressionDecoder {
+    fn format(&self) -> &str {
+        self.0
+    }
+
+    fn class(&self) -> ContainerClass {
+        ContainerClass::Archive
+    }
+
+    fn decode(
+        &self,
+        context: &ContainerDecodeContext<'_>,
+    ) -> Result<Vec<ContainerMember>, ContainerDecodeFailure> {
+        decode_compression_stream(context, self.0)
+    }
+}
+
+#[derive(Debug)]
+pub struct SevenZipDecoder;
+
+impl ContainerDecoder for SevenZipDecoder {
+    fn format(&self) -> &str {
+        "7z"
+    }
+
+    fn class(&self) -> ContainerClass {
+        ContainerClass::Archive
+    }
+
+    fn decode(
+        &self,
+        context: &ContainerDecodeContext<'_>,
+    ) -> Result<Vec<ContainerMember>, ContainerDecodeFailure> {
+        decode_seven_zip(context)
+    }
+}
+
+fn decode_compression_stream(
+    context: &ContainerDecodeContext<'_>,
+    format: &str,
+) -> Result<Vec<ContainerMember>, ContainerDecodeFailure> {
+    let input = context.bytes();
+    let signature_valid = match format {
+        "gzip" => is_gzip(input),
+        "bzip2" => is_bzip2(input),
+        "xz" => is_xz(input),
+        "zstandard" => is_zstandard(input),
+        _ => false,
+    };
+    if !signature_valid {
+        return Err(malformed(format!("invalid {format} stream signature")));
+    }
+
+    context.check_archive_preflight(1, input.len() as u64, 0)?;
+    let reader: Box<dyn Read + '_> =
+        match format {
+            "gzip" => Box::new(flate2::read::MultiGzDecoder::new(input)),
+            "bzip2" => Box::new(bzip2::read::MultiBzDecoder::new(input)),
+            "xz" => Box::new(xz2::read::XzDecoder::new_multi_decoder(input)),
+            "zstandard" => Box::new(zstd::stream::read::Decoder::new(input).map_err(|error| {
+                malformed(format!("cannot initialize zstandard decoder: {error}"))
+            })?),
+            _ => return Err(malformed(format!("unknown compression decoder {format}"))),
+        };
+    let bytes = read_controlled(context, reader, input.len() as u64, format)?;
+    let name = compression_member_name(context.source(), format);
+    let locator = member_locator(0, &name)?;
+    let crc32 = if format == "gzip" && input.len() >= 8 {
+        little_u32(input, input.len() - 8)
+    } else {
+        None
+    };
+    let mut member = ContainerMember::available(0, locator, bytes)
+        .with_declared_filename(name.clone())
+        .with_compressed_bytes(input.len() as u64)
+        .with_archive_metadata(ArchiveMemberMetadata {
+            entry_kind: ArchiveEntryKind::RegularFile,
+            compression_method: format.into(),
+            compressed_size: input.len() as u64,
+            uncompressed_size: 0,
+            crc32,
+            mode: None,
+            uid: None,
+            gid: None,
+            modified_time: None,
+            link_target: None,
+            encrypted: false,
+            zip64: false,
+        });
+    let expanded = match &member.body {
+        crate::container::ContainerMemberBody::Available(bytes) => bytes.len() as u64,
+        crate::container::ContainerMemberBody::Unavailable(_) => 0,
+    };
+    if let Some(metadata) = member.archive_metadata.as_mut() {
+        metadata.uncompressed_size = expanded;
+    }
+    if let crate::container::ContainerMemberBody::Available(bytes) = &member.body
+        && let Some(nested) = nested_archive_format(bytes)
+    {
+        member = member.with_nested_container_format(nested);
+    }
+    if let Some(hint) = member_hint(&name) {
+        member = member.with_format_hint(hint);
+    }
+    Ok(vec![member])
+}
+
+fn read_controlled(
+    context: &ContainerDecodeContext<'_>,
+    mut reader: impl Read,
+    compressed: u64,
+    label: &str,
+) -> Result<Vec<u8>, ContainerDecodeFailure> {
+    let mut output = Vec::new();
+    let mut chunk = [0_u8; 32 * 1024];
+    loop {
+        context.checkpoint()?;
+        let count = reader
+            .read(&mut chunk)
+            .map_err(|error| malformed(format!("cannot decode {label} stream: {error}")))?;
+        if count == 0 {
+            break;
+        }
+        let next = output.len().saturating_add(count) as u64;
+        context.check_archive_preflight(1, compressed, next)?;
+        output.extend_from_slice(&chunk[..count]);
+    }
+    Ok(output)
+}
+
+fn decode_seven_zip(
+    context: &ContainerDecodeContext<'_>,
+) -> Result<Vec<ContainerMember>, ContainerDecodeFailure> {
+    if !is_seven_zip(context.bytes()) {
+        return Err(malformed("invalid 7z archive signature"));
+    }
+    let input_len = context.bytes().len() as u64;
+    let mut reader = sevenz_rust::SevenZReader::new(
+        Cursor::new(context.bytes()),
+        input_len,
+        sevenz_rust::Password::empty(),
+    )
+    .map_err(seven_zip_failure)?;
+    let inventory = reader.archive().files.clone();
+    let expanded = inventory
+        .iter()
+        .fold(0_u64, |total, entry| total.saturating_add(entry.size));
+    context.check_archive_preflight(inventory.len() as u64, input_len, expanded)?;
+
+    let mut members = Vec::with_capacity(inventory.len());
+    let mut bounded_failure = None;
+    let result = reader.for_each_entries(|entry, source| {
+        let index = members.len();
+        let path = entry.name.replace('\\', "/");
+        let locator = match member_locator(index, &path) {
+            Ok(locator) => locator,
+            Err(error) => {
+                bounded_failure = Some(error);
+                return Err(sevenz_rust::Error::other("bounded 7z locator failure"));
+            }
+        };
+        let kind = if entry.is_directory {
+            ArchiveEntryKind::Directory
+        } else {
+            ArchiveEntryKind::RegularFile
+        };
+        let metadata = ArchiveMemberMetadata {
+            entry_kind: kind,
+            compression_method: "7z".into(),
+            compressed_size: entry.compressed_size,
+            uncompressed_size: entry.size,
+            crc32: entry.has_crc.then_some(entry.crc as u32),
+            mode: None,
+            uid: None,
+            gid: None,
+            modified_time: None,
+            link_target: None,
+            encrypted: false,
+            zip64: false,
+        };
+        let mut member = if entry.is_anti_item {
+            ContainerMember::unavailable(
+                index as u64,
+                locator,
+                ContainerUnavailable::new(
+                    ContainerUnavailableKind::Unsupported,
+                    "grist.archive.7z_anti_item",
+                )
+                .with_message("7z anti-items are inventoried but not materialized"),
+            )
+        } else if kind == ArchiveEntryKind::Directory {
+            ContainerMember::available(index as u64, locator, Vec::new())
+        } else {
+            match read_controlled(context, source, input_len, "7z member") {
+                Ok(bytes) => {
+                    if bytes.len() as u64 != entry.size {
+                        bounded_failure = Some(malformed(format!(
+                            "7z member {path} expanded length disagrees with its header"
+                        )));
+                        return Err(sevenz_rust::Error::other("bounded 7z length failure"));
+                    }
+                    let nested = nested_archive_format(&bytes);
+                    let mut value = ContainerMember::available(index as u64, locator, bytes);
+                    if let Some(format) = nested {
+                        value = value.with_nested_container_format(format);
+                    }
+                    value
+                }
+                Err(error) => {
+                    bounded_failure = Some(error);
+                    return Err(sevenz_rust::Error::other("bounded 7z decode failure"));
+                }
+            }
+        };
+        member = member
+            .with_declared_filename(path.clone())
+            .with_compressed_bytes(entry.compressed_size)
+            .with_entry_kind(kind)
+            .with_archive_metadata(metadata);
+        if let Some(hint) = member_hint(&path) {
+            member = member.with_format_hint(hint);
+        }
+        members.push(member);
+        Ok(true)
+    });
+    if let Some(error) = bounded_failure {
+        return Err(error);
+    }
+    result.map_err(seven_zip_failure)?;
+    Ok(members)
+}
+
+fn seven_zip_failure(error: sevenz_rust::Error) -> ContainerDecodeFailure {
+    use sevenz_rust::Error;
+    let status = match &error {
+        Error::PasswordRequired | Error::MaybeBadPassword(_) => ContainerChildStatus::Encrypted,
+        Error::ExternalUnsupported
+        | Error::UnsupportedCompressionMethod(_)
+        | Error::Unsupported(_) => ContainerChildStatus::Unsupported,
+        _ => ContainerChildStatus::Failed,
+    };
+    let diagnostic = match status {
+        ContainerChildStatus::Encrypted => {
+            let mut value = Diagnostic::unsupported(
+                PARSER,
+                "7z content is encrypted and no password was supplied",
+            );
+            value.code = "grist.archive.encrypted".into();
+            value
+        }
+        ContainerChildStatus::Unsupported => {
+            Diagnostic::unsupported(PARSER, format!("unsupported 7z method: {error}"))
+        }
+        _ => Diagnostic::malformed(PARSER, format!("cannot decode 7z archive: {error}")),
+    };
+    ContainerDecodeFailure::new(status, diagnostic)
+}
+
+fn compression_member_name(source: &SourceInfo, format: &str) -> String {
+    let candidate = source
+        .display_name
+        .replace('\\', "/")
+        .rsplit('/')
+        .next()
+        .unwrap_or("content")
+        .to_string();
+    let suffixes: &[&str] = match format {
+        "gzip" => &[".gzip", ".gz"],
+        "bzip2" => &[".bz2"],
+        "xz" => &[".xz"],
+        "zstandard" => &[".zstandard", ".zstd", ".zst"],
+        _ => &[],
+    };
+    let lower = candidate.to_ascii_lowercase();
+    for suffix in suffixes {
+        if lower.ends_with(suffix) && candidate.len() > suffix.len() {
+            return candidate[..candidate.len() - suffix.len()].to_string();
+        }
+    }
+    "content".into()
 }
 
 #[derive(Clone)]
@@ -951,6 +1266,16 @@ fn nested_archive_format(bytes: &[u8]) -> Option<&'static str> {
         Some("zip")
     } else if is_tar(bytes) {
         Some("tar")
+    } else if is_gzip(bytes) {
+        Some("gzip")
+    } else if is_bzip2(bytes) {
+        Some("bzip2")
+    } else if is_xz(bytes) {
+        Some("xz")
+    } else if is_zstandard(bytes) {
+        Some("zstandard")
+    } else if is_seven_zip(bytes) {
+        Some("7z")
     } else {
         None
     }
@@ -961,6 +1286,11 @@ fn member_hint(path: &str) -> Option<FormatHint> {
     match extension.as_str() {
         "zip" => Some(FormatHint::exact("zip")),
         "tar" => Some(FormatHint::exact("tar")),
+        "gz" | "gzip" => Some(FormatHint::exact("gzip")),
+        "bz2" => Some(FormatHint::exact("bzip2")),
+        "xz" => Some(FormatHint::exact("xz")),
+        "zst" | "zstd" => Some(FormatHint::exact("zstandard")),
+        "7z" => Some(FormatHint::exact("7z")),
         "txt" => Some(FormatHint::exact("text")),
         "md" | "markdown" => Some(FormatHint::exact("markdown")),
         "json" => Some(FormatHint::exact("json")),
@@ -974,6 +1304,31 @@ fn is_zip(bytes: &[u8]) -> bool {
     bytes.starts_with(b"PK\x03\x04")
         || bytes.starts_with(b"PK\x05\x06")
         || bytes.starts_with(b"PK\x07\x08")
+}
+
+fn is_gzip(bytes: &[u8]) -> bool {
+    bytes.starts_with(&[0x1f, 0x8b, 0x08])
+}
+
+fn is_bzip2(bytes: &[u8]) -> bool {
+    bytes.len() >= 4 && bytes.starts_with(b"BZh") && matches!(bytes[3], b'1'..=b'9')
+}
+
+fn is_xz(bytes: &[u8]) -> bool {
+    bytes.starts_with(&[0xfd, b'7', b'z', b'X', b'Z', 0x00])
+}
+
+fn is_zstandard(bytes: &[u8]) -> bool {
+    bytes.starts_with(&[0x28, 0xb5, 0x2f, 0xfd])
+        || bytes.len() >= 4
+            && matches!(
+                u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]),
+                0x184d2a50..=0x184d2a5f
+            )
+}
+
+fn is_seven_zip(bytes: &[u8]) -> bool {
+    bytes.starts_with(&[b'7', b'z', 0xbc, 0xaf, 0x27, 0x1c])
 }
 
 fn is_zip64(bytes: &[u8]) -> bool {
@@ -1081,11 +1436,18 @@ fn parse_tar_octal(bytes: &[u8]) -> Option<u64> {
 }
 
 fn normalize_format(value: &str) -> String {
-    value
+    let normalized = value
         .trim()
         .to_ascii_lowercase()
         .replace(['-', ' '], "_")
-        .replace("zip64", "zip")
+        .replace("zip64", "zip");
+    match normalized.as_str() {
+        "gz" => "gzip".into(),
+        "bz2" | "bzip" => "bzip2".into(),
+        "zst" | "zstd" => "zstandard".into(),
+        "seven_zip" | "7zip" => "7z".into(),
+        _ => normalized,
+    }
 }
 
 fn malformed(message: impl Into<String>) -> ContainerDecodeFailure {

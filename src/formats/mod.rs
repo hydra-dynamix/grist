@@ -4,6 +4,8 @@
 //! source-compatible aliases during the 0.x compatibility window.
 #[cfg(feature = "archives")]
 pub mod archive;
+#[cfg(feature = "archives")]
+pub mod compression;
 
 #[cfg(feature = "asciidoc")]
 pub mod asciidoc;
