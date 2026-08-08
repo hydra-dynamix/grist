@@ -164,6 +164,28 @@ fn traverse(
         .unwrap()
 }
 
+#[cfg(feature = "manifests")]
+fn traverse_with_leaf_payloads(
+    bytes: Vec<u8>,
+    format: &str,
+) -> grist::container::ContainerTraversal {
+    let ingestor = Ingestor::builtin().unwrap();
+    let decoders = builtin_decoder_registry().unwrap();
+    ContainerRecursor::new(&ingestor, &decoders)
+        .parse(
+            ContainerParseRequest::new(
+                RequestId::new("archive-manifest-leaf-test").unwrap(),
+                bytes,
+                SourceInfo::new(format!("manifest-fixture.{format}")),
+                format,
+                ContainerParseOptions::new(ContainerArtifactMode::InlinePayload),
+                BudgetSelection::Profile(BudgetProfile::TrustedUnboundedV1),
+            ),
+            None,
+        )
+        .unwrap()
+}
+
 fn ids(children: &[ContainerChild]) -> Vec<String> {
     children
         .iter()
@@ -171,6 +193,60 @@ fn ids(children: &[ContainerChild]) -> Vec<String> {
             std::iter::once(child.artifact.identity.artifact_id.clone()).chain(ids(&child.children))
         })
         .collect()
+}
+
+#[cfg(feature = "manifests")]
+#[test]
+fn zip_and_tar_leaf_payloads_route_project_and_infrastructure_files_to_manifests() {
+    let entries = [
+        (
+            "package.json",
+            b"{\"dependencies\":{\"serde\":\"1\"}}".as_slice(),
+        ),
+        ("pom.xml", b"<project><dependencies/></project>".as_slice()),
+        (
+            "Cargo.toml",
+            b"[package]\nname = \"demo\"\nversion = \"0.1.0\"\n".as_slice(),
+        ),
+        (
+            ".github/workflows/ci.yml",
+            b"name: ci\non: [push]\njobs: {}\n".as_slice(),
+        ),
+        (
+            "deployment.yaml",
+            b"apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: demo\n".as_slice(),
+        ),
+    ];
+    let zip_entries = entries
+        .iter()
+        .map(|(path, body)| (*path, *body, CompressionMethod::Stored))
+        .collect::<Vec<_>>();
+    let tar_entries = entries
+        .iter()
+        .map(|(path, body)| (*path, EntryType::Regular, *body, None))
+        .collect::<Vec<_>>();
+
+    for traversal in [
+        traverse_with_leaf_payloads(zip_bytes(&zip_entries, false), "zip"),
+        traverse_with_leaf_payloads(tar_bytes(&tar_entries), "tar"),
+    ] {
+        assert_eq!(traversal.children.len(), entries.len());
+        for child in &traversal.children {
+            let parsed = child.parsed.as_ref().unwrap_or_else(|| {
+                panic!(
+                    "{} was not parsed",
+                    child.artifact.declared_filename.as_deref().unwrap()
+                )
+            });
+            assert_eq!(
+                parsed.kind,
+                ArtifactKind::Manifest,
+                "{} was routed to {:?}",
+                child.artifact.declared_filename.as_deref().unwrap(),
+                parsed.kind
+            );
+        }
+    }
 }
 
 #[test]

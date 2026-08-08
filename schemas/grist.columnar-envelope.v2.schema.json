@@ -108,6 +108,7 @@
     },
     "ArtifactKind": {
       "enum": [
+        "archive",
         "markdown",
         "restructured_text",
         "ascii_doc",
@@ -128,6 +129,7 @@
         "javascript_code",
         "typescript_code",
         "code",
+        "manifest",
         "latex",
         "bibliography",
         "serialization",

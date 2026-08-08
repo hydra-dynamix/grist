@@ -106,6 +106,101 @@
       ],
       "type": "object"
     },
+    "ArchiveEntryKind": {
+      "enum": [
+        "regular_file",
+        "directory",
+        "symbolic_link",
+        "hard_link",
+        "block_device",
+        "character_device",
+        "fifo",
+        "socket"
+      ],
+      "type": "string"
+    },
+    "ArchiveMemberMetadata": {
+      "description": "Format-neutral archive header facts retained for every storage mode.",
+      "properties": {
+        "compressed_size": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "compression_method": {
+          "type": "string"
+        },
+        "crc32": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "encrypted": {
+          "type": "boolean"
+        },
+        "entry_kind": {
+          "$ref": "#/definitions/ArchiveEntryKind"
+        },
+        "gid": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "link_target": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mode": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "modified_time": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "uid": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "uncompressed_size": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "zip64": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "compressed_size",
+        "compression_method",
+        "encrypted",
+        "entry_kind",
+        "uncompressed_size",
+        "zip64"
+      ],
+      "type": "object"
+    },
     "ArtifactContent": {
       "description": "Storage representation is deliberately outside the stable artifact identity.",
       "oneOf": [
@@ -239,6 +334,7 @@
     },
     "ArtifactKind": {
       "enum": [
+        "archive",
         "markdown",
         "restructured_text",
         "ascii_doc",
@@ -259,6 +355,7 @@
         "javascript_code",
         "typescript_code",
         "code",
+        "manifest",
         "latex",
         "bibliography",
         "serialization",
@@ -673,6 +770,16 @@
       "properties": {
         "allocation_id": {
           "type": "string"
+        },
+        "archive_metadata": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ArchiveMemberMetadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "artifact": {
           "$ref": "#/definitions/EmbeddedArtifact"

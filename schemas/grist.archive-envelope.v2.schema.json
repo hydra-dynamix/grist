@@ -106,6 +106,394 @@
       ],
       "type": "object"
     },
+    "ArchiveDocument": {
+      "properties": {
+        "format": {
+          "$ref": "#/definitions/ArchiveFormat"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "traversal": {
+          "$ref": "#/definitions/ContainerTraversal"
+        }
+      },
+      "required": [
+        "format",
+        "schema_version",
+        "traversal"
+      ],
+      "type": "object"
+    },
+    "ArchiveEntryKind": {
+      "enum": [
+        "regular_file",
+        "directory",
+        "symbolic_link",
+        "hard_link",
+        "block_device",
+        "character_device",
+        "fifo",
+        "socket"
+      ],
+      "type": "string"
+    },
+    "ArchiveFormat": {
+      "enum": [
+        "zip",
+        "zip64",
+        "tar"
+      ],
+      "type": "string"
+    },
+    "ArchiveMemberMetadata": {
+      "description": "Format-neutral archive header facts retained for every storage mode.",
+      "properties": {
+        "compressed_size": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "compression_method": {
+          "type": "string"
+        },
+        "crc32": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "encrypted": {
+          "type": "boolean"
+        },
+        "entry_kind": {
+          "$ref": "#/definitions/ArchiveEntryKind"
+        },
+        "gid": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "link_target": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mode": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "modified_time": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "uid": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "uncompressed_size": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "zip64": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "compressed_size",
+        "compression_method",
+        "encrypted",
+        "entry_kind",
+        "uncompressed_size",
+        "zip64"
+      ],
+      "type": "object"
+    },
+    "ArtifactContent": {
+      "description": "Storage representation is deliberately outside the stable artifact identity.",
+      "oneOf": [
+        {
+          "description": "Inline representation with its caller-selected threshold made explicit.",
+          "properties": {
+            "bytes": {
+              "items": {
+                "format": "uint8",
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "inline_threshold_bytes": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "storage": {
+              "enum": [
+                "inline"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "bytes",
+            "inline_threshold_bytes",
+            "storage"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "inline_threshold_bytes": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "reference": {
+              "$ref": "#/definitions/ContentAddressedArtifactReference"
+            },
+            "storage": {
+              "enum": [
+                "content_addressed"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "inline_threshold_bytes",
+            "reference",
+            "storage"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "ArtifactDisposition": {
+      "description": "Content-disposition semantics, independent of storage or safety policy.",
+      "enum": [
+        "attachment",
+        "inline",
+        "related",
+        "alternative",
+        "package_part",
+        "unspecified"
+      ],
+      "type": "string"
+    },
+    "ArtifactExtraction": {
+      "description": "Machine-readable extraction result for one child.",
+      "properties": {
+        "diagnostic_codes": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "message": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "$ref": "#/definitions/ArtifactExtractionStatus"
+        },
+        "status_code": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "status_code"
+      ],
+      "type": "object"
+    },
+    "ArtifactExtractionStatus": {
+      "description": "Terminal extraction states retained even when no child bytes are available.",
+      "enum": [
+        "extracted",
+        "quarantined",
+        "inventory_only",
+        "skipped",
+        "encrypted",
+        "unsupported",
+        "rejected",
+        "budget_limited",
+        "failed"
+      ],
+      "type": "string"
+    },
+    "ArtifactIdentity": {
+      "description": "Stable child identity. It excludes filename, disposition, status, and storage mode.",
+      "properties": {
+        "artifact_id": {
+          "type": "string"
+        },
+        "content": {
+          "$ref": "#/definitions/ContentIdentity"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "content"
+      ],
+      "type": "object"
+    },
+    "ArtifactKind": {
+      "enum": [
+        "archive",
+        "markdown",
+        "restructured_text",
+        "ascii_doc",
+        "html",
+        "epub",
+        "pdf",
+        "word_ooxml",
+        "presentation_ooxml",
+        "spreadsheet_ooxml",
+        "spreadsheet_odf",
+        "presentation_odf",
+        "odf_word",
+        "rtf",
+        "xml",
+        "csv",
+        "rust_code",
+        "python_code",
+        "javascript_code",
+        "typescript_code",
+        "code",
+        "manifest",
+        "latex",
+        "bibliography",
+        "serialization",
+        "structured_binary",
+        "columnar",
+        "sqlite",
+        "email",
+        "mbox",
+        "outlook_msg",
+        "i_calendar",
+        "v_card",
+        "notebook",
+        "model_output",
+        "repo_ingest",
+        "file_ingest",
+        "text",
+        "ldgr_projection",
+        "detection",
+        "document_graph",
+        "graph_transform_result",
+        "render_result",
+        "reconstruction_result",
+        "segment_collection",
+        "schema_validation",
+        "container_traversal",
+        "capabilities",
+        "unsupported"
+      ],
+      "type": "string"
+    },
+    "ArtifactParent": {
+      "description": "The parent is retained structurally rather than flattened into a path.",
+      "properties": {
+        "identity": {
+          "$ref": "#/definitions/ContentIdentity"
+        },
+        "relationship": {
+          "$ref": "#/definitions/ArtifactRelationship"
+        }
+      },
+      "required": [
+        "identity",
+        "relationship"
+      ],
+      "type": "object"
+    },
+    "ArtifactRelationship": {
+      "description": "How the source relates the child to its immediate parent.",
+      "enum": [
+        "attachment_of",
+        "embedded_in",
+        "inline_resource_of",
+        "alternative_representation_of",
+        "package_part_of",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "ArtifactSafety": {
+      "description": "Auditable, deterministic safety result. Classifiers only inspect supplied metadata and bytes.",
+      "properties": {
+        "classification": {
+          "$ref": "#/definitions/ArtifactSafetyClassification"
+        },
+        "evidence": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/ArtifactSafetyEvidence"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "classification"
+      ],
+      "type": "object"
+    },
+    "ArtifactSafetyClassification": {
+      "description": "Security classification used to decide whether materialization is allowed.",
+      "enum": [
+        "passive",
+        "encrypted",
+        "active_content",
+        "script",
+        "macro",
+        "executable",
+        "suspicious",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "ArtifactSafetyEvidence": {
+      "description": "Why a safety class was selected.",
+      "properties": {
+        "classification": {
+          "$ref": "#/definitions/ArtifactSafetyClassification"
+        },
+        "source": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "classification",
+        "source",
+        "value"
+      ],
+      "type": "object"
+    },
     "BoundingBox": {
       "description": "A rectangle in a declared coordinate system.",
       "properties": {
@@ -139,6 +527,185 @@
         "width",
         "x",
         "y"
+      ],
+      "type": "object"
+    },
+    "BudgetAllocationNode": {
+      "properties": {
+        "allocated": {
+          "$ref": "#/definitions/ResourceBudget"
+        },
+        "allocation_id": {
+          "type": "string"
+        },
+        "children": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/BudgetAllocationNode"
+          },
+          "type": "array"
+        },
+        "depth": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "limit_hit": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/BudgetAxis"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "locator": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SourceLocator"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parent_allocation_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "usage_after": {
+          "$ref": "#/definitions/BudgetUsage"
+        },
+        "usage_before": {
+          "$ref": "#/definitions/BudgetUsage"
+        }
+      },
+      "required": [
+        "allocated",
+        "allocation_id",
+        "depth",
+        "usage_after",
+        "usage_before"
+      ],
+      "type": "object"
+    },
+    "BudgetAxis": {
+      "enum": [
+        "input_bytes",
+        "decoded_characters",
+        "pages",
+        "records",
+        "cells",
+        "nodes",
+        "nesting_depth",
+        "archive_expansion_ratio",
+        "archive_members",
+        "child_artifacts",
+        "parse_millis",
+        "provider_millis",
+        "memory_bytes",
+        "temporary_storage_bytes",
+        "output_bytes"
+      ],
+      "type": "string"
+    },
+    "BudgetUsage": {
+      "description": "Auditable shared consumption at a checkpoint or terminal event.",
+      "properties": {
+        "archive_expansion_ratio": {
+          "format": "double",
+          "type": "number"
+        },
+        "archive_members": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "cells": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "child_artifacts": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "decoded_characters": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "input_bytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "memory_bytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "nesting_depth": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "nodes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "output_bytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "pages": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "parse_millis": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "provider_millis": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "records": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "temporary_storage_bytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "archive_expansion_ratio",
+        "archive_members",
+        "cells",
+        "child_artifacts",
+        "decoded_characters",
+        "input_bytes",
+        "memory_bytes",
+        "nesting_depth",
+        "nodes",
+        "output_bytes",
+        "pages",
+        "parse_millis",
+        "provider_millis",
+        "records",
+        "temporary_storage_bytes"
       ],
       "type": "object"
     },
@@ -196,6 +763,202 @@
         "base",
         "column",
         "row"
+      ],
+      "type": "object"
+    },
+    "ContainerArtifactMode": {
+      "enum": [
+        "inventory_only",
+        "inline_payload",
+        "content_addressed"
+      ],
+      "type": "string"
+    },
+    "ContainerBudgetTree": {
+      "properties": {
+        "final_usage": {
+          "$ref": "#/definitions/BudgetUsage"
+        },
+        "limits": {
+          "$ref": "#/definitions/ResourceBudget"
+        },
+        "root": {
+          "$ref": "#/definitions/BudgetAllocationNode"
+        }
+      },
+      "required": [
+        "final_usage",
+        "limits",
+        "root"
+      ],
+      "type": "object"
+    },
+    "ContainerChild": {
+      "properties": {
+        "allocation_id": {
+          "type": "string"
+        },
+        "archive_metadata": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ArchiveMemberMetadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "artifact": {
+          "$ref": "#/definitions/EmbeddedArtifact"
+        },
+        "children": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/ContainerChild"
+          },
+          "type": "array"
+        },
+        "depth": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "diagnostics": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Diagnostic"
+          },
+          "type": "array"
+        },
+        "parsed": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Envelope_for_AnyValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_order": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "status": {
+          "$ref": "#/definitions/ContainerChildStatus"
+        }
+      },
+      "required": [
+        "allocation_id",
+        "artifact",
+        "depth",
+        "source_order",
+        "status"
+      ],
+      "type": "object"
+    },
+    "ContainerChildStatus": {
+      "enum": [
+        "parsed",
+        "inventory_only",
+        "skipped",
+        "encrypted",
+        "unsupported",
+        "rejected",
+        "budget_limited",
+        "failed",
+        "cancelled"
+      ],
+      "type": "string"
+    },
+    "ContainerParseOptions": {
+      "properties": {
+        "artifact_mode": {
+          "$ref": "#/definitions/ContainerArtifactMode"
+        },
+        "parse_leaf_payloads": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "artifact_mode",
+        "parse_leaf_payloads"
+      ],
+      "type": "object"
+    },
+    "ContainerTraversal": {
+      "properties": {
+        "budget_tree": {
+          "$ref": "#/definitions/ContainerBudgetTree"
+        },
+        "children": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/ContainerChild"
+          },
+          "type": "array"
+        },
+        "container_format": {
+          "type": "string"
+        },
+        "diagnostics": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Diagnostic"
+          },
+          "type": "array"
+        },
+        "identity": {
+          "$ref": "#/definitions/ContentIdentity"
+        },
+        "options": {
+          "$ref": "#/definitions/ContainerParseOptions"
+        },
+        "request_id": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/definitions/SourceInfo"
+        },
+        "status": {
+          "$ref": "#/definitions/OperationStatus"
+        }
+      },
+      "required": [
+        "budget_tree",
+        "container_format",
+        "identity",
+        "options",
+        "request_id",
+        "schema_version",
+        "source",
+        "status"
+      ],
+      "type": "object"
+    },
+    "ContentAddressedArtifactReference": {
+      "description": "Digest-keyed external reference. Grist does not prescribe persistence policy.",
+      "properties": {
+        "algorithm": {
+          "type": "string"
+        },
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "digest": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "algorithm",
+        "byte_length",
+        "digest"
       ],
       "type": "object"
     },
@@ -262,81 +1025,6 @@
       },
       "type": "object"
     },
-    "ContentKind": {
-      "enum": [
-        "markdown",
-        "restructured_text",
-        "ascii_doc",
-        "html",
-        "xml",
-        "rust",
-        "python",
-        "java_script",
-        "typescript",
-        "tsx",
-        "jsx",
-        "go",
-        "java",
-        "kotlin",
-        "c",
-        "cpp",
-        "csharp",
-        "ruby",
-        "php",
-        "swift",
-        "shell",
-        "sql",
-        "css",
-        "latex",
-        "bibliography",
-        "csv",
-        "json",
-        "jsonl",
-        "yaml",
-        "toml",
-        "manifest",
-        "cbor",
-        "message_pack",
-        "protobuf",
-        "arrow",
-        "text",
-        "pdf",
-        "zip",
-        "tar",
-        "docx",
-        "pptx",
-        "xlsx",
-        "xlsm",
-        "epub",
-        "odt",
-        "odp",
-        "ods",
-        "rtf",
-        "eml",
-        "mbox",
-        "msg",
-        "i_calendar",
-        "v_card",
-        "jupyter_notebook",
-        "sqlite",
-        "png",
-        "jpeg",
-        "gif",
-        "tiff",
-        "webp",
-        "bmp",
-        "gzip",
-        "bzip2",
-        "xz",
-        "zstd",
-        "seven_zip",
-        "parquet",
-        "ole_compound",
-        "binary",
-        "unknown"
-      ],
-      "type": "string"
-    },
     "CoordinateOrigin": {
       "description": "Coordinate-system origin for rectangular source regions.",
       "enum": [
@@ -401,67 +1089,6 @@
       "required": [
         "derivation_steps",
         "source_node_ids"
-      ],
-      "type": "object"
-    },
-    "Detection": {
-      "properties": {
-        "candidates": {
-          "default": [],
-          "items": {
-            "$ref": "#/definitions/DetectionCandidate"
-          },
-          "type": "array"
-        },
-        "confidence": {
-          "format": "float",
-          "type": "number"
-        },
-        "content_kind": {
-          "$ref": "#/definitions/ContentKind"
-        },
-        "diagnostics": {
-          "items": {
-            "$ref": "#/definitions/Diagnostic"
-          },
-          "type": "array"
-        },
-        "file_kind": {
-          "$ref": "#/definitions/FileKind"
-        },
-        "language": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "reasons": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "selected_parser": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "status": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/DetectionStatus"
-            }
-          ],
-          "default": "unknown"
-        }
-      },
-      "required": [
-        "confidence",
-        "content_kind",
-        "diagnostics",
-        "file_kind",
-        "reasons"
       ],
       "type": "object"
     },
@@ -539,15 +1166,6 @@
         "shebang",
         "grammar_probe",
         "fallback"
-      ],
-      "type": "string"
-    },
-    "DetectionStatus": {
-      "enum": [
-        "selected",
-        "ambiguous",
-        "unsupported",
-        "unknown"
       ],
       "type": "string"
     },
@@ -725,18 +1343,147 @@
       ],
       "type": "string"
     },
-    "FileKind": {
-      "enum": [
-        "source",
-        "test",
-        "manifest",
-        "lockfile",
-        "generated",
-        "binary",
-        "documentation",
-        "unknown"
+    "EmbeddedArtifact": {
+      "description": "Complete artifact inventory record.",
+      "properties": {
+        "content": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ArtifactContent"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "declared_filename": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "disposition": {
+          "$ref": "#/definitions/ArtifactDisposition"
+        },
+        "extraction": {
+          "$ref": "#/definitions/ArtifactExtraction"
+        },
+        "identity": {
+          "$ref": "#/definitions/ArtifactIdentity"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "media_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parent": {
+          "$ref": "#/definitions/ArtifactParent"
+        },
+        "safety": {
+          "$ref": "#/definitions/ArtifactSafety"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "disposition",
+        "extraction",
+        "identity",
+        "locator",
+        "parent",
+        "safety",
+        "schema_version"
       ],
-      "type": "string"
+      "type": "object"
+    },
+    "Envelope_for_AnyValue": {
+      "description": "Universal result for parse, ingest, transform, render, segment, and validation operations.",
+      "properties": {
+        "diagnostics": {
+          "items": {
+            "$ref": "#/definitions/Diagnostic"
+          },
+          "type": "array"
+        },
+        "hashes": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Hashes"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Legacy v1 hashes retained for wire and Rust compatibility."
+        },
+        "identity": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ContentIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Versioned raw, decoded, canonical-payload, format, and aggregate identity."
+        },
+        "kind": {
+          "$ref": "#/definitions/ArtifactKind"
+        },
+        "operation": {
+          "$ref": "#/definitions/OperationKind"
+        },
+        "options_digest": {
+          "type": "string"
+        },
+        "parser": {
+          "$ref": "#/definitions/ParserInfo"
+        },
+        "payload": true,
+        "payload_schema_version": {
+          "$ref": "#/definitions/SchemaVersion"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/definitions/ProvenanceStep"
+          },
+          "type": "array"
+        },
+        "providers": {
+          "items": {
+            "$ref": "#/definitions/ProviderInvocation"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "$ref": "#/definitions/SchemaVersion"
+        },
+        "source": {
+          "$ref": "#/definitions/SourceInfo"
+        },
+        "status": {
+          "$ref": "#/definitions/OperationStatus"
+        }
+      },
+      "required": [
+        "diagnostics",
+        "kind",
+        "operation",
+        "options_digest",
+        "parser",
+        "payload_schema_version",
+        "provenance",
+        "providers",
+        "schema_version",
+        "source",
+        "status"
+      ],
+      "type": "object"
     },
     "FormatIdentity": {
       "description": "Detected parser-format name paired with an Internet media type when known.",
@@ -753,6 +1500,29 @@
       },
       "required": [
         "format"
+      ],
+      "type": "object"
+    },
+    "Hashes": {
+      "properties": {
+        "sha256": {
+          "type": "string"
+        },
+        "size_bytes": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "text_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "sha256",
+        "size_bytes"
       ],
       "type": "object"
     },
@@ -1289,6 +2059,31 @@
       "minimum": 0.0,
       "type": "number"
     },
+    "OperationKind": {
+      "description": "The public operation that produced an envelope.",
+      "enum": [
+        "parse",
+        "ingest",
+        "transform",
+        "render",
+        "segment",
+        "validate"
+      ],
+      "type": "string"
+    },
+    "OperationStatus": {
+      "description": "Whether an operation satisfied its requested contract.",
+      "enum": [
+        "complete",
+        "partial",
+        "failed",
+        "unsupported",
+        "encrypted",
+        "ambiguous",
+        "cancelled"
+      ],
+      "type": "string"
+    },
     "ParserAvailability": {
       "description": "Whether a ranked candidate can be interpreted by the active registry.",
       "enum": [
@@ -1297,6 +2092,172 @@
         "unregistered"
       ],
       "type": "string"
+    },
+    "ParserInfo": {
+      "description": "Parser and backend identity used to interpret an input.\n\n`version` is the Grist crate version retained under its v1 JSON name.",
+      "properties": {
+        "build_identity": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "enabled_feature": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "grammar_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "implementation": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "implementation_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "type": "object"
+    },
+    "ProvenanceStep": {
+      "description": "One declared derivation step that contributed to an operation result.\n\nA missing `loss_class` is the stable wire representation of an explicit lossless declaration; any lossy step names its loss class.",
+      "properties": {
+        "implementation": {
+          "type": "string"
+        },
+        "input_identity": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "loss_class": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "operation": {
+          "$ref": "#/definitions/OperationKind"
+        },
+        "options_digest": {
+          "type": "string"
+        },
+        "output_identity": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "provider": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "timestamp": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "warnings": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "implementation",
+        "operation",
+        "options_digest"
+      ],
+      "type": "object"
+    },
+    "ProviderInvocation": {
+      "description": "One explicitly attributed external-provider call.",
+      "properties": {
+        "confidence_model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "configuration_digest": {
+          "type": "string"
+        },
+        "deterministic": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "diagnostics": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Diagnostic"
+          },
+          "type": "array"
+        },
+        "implementation": {
+          "type": "string"
+        },
+        "input_identity": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "model_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "output_identity": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "provider": {
+          "type": "string"
+        },
+        "timing": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "configuration_digest",
+        "implementation",
+        "provider"
+      ],
+      "type": "object"
     },
     "RawContentIdentity": {
       "description": "SHA-256 of exactly the original input bytes, without a prefix or suffix.",
@@ -1349,6 +2310,131 @@
         "report_parser_defect"
       ],
       "type": "string"
+    },
+    "ResourceBudget": {
+      "description": "All limits visible at every public operation boundary. `None` is explicitly unbounded.",
+      "properties": {
+        "max_archive_expansion_ratio": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "max_archive_members": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_cells": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_child_artifacts": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_decoded_characters": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_input_bytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_memory_bytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_nesting_depth": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_nodes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_output_bytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_pages": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_parse_millis": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_provider_millis": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_records": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_temporary_storage_bytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
     },
     "SchemaVersion": {
       "type": "string"
@@ -1558,38 +2644,96 @@
       "type": "object"
     }
   },
-  "description": "Ranked detection result with stable request correlation and source identity.",
+  "description": "Universal result for parse, ingest, transform, render, segment, and validation operations.",
   "properties": {
-    "detection": {
-      "$ref": "#/definitions/Detection"
-    },
     "diagnostics": {
-      "default": [],
       "items": {
         "$ref": "#/definitions/Diagnostic"
       },
       "type": "array"
     },
-    "identity": {
-      "$ref": "#/definitions/ContentIdentity"
+    "hashes": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/Hashes"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Legacy v1 hashes retained for wire and Rust compatibility."
     },
-    "request_id": {
+    "identity": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/ContentIdentity"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Versioned raw, decoded, canonical-payload, format, and aggregate identity."
+    },
+    "kind": {
+      "$ref": "#/definitions/ArtifactKind"
+    },
+    "operation": {
+      "$ref": "#/definitions/OperationKind"
+    },
+    "options_digest": {
       "type": "string"
+    },
+    "parser": {
+      "$ref": "#/definitions/ParserInfo"
+    },
+    "payload": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/ArchiveDocument"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "payload_schema_version": {
+      "$ref": "#/definitions/SchemaVersion"
+    },
+    "provenance": {
+      "items": {
+        "$ref": "#/definitions/ProvenanceStep"
+      },
+      "type": "array"
+    },
+    "providers": {
+      "items": {
+        "$ref": "#/definitions/ProviderInvocation"
+      },
+      "type": "array"
     },
     "schema_version": {
-      "type": "string"
+      "$ref": "#/definitions/SchemaVersion"
     },
     "source": {
       "$ref": "#/definitions/SourceInfo"
+    },
+    "status": {
+      "$ref": "#/definitions/OperationStatus"
     }
   },
   "required": [
-    "detection",
-    "identity",
-    "request_id",
+    "diagnostics",
+    "kind",
+    "operation",
+    "options_digest",
+    "parser",
+    "payload_schema_version",
+    "provenance",
+    "providers",
     "schema_version",
-    "source"
+    "source",
+    "status"
   ],
-  "title": "DetectionReport",
+  "title": "Envelope_for_ArchiveDocument",
   "type": "object"
 }

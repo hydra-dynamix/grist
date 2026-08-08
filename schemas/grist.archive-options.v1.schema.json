@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "ContainerArtifactMode": {
+      "enum": [
+        "inventory_only",
+        "inline_payload",
+        "content_addressed"
+      ],
+      "type": "string"
+    }
+  },
+  "properties": {
+    "artifact_mode": {
+      "$ref": "#/definitions/ContainerArtifactMode"
+    },
+    "parse_leaf_payloads": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "artifact_mode",
+    "parse_leaf_payloads"
+  ],
+  "title": "ArchiveOptions",
+  "type": "object"
+}

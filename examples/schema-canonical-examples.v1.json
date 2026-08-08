@@ -1,6 +1,120 @@
 {
   "schema_version": "grist/canonical-examples/v1",
   "examples": {
+    "archive": {
+      "schema_name": "archive",
+      "schema_version": "grist/archive/v1",
+      "canonical_sha256": "sha256:85e36c9439a5e34556bd5a5d871728ff17e71e4f65a977dcdff68f978e5cb796",
+      "value": {
+        "format": "zip",
+        "schema_version": "grist/archive/v1",
+        "traversal": {
+          "budget_tree": {
+            "final_usage": {
+              "archive_expansion_ratio": 0.0,
+              "archive_members": 0,
+              "cells": 0,
+              "child_artifacts": 0,
+              "decoded_characters": 0,
+              "input_bytes": 0,
+              "memory_bytes": 0,
+              "nesting_depth": 0,
+              "nodes": 0,
+              "output_bytes": 0,
+              "pages": 0,
+              "parse_millis": 0,
+              "provider_millis": 0,
+              "records": 0,
+              "temporary_storage_bytes": 0
+            },
+            "limits": {},
+            "root": {
+              "allocated": {},
+              "allocation_id": "",
+              "depth": 0,
+              "usage_after": {
+                "archive_expansion_ratio": 0.0,
+                "archive_members": 0,
+                "cells": 0,
+                "child_artifacts": 0,
+                "decoded_characters": 0,
+                "input_bytes": 0,
+                "memory_bytes": 0,
+                "nesting_depth": 0,
+                "nodes": 0,
+                "output_bytes": 0,
+                "pages": 0,
+                "parse_millis": 0,
+                "provider_millis": 0,
+                "records": 0,
+                "temporary_storage_bytes": 0
+              },
+              "usage_before": {
+                "archive_expansion_ratio": 0.0,
+                "archive_members": 0,
+                "cells": 0,
+                "child_artifacts": 0,
+                "decoded_characters": 0,
+                "input_bytes": 0,
+                "memory_bytes": 0,
+                "nesting_depth": 0,
+                "nodes": 0,
+                "output_bytes": 0,
+                "pages": 0,
+                "parse_millis": 0,
+                "provider_millis": 0,
+                "records": 0,
+                "temporary_storage_bytes": 0
+              }
+            }
+          },
+          "container_format": "",
+          "identity": {},
+          "options": {
+            "artifact_mode": "inventory_only",
+            "parse_leaf_payloads": false
+          },
+          "request_id": "",
+          "schema_version": "",
+          "source": {
+            "display_name": ""
+          },
+          "status": "complete"
+        }
+      }
+    },
+    "archive-envelope": {
+      "schema_name": "archive-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "archive-options": {
+      "schema_name": "archive-options",
+      "schema_version": "grist/archive-options/v1",
+      "canonical_sha256": "sha256:88d69a413cc8e961be05f22c95a0107e39e74561bc7388bf90fd3718e664303f",
+      "value": {
+        "artifact_mode": "inventory_only",
+        "parse_leaf_payloads": false
+      }
+    },
     "archive-security-options": {
       "schema_name": "archive-security-options",
       "schema_version": "grist/archive-security-options/v1",
@@ -83,10 +197,10 @@
     "asciidoc-envelope": {
       "schema_name": "asciidoc-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -243,10 +357,10 @@
     "bibliography-envelope": {
       "schema_name": "bibliography-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -515,10 +629,10 @@
     "code-envelope": {
       "schema_name": "code-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -564,10 +678,10 @@
     "columnar-envelope": {
       "schema_name": "columnar-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -758,10 +872,10 @@
     "csv-envelope": {
       "schema_name": "csv-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -848,10 +962,10 @@
     "document-graph-envelope": {
       "schema_name": "document-graph-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -936,10 +1050,10 @@
     "email-envelope": {
       "schema_name": "email-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -1006,10 +1120,10 @@
     "envelope": {
       "schema_name": "envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -1072,10 +1186,10 @@
     "epub-envelope": {
       "schema_name": "epub-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -1117,10 +1231,10 @@
     "file-ingest-envelope": {
       "schema_name": "file-ingest-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -1165,10 +1279,10 @@
     "format-reconstruction-envelope": {
       "schema_name": "format-reconstruction-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -1220,10 +1334,10 @@
     "graph-transform-envelope": {
       "schema_name": "graph-transform-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -1365,10 +1479,10 @@
     "html-envelope": {
       "schema_name": "html-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -1419,10 +1533,10 @@
     "icalendar-envelope": {
       "schema_name": "icalendar-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -1481,14 +1595,14 @@
     "ingest-stream-event": {
       "schema_name": "ingest-stream-event",
       "schema_version": "grist/ingest-stream-event/v1",
-      "canonical_sha256": "sha256:93c952a8da733b29b1eb47f80229b590389c465d00653a02bd8bbe2d418c7904",
+      "canonical_sha256": "sha256:8e184ec450ff8fdb3be1e44f07317c9a61f1508d27bbbefd190b9f1441ef34b5",
       "value": {
         "event": "item",
         "item": {
           "identity": {},
           "payload": {
             "diagnostics": [],
-            "kind": "markdown",
+            "kind": "archive",
             "operation": "parse",
             "options_digest": "",
             "parser": {
@@ -1535,10 +1649,10 @@
     "ipynb-envelope": {
       "schema_name": "ipynb-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -1605,10 +1719,10 @@
     "javascript-code-envelope": {
       "schema_name": "javascript-code-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -1644,10 +1758,10 @@
     "latex-envelope": {
       "schema_name": "latex-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -1696,10 +1810,10 @@
     "ldgr-projection-envelope": {
       "schema_name": "ldgr-projection-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -1856,10 +1970,10 @@
     "markdown-envelope": {
       "schema_name": "markdown-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -1902,10 +2016,10 @@
     "mbox-envelope": {
       "schema_name": "mbox-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -2045,10 +2159,10 @@
     "model-output-envelope": {
       "schema_name": "model-output-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -2138,10 +2252,10 @@
     "odf-word-envelope": {
       "schema_name": "odf-word-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -2203,10 +2317,10 @@
     "outlook-msg-envelope": {
       "schema_name": "outlook-msg-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -2276,7 +2390,7 @@
     "parser-conformance-report": {
       "schema_name": "parser-conformance-report",
       "schema_version": "grist/parser-conformance-report/v1",
-      "canonical_sha256": "sha256:e8656bddf5ef2315ded8bb1671d8154752e7dd69e9cce5641a8ddf6a68f8c273",
+      "canonical_sha256": "sha256:48f3fd47149dbe7ede7557580cb6541dbd6901dd7778d759bababe3f989dca41",
       "value": {
         "eligible_for_promotion": false,
         "format": "x",
@@ -2417,7 +2531,7 @@
         "harness_version": "x",
         "parser": {
           "format": {
-            "artifact_kind": "markdown",
+            "artifact_kind": "archive",
             "display_name": "",
             "id": ""
           },
@@ -2550,10 +2664,10 @@
     "pdf-envelope": {
       "schema_name": "pdf-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -2599,10 +2713,10 @@
     "presentation-odf-envelope": {
       "schema_name": "presentation-odf-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -2677,10 +2791,10 @@
     "presentation-ooxml-envelope": {
       "schema_name": "presentation-ooxml-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -2807,10 +2921,10 @@
     "python-code-envelope": {
       "schema_name": "python-code-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -2898,10 +3012,10 @@
     "quarto-envelope": {
       "schema_name": "quarto-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -2989,10 +3103,10 @@
     "r_markdown-envelope": {
       "schema_name": "r_markdown-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -3144,10 +3258,10 @@
     "repo-ingest-envelope": {
       "schema_name": "repo-ingest-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -3244,10 +3358,10 @@
     "restructured-text-envelope": {
       "schema_name": "restructured-text-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -3323,10 +3437,10 @@
     "rtf-envelope": {
       "schema_name": "rtf-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -3366,10 +3480,10 @@
     "rust-code-envelope": {
       "schema_name": "rust-code-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -3470,10 +3584,10 @@
     "segment-envelope": {
       "schema_name": "segment-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -3539,10 +3653,10 @@
     "serialization-envelope": {
       "schema_name": "serialization-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -3620,10 +3734,10 @@
     "spreadsheet-odf-envelope": {
       "schema_name": "spreadsheet-odf-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -3687,10 +3801,10 @@
     "spreadsheet-ooxml-envelope": {
       "schema_name": "spreadsheet-ooxml-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -3747,10 +3861,10 @@
     "sqlite-envelope": {
       "schema_name": "sqlite-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -3810,10 +3924,10 @@
     "structured-binary-envelope": {
       "schema_name": "structured-binary-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -3938,10 +4052,10 @@
     "text-envelope": {
       "schema_name": "text-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -4015,10 +4129,10 @@
     "typescript-code-envelope": {
       "schema_name": "typescript-code-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -4075,10 +4189,10 @@
     "vcard-envelope": {
       "schema_name": "vcard-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -4153,10 +4267,10 @@
     "word-ooxml-envelope": {
       "schema_name": "word-ooxml-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {
@@ -4254,10 +4368,10 @@
     "xml-envelope": {
       "schema_name": "xml-envelope",
       "schema_version": "grist/envelope/v2",
-      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
       "value": {
         "diagnostics": [],
-        "kind": "markdown",
+        "kind": "archive",
         "operation": "parse",
         "options_digest": "",
         "parser": {

@@ -108,6 +108,7 @@
     },
     "ArtifactKind": {
       "enum": [
+        "archive",
         "markdown",
         "restructured_text",
         "ascii_doc",
@@ -128,6 +129,7 @@
         "javascript_code",
         "typescript_code",
         "code",
+        "manifest",
         "latex",
         "bibliography",
         "serialization",
@@ -346,6 +348,7 @@
         "jsonl",
         "yaml",
         "toml",
+        "manifest",
         "cbor",
         "message_pack",
         "protobuf",
@@ -353,6 +356,7 @@
         "text",
         "pdf",
         "zip",
+        "tar",
         "docx",
         "pptx",
         "xlsx",
