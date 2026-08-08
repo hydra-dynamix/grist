@@ -600,6 +600,7 @@ fn is_code_atomic(kind: &DocumentNodeKind) -> bool {
         kind,
         DocumentNodeKind::CodeBlock
             | DocumentNodeKind::CodeSymbol
+            | DocumentNodeKind::Symbol
             | DocumentNodeKind::Module
             | DocumentNodeKind::Namespace
             | DocumentNodeKind::Package
@@ -607,6 +608,10 @@ fn is_code_atomic(kind: &DocumentNodeKind) -> bool {
             | DocumentNodeKind::Function
             | DocumentNodeKind::Method
             | DocumentNodeKind::Constructor
+            | DocumentNodeKind::TypeAlias
+            | DocumentNodeKind::Enum
+            | DocumentNodeKind::Variable
+            | DocumentNodeKind::Field
             | DocumentNodeKind::Interface
     )
 }
@@ -626,11 +631,19 @@ fn boundary_for_kind(kind: &DocumentNodeKind) -> Option<BoundaryKind> {
         DocumentNodeKind::ListItem => Some(BoundaryKind::ListItem),
         DocumentNodeKind::TableRow | DocumentNodeKind::Row => Some(BoundaryKind::TableRow),
         DocumentNodeKind::CodeSymbol
+        | DocumentNodeKind::Symbol
+        | DocumentNodeKind::Module
+        | DocumentNodeKind::Namespace
+        | DocumentNodeKind::Package
         | DocumentNodeKind::Class
         | DocumentNodeKind::Function
         | DocumentNodeKind::Method
         | DocumentNodeKind::Constructor
-        | DocumentNodeKind::Interface => Some(BoundaryKind::CodeSymbol),
+        | DocumentNodeKind::Interface
+        | DocumentNodeKind::TypeAlias
+        | DocumentNodeKind::Enum
+        | DocumentNodeKind::Variable
+        | DocumentNodeKind::Field => Some(BoundaryKind::CodeSymbol),
         DocumentNodeKind::Page => Some(BoundaryKind::Page),
         DocumentNodeKind::Slide => Some(BoundaryKind::Slide),
         DocumentNodeKind::Sheet => Some(BoundaryKind::SheetRange),

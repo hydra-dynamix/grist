@@ -90,7 +90,7 @@ pub mod sqlite;
 #[cfg(feature = "structured-binary")]
 pub mod structured_binary;
 pub mod summary;
-#[cfg(feature = "typescript")]
+#[cfg(any(feature = "javascript", feature = "typescript"))]
 pub mod typescript;
 #[cfg(feature = "word-ooxml")]
 pub mod word_ooxml;

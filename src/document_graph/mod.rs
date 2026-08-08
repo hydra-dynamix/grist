@@ -11,7 +11,7 @@ use crate::core::{
     CitationAnchor, CitationAnchorError, CitationAnchorOptions, CitationCandidate,
     CitationSourceVersion, CitationTargetKind, ContentIdentity, DerivedNodeReference, Diagnostic,
     LocatorConfidence, LocatorPrecision, ParserInfo, SchemaVersion, SourceInfo, SourceLocator,
-    SourceRange,
+    SourceRange, canonical_json_bytes, sha256_hex,
 };
 #[cfg(any(feature = "markdown", feature = "latex"))]
 use crate::security::sanitize_link_destination;
@@ -24,7 +24,7 @@ use crate::security::{escape_latex_text, inert_latex_literal};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use thiserror::Error;
 
 mod identity;
@@ -5711,24 +5711,38 @@ impl ToDocumentGraph for crate::python::PythonFile {
     ) -> Result<DocumentGraph, TransformError> {
         use crate::python::PythonSymbolKind;
 
+        const NAMESPACE: &str = "grist.python";
         let identities = context
             .identity_generator(SchemaVersion::PYTHON_CODE_V1, "python")
             .map_err(projection_transform_error)?;
         let mut graph = code_graph_from_context(context, DocumentKind::Python, "python");
         let root_id = ensure_code_root(&mut graph, &identities, "python")?;
-        let symbol_ids = self
+        if let Some(root) = graph.nodes.iter_mut().find(|node| node.id == root_id) {
+            root.extensions.insert(
+                NAMESPACE.into(),
+                serde_json::json!({"schema_version": self.schema_version, "detail": self.detail}),
+            );
+        }
+        let mut symbol_ids = BTreeMap::new();
+        for symbol in &self.symbols {
+            let id = code_node_id(&identities, "symbol", Some(&symbol.id), Some(&symbol.range))?;
+            for key in [&symbol.id, &symbol.qualified_name] {
+                insert_code_symbol_alias(&mut symbol_ids, key.clone(), &id);
+            }
+        }
+        let symbols_by_range = self
             .symbols
             .iter()
-            .map(|symbol| {
-                Ok((
-                    symbol.qualified_name.clone(),
-                    code_node_id(&identities, "symbol", None, Some(&symbol.range))?,
-                ))
+            .filter_map(|symbol| {
+                symbol_ids
+                    .get(&symbol.qualified_name)
+                    .cloned()
+                    .map(|id| (symbol.range.clone(), id))
             })
-            .collect::<Result<BTreeMap<_, _>, TransformError>>()?;
+            .collect::<Vec<_>>();
 
         for symbol in &self.symbols {
-            let id = code_node_id(&identities, "symbol", None, Some(&symbol.range))?;
+            let id = symbol_ids[&symbol.qualified_name].clone();
             let mut node = DocumentNode::new(
                 &id,
                 match symbol.kind {
@@ -5739,43 +5753,59 @@ impl ToDocumentGraph for crate::python::PythonFile {
                 },
             )
             .with_name(symbol.name.clone())
-            .with_qualified_name(symbol.qualified_name.clone());
-            node.range = Some(symbol.range.clone());
-            node.parent = symbol_parent_node(&graph.id, &symbol.qualified_name, &symbol_ids);
+            .with_qualified_name(symbol.qualified_name.clone())
+            .with_range(symbol.range.clone());
+            let parent = symbol_parent_node(&graph.id, &symbol.qualified_name, &symbol_ids)
+                .or_else(|| parent_lookup(symbol.parent.as_deref(), &symbol_ids));
+            node.parent = parent.clone();
             insert_json_attr(&mut node.attrs, "visibility", &symbol.visibility);
             insert_json_attr(&mut node.attrs, "decorators", &symbol.decorators);
             insert_json_attr(&mut node.attrs, "superclasses", &symbol.superclasses);
             insert_json_attr(&mut node.attrs, "doc", &symbol.doc);
+            retain_code_native(&mut node, NAMESPACE, symbol);
             graph.add_node(node);
-            graph.add_contains(
-                node_parent_or_root(
-                    &root_id,
-                    symbol_parent_node(&graph.id, &symbol.qualified_name, &symbol_ids),
-                ),
-                &id,
-            );
-
+            graph.add_contains(node_parent_or_root(&root_id, parent), &id);
             for superclass in &symbol.superclasses {
-                graph.add_edge(
-                    DocumentEdge::new(&id, DocumentRelation::Inherits, superclass)
-                        .with_range(symbol.range.clone()),
-                );
+                let target = parent_lookup(Some(superclass), &symbol_ids)
+                    .unwrap_or_else(|| superclass.clone());
+                graph.add_edge(code_inferred_edge(
+                    &id,
+                    DocumentRelation::Inherits,
+                    target,
+                    "grist.code.superclass-name-resolution.v1",
+                    0.85,
+                    &symbol.range,
+                )?);
             }
         }
 
         for import in &self.imports {
-            let id = code_node_id(&identities, "import", None, Some(&import.range))?;
-            let mut node =
-                DocumentNode::new(&id, DocumentNodeKind::Import).with_name(import.module.clone());
-            node.range = Some(import.range.clone());
+            let id = code_node_id(&identities, "import", Some(&import.id), Some(&import.range))?;
+            let mut node = DocumentNode::new(&id, DocumentNodeKind::Import)
+                .with_name(import.module.clone())
+                .with_range(import.range.clone());
             insert_json_attr(&mut node.attrs, "names", &import.names);
             insert_json_attr(&mut node.attrs, "aliases", &import.aliases);
             insert_json_attr(&mut node.attrs, "level", &import.level);
+            retain_code_native(&mut node, NAMESPACE, import);
             graph.add_node(node);
             graph.add_contains(&root_id, &id);
             graph.add_edge(
                 DocumentEdge::new(&root_id, DocumentRelation::Imports, &id)
                     .with_range(import.range.clone()),
+            );
+        }
+        for export in &self.exports {
+            let id = code_node_id(&identities, "export", Some(&export.id), Some(&export.range))?;
+            let mut node =
+                DocumentNode::new(&id, DocumentNodeKind::Export).with_range(export.range.clone());
+            insert_json_attr(&mut node.attrs, "names", &export.names);
+            retain_code_native(&mut node, NAMESPACE, export);
+            graph.add_node(node);
+            graph.add_contains(&root_id, &id);
+            graph.add_edge(
+                DocumentEdge::new(&root_id, DocumentRelation::Exports, &id)
+                    .with_range(export.range.clone()),
             );
         }
 
@@ -5791,6 +5821,8 @@ impl ToDocumentGraph for crate::python::PythonFile {
                 &symbol_ids,
                 Some(assignment.range.clone()),
                 Some(assignment.lhs.clone()),
+                NAMESPACE,
+                assignment,
                 |attrs| {
                     insert_json_attr(attrs, "rhs", &assignment.rhs);
                     insert_json_attr(attrs, "operator", &assignment.operator);
@@ -5809,6 +5841,8 @@ impl ToDocumentGraph for crate::python::PythonFile {
                 &symbol_ids,
                 Some(ret.range.clone()),
                 ret.expression.clone(),
+                NAMESPACE,
+                ret,
                 |_| {},
             )?;
         }
@@ -5824,24 +5858,105 @@ impl ToDocumentGraph for crate::python::PythonFile {
                 &symbol_ids,
                 Some(branch.range.clone()),
                 branch.condition.clone(),
+                NAMESPACE,
+                branch,
                 |attrs| insert_json_attr(attrs, "kind", &branch.kind),
             )?;
         }
         for call in &self.calls {
             let parent = parent_lookup(call.parent.as_deref(), &symbol_ids)
                 .unwrap_or_else(|| root_id.clone());
-            let id = code_node_id(&identities, "call", None, Some(&call.range))?;
+            let id = code_node_id(&identities, "call", Some(&call.id), Some(&call.range))?;
             let mut node = DocumentNode::new(&id, DocumentNodeKind::Call)
                 .with_name(call.target.clone())
-                .with_text(call.target.clone());
-            node.range = Some(call.range.clone());
+                .with_text(call.target.clone())
+                .with_range(call.range.clone());
             insert_json_attr(&mut node.attrs, "args", &call.args);
+            retain_code_native(&mut node, NAMESPACE, call);
             graph.add_node(node);
             graph.add_contains(&parent, &id);
-            graph.add_edge(
-                DocumentEdge::new(&parent, DocumentRelation::Calls, call.target.clone())
-                    .with_range(call.range.clone()),
-            );
+            let target = parent_lookup(Some(&call.target), &symbol_ids)
+                .unwrap_or_else(|| call.target.clone());
+            graph.add_edge(code_inferred_edge(
+                &parent,
+                DocumentRelation::Calls,
+                target,
+                "grist.code.call-target-name-resolution.v1",
+                0.75,
+                &call.range,
+            )?);
+        }
+
+        for test in &self.tests {
+            add_code_test_node(
+                &mut graph,
+                &identities,
+                &root_id,
+                NAMESPACE,
+                test,
+                &test.id,
+                &test.name,
+                &test.framework,
+                Some(&test.symbol_id),
+                &symbol_ids,
+                &test.range,
+            )?;
+        }
+        for comment in &self.comments {
+            add_code_comment_node(
+                &mut graph,
+                &identities,
+                &root_id,
+                NAMESPACE,
+                comment,
+                &comment.id,
+                &comment.text,
+                false,
+                &comment.range,
+                &symbols_by_range,
+            )?;
+        }
+        let syntax_ids = self
+            .syntax_nodes
+            .iter()
+            .map(|syntax| {
+                Ok((
+                    syntax.id.clone(),
+                    code_node_id(&identities, "syntax", Some(&syntax.id), Some(&syntax.range))?,
+                ))
+            })
+            .collect::<Result<BTreeMap<_, _>, TransformError>>()?;
+        for syntax in &self.syntax_nodes {
+            add_code_syntax_node(
+                &mut graph,
+                &identities,
+                &root_id,
+                NAMESPACE,
+                syntax,
+                &syntax.id,
+                &syntax.kind,
+                syntax.named,
+                syntax.error,
+                syntax.missing,
+                syntax.parent.as_deref(),
+                &syntax_ids,
+                &syntax.raw,
+                &syntax.range,
+            )?;
+        }
+        for (ordinal, error) in self.parse_errors.iter().enumerate() {
+            add_code_parse_error(
+                &mut graph,
+                &identities,
+                &root_id,
+                NAMESPACE,
+                error,
+                ordinal,
+                &error.node_kind,
+                &error.raw,
+                error.missing,
+                &error.range,
+            )?;
         }
 
         graph
@@ -5859,24 +5974,87 @@ impl ToDocumentGraph for crate::rust::RustFile {
     ) -> Result<DocumentGraph, TransformError> {
         use crate::rust::RustSymbolKind;
 
+        const NAMESPACE: &str = "grist.rust";
         let identities = context
             .identity_generator(SchemaVersion::RUST_CODE_V1, "rust")
             .map_err(projection_transform_error)?;
         let mut graph = code_graph_from_context(context, DocumentKind::Rust, "rust");
         let root_id = ensure_code_root(&mut graph, &identities, "rust")?;
-        let symbol_ids = self
+        if let Some(root) = graph.nodes.iter_mut().find(|node| node.id == root_id) {
+            root.extensions.insert(
+                NAMESPACE.into(),
+                serde_json::json!({"schema_version": self.schema_version, "detail": self.detail}),
+            );
+        }
+        let rust_qualified_names = self
             .symbols
             .iter()
             .map(|symbol| {
-                Ok((
-                    symbol.name.clone(),
-                    code_node_id(&identities, "symbol", None, Some(&symbol.range))?,
-                ))
+                let mut ancestors = self
+                    .symbols
+                    .iter()
+                    .filter(|candidate| {
+                        candidate.id != symbol.id
+                            && candidate.range.byte_start <= symbol.range.byte_start
+                            && candidate.range.byte_end >= symbol.range.byte_end
+                    })
+                    .collect::<Vec<_>>();
+                ancestors.sort_by(|left, right| {
+                    left.range
+                        .byte_start
+                        .cmp(&right.range.byte_start)
+                        .then_with(|| right.range.byte_end.cmp(&left.range.byte_end))
+                });
+                let mut parts = ancestors
+                    .into_iter()
+                    .map(|ancestor| {
+                        if ancestor.kind == RustSymbolKind::Impl {
+                            self.inheritances
+                                .iter()
+                                .find(|inheritance| inheritance.range == ancestor.range)
+                                .map(|inheritance| inheritance.implementation.clone())
+                                .unwrap_or_else(|| ancestor.name.clone())
+                        } else {
+                            ancestor.name.clone()
+                        }
+                    })
+                    .collect::<Vec<_>>();
+                parts.push(if symbol.kind == RustSymbolKind::Impl {
+                    self.inheritances
+                        .iter()
+                        .find(|inheritance| inheritance.range == symbol.range)
+                        .map(|inheritance| inheritance.implementation.clone())
+                        .unwrap_or_else(|| symbol.name.clone())
+                } else {
+                    symbol.name.clone()
+                });
+                (symbol.id.clone(), parts.join("::"))
             })
-            .collect::<Result<BTreeMap<_, _>, TransformError>>()?;
+            .collect::<BTreeMap<_, _>>();
+        let mut symbol_ids = BTreeMap::new();
+        for symbol in &self.symbols {
+            let id = code_node_id(&identities, "symbol", Some(&symbol.id), Some(&symbol.range))?;
+            insert_code_symbol_alias(&mut symbol_ids, symbol.id.clone(), &id);
+            insert_code_symbol_alias(
+                &mut symbol_ids,
+                rust_qualified_names[&symbol.id].clone(),
+                &id,
+            );
+            insert_code_symbol_alias(&mut symbol_ids, id.clone(), &id);
+        }
+        let symbols_by_range = self
+            .symbols
+            .iter()
+            .filter_map(|symbol| {
+                symbol_ids
+                    .get(&symbol.id)
+                    .cloned()
+                    .map(|id| (symbol.range.clone(), id))
+            })
+            .collect::<Vec<_>>();
 
         for symbol in &self.symbols {
-            let id = code_node_id(&identities, "symbol", None, Some(&symbol.range))?;
+            let id = symbol_ids[&symbol.id].clone();
             let mut node = DocumentNode::new(
                 &id,
                 match symbol.kind {
@@ -5888,46 +6066,250 @@ impl ToDocumentGraph for crate::rust::RustFile {
                     RustSymbolKind::Trait => DocumentNodeKind::Interface,
                     RustSymbolKind::TypeAlias => DocumentNodeKind::TypeAlias,
                     RustSymbolKind::Const | RustSymbolKind::Static => DocumentNodeKind::Variable,
-                    RustSymbolKind::MacroDefinition | RustSymbolKind::MacroInvocation => {
-                        DocumentNodeKind::Symbol
-                    }
-                    RustSymbolKind::Impl | RustSymbolKind::Union | RustSymbolKind::Unknown => {
-                        DocumentNodeKind::Symbol
-                    }
+                    RustSymbolKind::MacroDefinition
+                    | RustSymbolKind::MacroInvocation
+                    | RustSymbolKind::Impl
+                    | RustSymbolKind::Union
+                    | RustSymbolKind::Unknown => DocumentNodeKind::Symbol,
                 },
             )
             .with_name(symbol.name.clone())
-            .with_qualified_name(symbol.name.clone());
-            node.range = Some(symbol.range.clone());
-            node.parent = parent_lookup(symbol.parent.as_deref(), &symbol_ids);
+            .with_qualified_name(rust_qualified_names[&symbol.id].clone())
+            .with_range(symbol.range.clone());
+            let parent = enclosing_code_symbol(&symbol.range, &symbols_by_range)
+                .or_else(|| parent_lookup(symbol.parent.as_deref(), &symbol_ids));
+            node.parent = parent.clone();
             insert_json_attr(&mut node.attrs, "visibility", &symbol.visibility);
             insert_json_attr(&mut node.attrs, "attributes", &symbol.attributes);
             insert_json_attr(&mut node.attrs, "doc", &symbol.doc);
+            retain_code_native(&mut node, NAMESPACE, symbol);
             graph.add_node(node);
-            graph.add_contains(
-                node_parent_or_root(
-                    &root_id,
-                    parent_lookup(symbol.parent.as_deref(), &symbol_ids),
-                ),
-                &id,
-            );
+            graph.add_contains(node_parent_or_root(&root_id, parent), &id);
         }
 
         for import in &self.imports {
-            let id = code_node_id(&identities, "import", None, Some(&import.range))?;
+            let id = code_node_id(&identities, "import", Some(&import.id), Some(&import.range))?;
             let mut node = DocumentNode::new(&id, DocumentNodeKind::Import)
                 .with_name(import.alias.clone().unwrap_or_else(|| import.path.clone()))
-                .with_text(import.path.clone());
-            node.range = Some(import.range.clone());
+                .with_text(import.path.clone())
+                .with_range(import.range.clone());
             insert_json_attr(&mut node.attrs, "path", &import.path);
             insert_json_attr(&mut node.attrs, "alias", &import.alias);
             insert_json_attr(&mut node.attrs, "visibility", &import.visibility);
+            retain_code_native(&mut node, NAMESPACE, import);
             graph.add_node(node);
             graph.add_contains(&root_id, &id);
             graph.add_edge(
                 DocumentEdge::new(&root_id, DocumentRelation::Imports, &id)
                     .with_range(import.range.clone()),
             );
+        }
+        for export in &self.exports {
+            let id = code_node_id(&identities, "export", Some(&export.id), Some(&export.range))?;
+            let mut node = DocumentNode::new(&id, DocumentNodeKind::Export)
+                .with_name(export.name.clone())
+                .with_range(export.range.clone());
+            insert_json_attr(&mut node.attrs, "kind", &export.kind);
+            retain_code_native(&mut node, NAMESPACE, export);
+            graph.add_node(node);
+            graph.add_contains(&root_id, &id);
+            graph.add_edge(
+                DocumentEdge::new(&root_id, DocumentRelation::Exports, &id)
+                    .with_range(export.range.clone()),
+            );
+        }
+
+        for assignment in &self.assignments {
+            let parent = enclosing_code_symbol(&assignment.range, &symbols_by_range)
+                .or_else(|| parent_lookup(assignment.parent.as_deref(), &symbol_ids));
+            add_code_fact_node(
+                &mut graph,
+                &identities,
+                &root_id,
+                "assignment",
+                &assignment.id,
+                DocumentNodeKind::Assignment,
+                parent.as_deref(),
+                &symbol_ids,
+                Some(assignment.range.clone()),
+                Some(assignment.lhs.clone()),
+                NAMESPACE,
+                assignment,
+                |attrs| {
+                    insert_json_attr(attrs, "rhs", &assignment.rhs);
+                    insert_json_attr(attrs, "operator", &assignment.operator);
+                },
+            )?;
+        }
+        for ret in &self.returns {
+            let parent = enclosing_code_symbol(&ret.range, &symbols_by_range)
+                .or_else(|| parent_lookup(ret.parent.as_deref(), &symbol_ids));
+            add_code_fact_node(
+                &mut graph,
+                &identities,
+                &root_id,
+                "return",
+                &ret.id,
+                DocumentNodeKind::Return,
+                parent.as_deref(),
+                &symbol_ids,
+                Some(ret.range.clone()),
+                ret.expression.clone(),
+                NAMESPACE,
+                ret,
+                |_| {},
+            )?;
+        }
+        for branch in &self.branches {
+            let parent = enclosing_code_symbol(&branch.range, &symbols_by_range)
+                .or_else(|| parent_lookup(branch.parent.as_deref(), &symbol_ids));
+            add_code_fact_node(
+                &mut graph,
+                &identities,
+                &root_id,
+                "branch",
+                &branch.id,
+                DocumentNodeKind::Branch,
+                parent.as_deref(),
+                &symbol_ids,
+                Some(branch.range.clone()),
+                branch.condition.clone(),
+                NAMESPACE,
+                branch,
+                |attrs| insert_json_attr(attrs, "kind", &branch.kind),
+            )?;
+        }
+        for call in &self.calls {
+            let parent = enclosing_code_symbol(&call.range, &symbols_by_range)
+                .or_else(|| parent_lookup(call.parent.as_deref(), &symbol_ids))
+                .unwrap_or_else(|| root_id.clone());
+            let id = code_node_id(&identities, "call", Some(&call.id), Some(&call.range))?;
+            let mut node = DocumentNode::new(&id, DocumentNodeKind::Call)
+                .with_name(call.target.clone())
+                .with_text(call.target.clone())
+                .with_range(call.range.clone());
+            insert_json_attr(&mut node.attrs, "arguments", &call.arguments);
+            retain_code_native(&mut node, NAMESPACE, call);
+            graph.add_node(node);
+            graph.add_contains(&parent, &id);
+            let target = parent_lookup(Some(&call.target), &symbol_ids)
+                .unwrap_or_else(|| call.target.clone());
+            graph.add_edge(code_inferred_edge(
+                &parent,
+                DocumentRelation::Calls,
+                target,
+                "grist.code.call-target-name-resolution.v1",
+                0.75,
+                &call.range,
+            )?);
+        }
+        for inheritance in &self.inheritances {
+            let node_id = code_node_id(
+                &identities,
+                "inheritance",
+                Some(&inheritance.id),
+                Some(&inheritance.range),
+            )?;
+            let mut node =
+                DocumentNode::new(&node_id, DocumentNodeKind::Other("inheritance".into()))
+                    .with_range(inheritance.range.clone());
+            insert_json_attr(&mut node.attrs, "target", &inheritance.target);
+            insert_json_attr(&mut node.attrs, "trait", &inheritance.trait_name);
+            retain_code_native(&mut node, NAMESPACE, inheritance);
+            graph.add_node(node);
+            graph.add_contains(&root_id, &node_id);
+
+            if let Some(trait_name) = &inheritance.trait_name {
+                let source = parent_lookup(Some(&inheritance.target), &symbol_ids)
+                    .unwrap_or_else(|| inheritance.target.clone());
+                let target = parent_lookup(Some(trait_name), &symbol_ids)
+                    .unwrap_or_else(|| trait_name.clone());
+                let mut edge = code_inferred_edge(
+                    source,
+                    DocumentRelation::Implements,
+                    target,
+                    "grist.rust.impl-target-resolution.v1",
+                    0.8,
+                    &inheritance.range,
+                )?;
+                edge.extensions.insert(
+                    NAMESPACE.to_string(),
+                    serde_json::to_value(inheritance).unwrap_or_default(),
+                );
+                graph.add_edge(edge);
+            }
+        }
+
+        for test in &self.tests {
+            add_code_test_node(
+                &mut graph,
+                &identities,
+                &root_id,
+                NAMESPACE,
+                test,
+                &test.id,
+                &test.name,
+                "rust-test",
+                Some(&test.symbol_id),
+                &symbol_ids,
+                &test.range,
+            )?;
+        }
+        for comment in &self.comments {
+            add_code_comment_node(
+                &mut graph,
+                &identities,
+                &root_id,
+                NAMESPACE,
+                comment,
+                &comment.id,
+                &comment.text,
+                comment.doc,
+                &comment.range,
+                &symbols_by_range,
+            )?;
+        }
+        let syntax_ids = self
+            .syntax_nodes
+            .iter()
+            .map(|syntax| {
+                Ok((
+                    syntax.id.clone(),
+                    code_node_id(&identities, "syntax", Some(&syntax.id), Some(&syntax.range))?,
+                ))
+            })
+            .collect::<Result<BTreeMap<_, _>, TransformError>>()?;
+        for syntax in &self.syntax_nodes {
+            add_code_syntax_node(
+                &mut graph,
+                &identities,
+                &root_id,
+                NAMESPACE,
+                syntax,
+                &syntax.id,
+                &syntax.kind,
+                syntax.named,
+                syntax.error,
+                syntax.missing,
+                syntax.parent.as_deref(),
+                &syntax_ids,
+                &syntax.raw,
+                &syntax.range,
+            )?;
+        }
+        for (ordinal, error) in self.parse_errors.iter().enumerate() {
+            add_code_parse_error(
+                &mut graph,
+                &identities,
+                &root_id,
+                NAMESPACE,
+                error,
+                ordinal,
+                &error.node_kind,
+                &error.raw,
+                error.missing,
+                &error.range,
+            )?;
         }
 
         graph
@@ -5936,7 +6318,6 @@ impl ToDocumentGraph for crate::rust::RustFile {
         Ok(graph)
     }
 }
-
 #[cfg(feature = "javascript")]
 impl ToDocumentGraph for crate::javascript::JavaScriptFile {
     fn to_document_graph(
@@ -5945,6 +6326,7 @@ impl ToDocumentGraph for crate::javascript::JavaScriptFile {
     ) -> Result<DocumentGraph, TransformError> {
         use crate::javascript::JavaScriptSymbolKind;
 
+        const NAMESPACE: &str = "grist.javascript";
         let identities = context
             .identity_generator(SchemaVersion::JAVASCRIPT_CODE_V1, "javascript")
             .map_err(projection_transform_error)?;
@@ -5955,19 +6337,36 @@ impl ToDocumentGraph for crate::javascript::JavaScriptFile {
         let mut graph = code_graph_from_context(context, DocumentKind::JavaScript, language);
         graph.dialect = Some(language.to_string());
         let root_id = ensure_code_root(&mut graph, &identities, "javascript")?;
-        let symbol_ids = self
-            .symbols
-            .iter()
-            .map(|symbol| {
-                Ok((
-                    symbol.qualified_name.clone(),
-                    code_node_id(&identities, "symbol", Some(&symbol.id), Some(&symbol.range))?,
-                ))
-            })
-            .collect::<Result<BTreeMap<_, _>, TransformError>>()?;
-
+        if let Some(root) = graph.nodes.iter_mut().find(|node| node.id == root_id) {
+            root.extensions.insert(
+                NAMESPACE.into(),
+                serde_json::json!({
+                    "schema_version": self.schema_version,
+                    "dialect": self.dialect,
+                    "detail": self.detail,
+                }),
+            );
+        }
+        let mut symbol_ids = BTreeMap::new();
         for symbol in &self.symbols {
             let id = code_node_id(&identities, "symbol", Some(&symbol.id), Some(&symbol.range))?;
+            for key in [&symbol.id, &symbol.qualified_name] {
+                insert_code_symbol_alias(&mut symbol_ids, key.clone(), &id);
+            }
+        }
+        let symbols_by_range = self
+            .symbols
+            .iter()
+            .filter_map(|symbol| {
+                symbol_ids
+                    .get(&symbol.qualified_name)
+                    .cloned()
+                    .map(|id| (symbol.range.clone(), id))
+            })
+            .collect::<Vec<_>>();
+
+        for symbol in &self.symbols {
+            let id = symbol_ids[&symbol.qualified_name].clone();
             let mut node = DocumentNode::new(
                 &id,
                 match symbol.kind {
@@ -5981,9 +6380,10 @@ impl ToDocumentGraph for crate::javascript::JavaScriptFile {
                 },
             )
             .with_name(symbol.name.clone())
-            .with_qualified_name(symbol.qualified_name.clone());
-            node.range = Some(symbol.range.clone());
-            let parent = symbol_parent_node(&graph.id, &symbol.qualified_name, &symbol_ids);
+            .with_qualified_name(symbol.qualified_name.clone())
+            .with_range(symbol.range.clone());
+            let parent = symbol_parent_node(&graph.id, &symbol.qualified_name, &symbol_ids)
+                .or_else(|| parent_lookup(symbol.parent.as_deref(), &symbol_ids));
             node.parent = parent.clone();
             insert_json_attr(&mut node.attrs, "visibility", &symbol.visibility);
             insert_json_attr(&mut node.attrs, "modifiers", &symbol.modifiers);
@@ -5991,24 +6391,49 @@ impl ToDocumentGraph for crate::javascript::JavaScriptFile {
             insert_json_attr(&mut node.attrs, "extends", &symbol.extends);
             insert_json_attr(&mut node.attrs, "implements", &symbol.implements);
             insert_json_attr(&mut node.attrs, "doc", &symbol.doc);
+            retain_code_native(&mut node, NAMESPACE, symbol);
             graph.add_node(node);
             graph.add_contains(node_parent_or_root(&root_id, parent), &id);
-            for target in symbol.extends.iter().chain(symbol.implements.iter()) {
-                graph.add_edge(
-                    DocumentEdge::new(&id, DocumentRelation::Inherits, target)
-                        .with_range(symbol.range.clone()),
-                );
+            for (target_name, relation, rule) in symbol
+                .extends
+                .iter()
+                .map(|target| {
+                    (
+                        target,
+                        DocumentRelation::Inherits,
+                        "grist.code.inheritance-name-resolution.v1",
+                    )
+                })
+                .chain(symbol.implements.iter().map(|target| {
+                    (
+                        target,
+                        DocumentRelation::Implements,
+                        "grist.code.implementation-name-resolution.v1",
+                    )
+                }))
+            {
+                let target = parent_lookup(Some(target_name), &symbol_ids)
+                    .unwrap_or_else(|| target_name.clone());
+                graph.add_edge(code_inferred_edge(
+                    &id,
+                    relation,
+                    target,
+                    rule,
+                    0.85,
+                    &symbol.range,
+                )?);
             }
         }
 
         for import in &self.imports {
             let id = code_node_id(&identities, "import", Some(&import.id), Some(&import.range))?;
-            let mut node =
-                DocumentNode::new(&id, DocumentNodeKind::Import).with_name(import.module.clone());
-            node.range = Some(import.range.clone());
+            let mut node = DocumentNode::new(&id, DocumentNodeKind::Import)
+                .with_name(import.module.clone())
+                .with_range(import.range.clone());
             insert_json_attr(&mut node.attrs, "names", &import.names);
             insert_json_attr(&mut node.attrs, "default", &import.default);
             insert_json_attr(&mut node.attrs, "namespace", &import.namespace);
+            retain_code_native(&mut node, NAMESPACE, import);
             graph.add_node(node);
             graph.add_contains(&root_id, &id);
             graph.add_edge(
@@ -6018,10 +6443,11 @@ impl ToDocumentGraph for crate::javascript::JavaScriptFile {
         }
         for export in &self.exports {
             let id = code_node_id(&identities, "export", Some(&export.id), Some(&export.range))?;
-            let mut node = DocumentNode::new(&id, DocumentNodeKind::Export);
-            node.range = Some(export.range.clone());
+            let mut node =
+                DocumentNode::new(&id, DocumentNodeKind::Export).with_range(export.range.clone());
             insert_json_attr(&mut node.attrs, "names", &export.names);
             insert_json_attr(&mut node.attrs, "source", &export.source);
+            retain_code_native(&mut node, NAMESPACE, export);
             graph.add_node(node);
             graph.add_contains(&root_id, &id);
             graph.add_edge(
@@ -6042,6 +6468,8 @@ impl ToDocumentGraph for crate::javascript::JavaScriptFile {
                 &symbol_ids,
                 Some(assignment.range.clone()),
                 Some(assignment.lhs.clone()),
+                NAMESPACE,
+                assignment,
                 |attrs| {
                     insert_json_attr(attrs, "rhs", &assignment.rhs);
                     insert_json_attr(attrs, "operator", &assignment.operator);
@@ -6060,6 +6488,8 @@ impl ToDocumentGraph for crate::javascript::JavaScriptFile {
                 &symbol_ids,
                 Some(ret.range.clone()),
                 ret.expression.clone(),
+                NAMESPACE,
+                ret,
                 |_| {},
             )?;
         }
@@ -6075,6 +6505,8 @@ impl ToDocumentGraph for crate::javascript::JavaScriptFile {
                 &symbol_ids,
                 Some(branch.range.clone()),
                 branch.condition.clone(),
+                NAMESPACE,
+                branch,
                 |attrs| insert_json_attr(attrs, "kind", &branch.kind),
             )?;
         }
@@ -6084,15 +6516,94 @@ impl ToDocumentGraph for crate::javascript::JavaScriptFile {
             let id = code_node_id(&identities, "call", Some(&call.id), Some(&call.range))?;
             let mut node = DocumentNode::new(&id, DocumentNodeKind::Call)
                 .with_name(call.target.clone())
-                .with_text(call.target.clone());
-            node.range = Some(call.range.clone());
+                .with_text(call.target.clone())
+                .with_range(call.range.clone());
             insert_json_attr(&mut node.attrs, "args", &call.args);
+            retain_code_native(&mut node, NAMESPACE, call);
             graph.add_node(node);
             graph.add_contains(&parent, &id);
-            graph.add_edge(
-                DocumentEdge::new(&parent, DocumentRelation::Calls, call.target.clone())
-                    .with_range(call.range.clone()),
-            );
+            let target = parent_lookup(Some(&call.target), &symbol_ids)
+                .unwrap_or_else(|| call.target.clone());
+            graph.add_edge(code_inferred_edge(
+                &parent,
+                DocumentRelation::Calls,
+                target,
+                "grist.code.call-target-name-resolution.v1",
+                0.75,
+                &call.range,
+            )?);
+        }
+
+        for test in &self.tests {
+            add_code_test_node(
+                &mut graph,
+                &identities,
+                &root_id,
+                NAMESPACE,
+                test,
+                &test.id,
+                &test.name,
+                &test.framework,
+                test.parent.as_deref(),
+                &symbol_ids,
+                &test.range,
+            )?;
+        }
+        for comment in &self.comments {
+            add_code_comment_node(
+                &mut graph,
+                &identities,
+                &root_id,
+                NAMESPACE,
+                comment,
+                &comment.id,
+                &comment.text,
+                comment.doc,
+                &comment.range,
+                &symbols_by_range,
+            )?;
+        }
+        let syntax_ids = self
+            .syntax_nodes
+            .iter()
+            .map(|syntax| {
+                Ok((
+                    syntax.id.clone(),
+                    code_node_id(&identities, "syntax", Some(&syntax.id), Some(&syntax.range))?,
+                ))
+            })
+            .collect::<Result<BTreeMap<_, _>, TransformError>>()?;
+        for syntax in &self.syntax_nodes {
+            add_code_syntax_node(
+                &mut graph,
+                &identities,
+                &root_id,
+                NAMESPACE,
+                syntax,
+                &syntax.id,
+                &syntax.kind,
+                syntax.named,
+                syntax.error,
+                syntax.missing,
+                syntax.parent.as_deref(),
+                &syntax_ids,
+                &syntax.raw,
+                &syntax.range,
+            )?;
+        }
+        for (ordinal, error) in self.parse_errors.iter().enumerate() {
+            add_code_parse_error(
+                &mut graph,
+                &identities,
+                &root_id,
+                NAMESPACE,
+                error,
+                ordinal,
+                &error.node_kind,
+                &error.raw,
+                error.missing,
+                &error.range,
+            )?;
         }
 
         graph
@@ -6101,7 +6612,6 @@ impl ToDocumentGraph for crate::javascript::JavaScriptFile {
         Ok(graph)
     }
 }
-
 #[cfg(feature = "typescript")]
 impl ToDocumentGraph for crate::typescript::TypeScriptFile {
     fn to_document_graph(
@@ -6110,6 +6620,7 @@ impl ToDocumentGraph for crate::typescript::TypeScriptFile {
     ) -> Result<DocumentGraph, TransformError> {
         use crate::typescript::TypeScriptSymbolKind;
 
+        const NAMESPACE: &str = "grist.typescript";
         let identities = context
             .identity_generator(SchemaVersion::TYPESCRIPT_CODE_V1, "typescript")
             .map_err(projection_transform_error)?;
@@ -6120,21 +6631,38 @@ impl ToDocumentGraph for crate::typescript::TypeScriptFile {
             crate::typescript::TypeScriptDialect::Jsx => "jsx",
         };
         let mut graph = code_graph_from_context(context, DocumentKind::TypeScript, language);
-        graph.dialect = Some(format!("{:?}", self.dialect).to_lowercase());
+        graph.dialect = Some(language.to_string());
         let root_id = ensure_code_root(&mut graph, &identities, "typescript")?;
-        let symbol_ids = self
+        if let Some(root) = graph.nodes.iter_mut().find(|node| node.id == root_id) {
+            root.extensions.insert(
+                NAMESPACE.into(),
+                serde_json::json!({
+                    "schema_version": self.schema_version,
+                    "dialect": self.dialect,
+                    "detail": self.detail,
+                }),
+            );
+        }
+        let mut symbol_ids = BTreeMap::new();
+        for symbol in &self.symbols {
+            let id = code_node_id(&identities, "symbol", Some(&symbol.id), Some(&symbol.range))?;
+            for key in [&symbol.id, &symbol.qualified_name] {
+                insert_code_symbol_alias(&mut symbol_ids, key.clone(), &id);
+            }
+        }
+        let symbols_by_range = self
             .symbols
             .iter()
-            .map(|symbol| {
-                Ok((
-                    symbol.qualified_name.clone(),
-                    code_node_id(&identities, "symbol", None, Some(&symbol.range))?,
-                ))
+            .filter_map(|symbol| {
+                symbol_ids
+                    .get(&symbol.qualified_name)
+                    .cloned()
+                    .map(|id| (symbol.range.clone(), id))
             })
-            .collect::<Result<BTreeMap<_, _>, TransformError>>()?;
+            .collect::<Vec<_>>();
 
         for symbol in &self.symbols {
-            let id = code_node_id(&identities, "symbol", None, Some(&symbol.range))?;
+            let id = symbol_ids[&symbol.qualified_name].clone();
             let mut node = DocumentNode::new(
                 &id,
                 match symbol.kind {
@@ -6152,39 +6680,60 @@ impl ToDocumentGraph for crate::typescript::TypeScriptFile {
                 },
             )
             .with_name(symbol.name.clone())
-            .with_qualified_name(symbol.qualified_name.clone());
-            node.range = Some(symbol.range.clone());
-            node.parent = symbol_parent_node(&graph.id, &symbol.qualified_name, &symbol_ids);
+            .with_qualified_name(symbol.qualified_name.clone())
+            .with_range(symbol.range.clone());
+            let parent = symbol_parent_node(&graph.id, &symbol.qualified_name, &symbol_ids)
+                .or_else(|| parent_lookup(symbol.parent.as_deref(), &symbol_ids));
+            node.parent = parent.clone();
             insert_json_attr(&mut node.attrs, "visibility", &symbol.visibility);
             insert_json_attr(&mut node.attrs, "modifiers", &symbol.modifiers);
             insert_json_attr(&mut node.attrs, "decorators", &symbol.decorators);
             insert_json_attr(&mut node.attrs, "extends", &symbol.extends);
             insert_json_attr(&mut node.attrs, "implements", &symbol.implements);
             insert_json_attr(&mut node.attrs, "doc", &symbol.doc);
+            retain_code_native(&mut node, NAMESPACE, symbol);
             graph.add_node(node);
-            graph.add_contains(
-                node_parent_or_root(
-                    &root_id,
-                    symbol_parent_node(&graph.id, &symbol.qualified_name, &symbol_ids),
-                ),
-                &id,
-            );
-            for target in symbol.extends.iter().chain(symbol.implements.iter()) {
-                graph.add_edge(
-                    DocumentEdge::new(&id, DocumentRelation::Inherits, target)
-                        .with_range(symbol.range.clone()),
-                );
+            graph.add_contains(node_parent_or_root(&root_id, parent), &id);
+            for (target_name, relation, rule) in symbol
+                .extends
+                .iter()
+                .map(|target| {
+                    (
+                        target,
+                        DocumentRelation::Inherits,
+                        "grist.code.inheritance-name-resolution.v1",
+                    )
+                })
+                .chain(symbol.implements.iter().map(|target| {
+                    (
+                        target,
+                        DocumentRelation::Implements,
+                        "grist.code.implementation-name-resolution.v1",
+                    )
+                }))
+            {
+                let target = parent_lookup(Some(target_name), &symbol_ids)
+                    .unwrap_or_else(|| target_name.clone());
+                graph.add_edge(code_inferred_edge(
+                    &id,
+                    relation,
+                    target,
+                    rule,
+                    0.85,
+                    &symbol.range,
+                )?);
             }
         }
 
         for import in &self.imports {
-            let id = code_node_id(&identities, "import", None, Some(&import.range))?;
-            let mut node =
-                DocumentNode::new(&id, DocumentNodeKind::Import).with_name(import.module.clone());
-            node.range = Some(import.range.clone());
+            let id = code_node_id(&identities, "import", Some(&import.id), Some(&import.range))?;
+            let mut node = DocumentNode::new(&id, DocumentNodeKind::Import)
+                .with_name(import.module.clone())
+                .with_range(import.range.clone());
             insert_json_attr(&mut node.attrs, "names", &import.names);
             insert_json_attr(&mut node.attrs, "default", &import.default);
             insert_json_attr(&mut node.attrs, "namespace", &import.namespace);
+            retain_code_native(&mut node, NAMESPACE, import);
             graph.add_node(node);
             graph.add_contains(&root_id, &id);
             graph.add_edge(
@@ -6193,11 +6742,12 @@ impl ToDocumentGraph for crate::typescript::TypeScriptFile {
             );
         }
         for export in &self.exports {
-            let id = code_node_id(&identities, "export", None, Some(&export.range))?;
-            let mut node = DocumentNode::new(&id, DocumentNodeKind::Export);
-            node.range = Some(export.range.clone());
+            let id = code_node_id(&identities, "export", Some(&export.id), Some(&export.range))?;
+            let mut node =
+                DocumentNode::new(&id, DocumentNodeKind::Export).with_range(export.range.clone());
             insert_json_attr(&mut node.attrs, "names", &export.names);
             insert_json_attr(&mut node.attrs, "source", &export.source);
+            retain_code_native(&mut node, NAMESPACE, export);
             graph.add_node(node);
             graph.add_contains(&root_id, &id);
             graph.add_edge(
@@ -6218,6 +6768,8 @@ impl ToDocumentGraph for crate::typescript::TypeScriptFile {
                 &symbol_ids,
                 Some(assignment.range.clone()),
                 Some(assignment.lhs.clone()),
+                NAMESPACE,
+                assignment,
                 |attrs| {
                     insert_json_attr(attrs, "rhs", &assignment.rhs);
                     insert_json_attr(attrs, "operator", &assignment.operator);
@@ -6236,6 +6788,8 @@ impl ToDocumentGraph for crate::typescript::TypeScriptFile {
                 &symbol_ids,
                 Some(ret.range.clone()),
                 ret.expression.clone(),
+                NAMESPACE,
+                ret,
                 |_| {},
             )?;
         }
@@ -6251,24 +6805,105 @@ impl ToDocumentGraph for crate::typescript::TypeScriptFile {
                 &symbol_ids,
                 Some(branch.range.clone()),
                 branch.condition.clone(),
+                NAMESPACE,
+                branch,
                 |attrs| insert_json_attr(attrs, "kind", &branch.kind),
             )?;
         }
         for call in &self.calls {
             let parent = parent_lookup(call.parent.as_deref(), &symbol_ids)
                 .unwrap_or_else(|| root_id.clone());
-            let id = code_node_id(&identities, "call", None, Some(&call.range))?;
+            let id = code_node_id(&identities, "call", Some(&call.id), Some(&call.range))?;
             let mut node = DocumentNode::new(&id, DocumentNodeKind::Call)
                 .with_name(call.target.clone())
-                .with_text(call.target.clone());
-            node.range = Some(call.range.clone());
+                .with_text(call.target.clone())
+                .with_range(call.range.clone());
             insert_json_attr(&mut node.attrs, "args", &call.args);
+            retain_code_native(&mut node, NAMESPACE, call);
             graph.add_node(node);
             graph.add_contains(&parent, &id);
-            graph.add_edge(
-                DocumentEdge::new(&parent, DocumentRelation::Calls, call.target.clone())
-                    .with_range(call.range.clone()),
-            );
+            let target = parent_lookup(Some(&call.target), &symbol_ids)
+                .unwrap_or_else(|| call.target.clone());
+            graph.add_edge(code_inferred_edge(
+                &parent,
+                DocumentRelation::Calls,
+                target,
+                "grist.code.call-target-name-resolution.v1",
+                0.75,
+                &call.range,
+            )?);
+        }
+
+        for test in &self.tests {
+            add_code_test_node(
+                &mut graph,
+                &identities,
+                &root_id,
+                NAMESPACE,
+                test,
+                &test.id,
+                &test.name,
+                &test.framework,
+                test.parent.as_deref(),
+                &symbol_ids,
+                &test.range,
+            )?;
+        }
+        for comment in &self.comments {
+            add_code_comment_node(
+                &mut graph,
+                &identities,
+                &root_id,
+                NAMESPACE,
+                comment,
+                &comment.id,
+                &comment.text,
+                comment.doc,
+                &comment.range,
+                &symbols_by_range,
+            )?;
+        }
+        let syntax_ids = self
+            .syntax_nodes
+            .iter()
+            .map(|syntax| {
+                Ok((
+                    syntax.id.clone(),
+                    code_node_id(&identities, "syntax", Some(&syntax.id), Some(&syntax.range))?,
+                ))
+            })
+            .collect::<Result<BTreeMap<_, _>, TransformError>>()?;
+        for syntax in &self.syntax_nodes {
+            add_code_syntax_node(
+                &mut graph,
+                &identities,
+                &root_id,
+                NAMESPACE,
+                syntax,
+                &syntax.id,
+                &syntax.kind,
+                syntax.named,
+                syntax.error,
+                syntax.missing,
+                syntax.parent.as_deref(),
+                &syntax_ids,
+                &syntax.raw,
+                &syntax.range,
+            )?;
+        }
+        for (ordinal, error) in self.parse_errors.iter().enumerate() {
+            add_code_parse_error(
+                &mut graph,
+                &identities,
+                &root_id,
+                NAMESPACE,
+                error,
+                ordinal,
+                &error.node_kind,
+                &error.raw,
+                error.missing,
+                &error.range,
+            )?;
         }
 
         graph
@@ -6375,6 +7010,235 @@ fn code_node_id(
     }
     stable_projection_node_id(identities, path, native_id, range)
 }
+#[cfg(any(
+    feature = "javascript",
+    feature = "python",
+    feature = "rust",
+    feature = "typescript"
+))]
+fn insert_code_symbol_alias(
+    symbol_ids: &mut BTreeMap<String, String>,
+    alias: impl Into<String>,
+    id: &str,
+) {
+    let id = id.to_string();
+    symbol_ids
+        .entry(alias.into())
+        .and_modify(|existing| {
+            if !existing.is_empty() && *existing != id {
+                existing.clear();
+            }
+        })
+        .or_insert(id);
+}
+
+#[cfg(feature = "rust")]
+fn enclosing_code_symbol(range: &SourceRange, symbols: &[(SourceRange, String)]) -> Option<String> {
+    symbols
+        .iter()
+        .filter(|(candidate, _)| {
+            candidate.byte_start <= range.byte_start
+                && candidate.byte_end >= range.byte_end
+                && (candidate.byte_start != range.byte_start
+                    || candidate.byte_end != range.byte_end)
+        })
+        .min_by_key(|(candidate, _)| candidate.byte_end.saturating_sub(candidate.byte_start))
+        .map(|(_, id)| id.clone())
+}
+
+#[cfg(any(
+    feature = "javascript",
+    feature = "python",
+    feature = "rust",
+    feature = "typescript"
+))]
+fn retain_code_native<T: Serialize>(node: &mut DocumentNode, namespace: &str, native: &T) {
+    if let Ok(value) = serde_json::to_value(native) {
+        node.extensions.insert(namespace.to_string(), value);
+    }
+}
+
+#[cfg(any(
+    feature = "javascript",
+    feature = "python",
+    feature = "rust",
+    feature = "typescript"
+))]
+fn code_inferred_edge(
+    source: impl Into<String>,
+    relation: DocumentRelation,
+    target: impl Into<String>,
+    rule: &str,
+    confidence: f64,
+    range: &SourceRange,
+) -> Result<DocumentEdge, TransformError> {
+    let confidence = LocatorConfidence::new(confidence).map_err(projection_transform_error)?;
+    let mut edge = DocumentEdge::inferred(source, relation, target, rule, confidence);
+    edge.range = Some(range.clone());
+    if let Ok(locator) = SourceLocator::try_from(range.clone()) {
+        edge = edge.with_inference_evidence(locator);
+    }
+    Ok(edge)
+}
+
+#[cfg(any(
+    feature = "javascript",
+    feature = "python",
+    feature = "rust",
+    feature = "typescript"
+))]
+#[allow(clippy::too_many_arguments)]
+fn add_code_test_node<T: Serialize>(
+    graph: &mut DocumentGraph,
+    identities: &GraphIdGenerator,
+    root_id: &str,
+    namespace: &str,
+    native: &T,
+    native_id: &str,
+    name: &str,
+    framework: &str,
+    parent: Option<&str>,
+    symbol_ids: &BTreeMap<String, String>,
+    range: &SourceRange,
+) -> Result<(), TransformError> {
+    let parent = parent_lookup(parent, symbol_ids).unwrap_or_else(|| root_id.to_string());
+    let id = code_node_id(identities, "test", Some(native_id), Some(range))?;
+    let mut node = DocumentNode::new(&id, DocumentNodeKind::CodeSymbol)
+        .with_name(name)
+        .with_range(range.clone());
+    insert_json_attr(&mut node.attrs, "framework", &framework);
+    retain_code_native(&mut node, namespace, native);
+    graph.add_node(node);
+    graph.add_contains(&parent, &id);
+    graph.add_edge(
+        DocumentEdge::new(parent, DocumentRelation::Other("tests".into()), id)
+            .with_range(range.clone()),
+    );
+    Ok(())
+}
+
+#[cfg(any(
+    feature = "javascript",
+    feature = "python",
+    feature = "rust",
+    feature = "typescript"
+))]
+#[allow(clippy::too_many_arguments)]
+fn add_code_comment_node<T: Serialize>(
+    graph: &mut DocumentGraph,
+    identities: &GraphIdGenerator,
+    root_id: &str,
+    namespace: &str,
+    native: &T,
+    native_id: &str,
+    text: &str,
+    doc: bool,
+    range: &SourceRange,
+    symbols: &[(SourceRange, String)],
+) -> Result<(), TransformError> {
+    let id = code_node_id(identities, "comment", Some(native_id), Some(range))?;
+    let mut node = DocumentNode::new(&id, DocumentNodeKind::Comment)
+        .with_text(text)
+        .with_range(range.clone());
+    insert_json_attr(&mut node.attrs, "documentation", &doc);
+    retain_code_native(&mut node, namespace, native);
+    graph.add_node(node);
+    graph.add_contains(root_id, &id);
+
+    if doc
+        && let Some((_, target)) = symbols
+            .iter()
+            .filter(|(symbol_range, _)| symbol_range.byte_start >= range.byte_end)
+            .min_by_key(|(symbol_range, _)| symbol_range.byte_start)
+    {
+        graph.add_edge(code_inferred_edge(
+            &id,
+            DocumentRelation::Annotates,
+            target,
+            "grist.code.leading-documentation.v1",
+            0.85,
+            range,
+        )?);
+    }
+    Ok(())
+}
+
+#[cfg(any(
+    feature = "javascript",
+    feature = "python",
+    feature = "rust",
+    feature = "typescript"
+))]
+#[allow(clippy::too_many_arguments)]
+fn add_code_syntax_node<T: Serialize>(
+    graph: &mut DocumentGraph,
+    identities: &GraphIdGenerator,
+    root_id: &str,
+    namespace: &str,
+    native: &T,
+    native_id: &str,
+    grammar_kind: &str,
+    named: bool,
+    error: bool,
+    missing: bool,
+    parent: Option<&str>,
+    syntax_ids: &BTreeMap<String, String>,
+    _raw: &str,
+    range: &SourceRange,
+) -> Result<(), TransformError> {
+    let id = code_node_id(identities, "syntax", Some(native_id), Some(range))?;
+    let mut node = DocumentNode::new(&id, DocumentNodeKind::Other("grammar_node".into()))
+        .with_range(range.clone());
+    insert_json_attr(&mut node.attrs, "grammar_kind", &grammar_kind);
+    insert_json_attr(&mut node.attrs, "named", &named);
+    insert_json_attr(&mut node.attrs, "error", &error);
+    insert_json_attr(&mut node.attrs, "missing", &missing);
+    retain_code_native(&mut node, namespace, native);
+    if let Ok(payload) = serde_json::to_value(native)
+        && let Ok(retained) = RawNodeContent::new(namespace, grammar_kind, payload)
+    {
+        node.raw = Some(retained);
+    }
+    graph.add_node(node);
+    let parent = parent
+        .and_then(|value| syntax_ids.get(value))
+        .cloned()
+        .unwrap_or_else(|| root_id.to_string());
+    graph.add_contains(parent, id);
+    Ok(())
+}
+
+#[cfg(any(
+    feature = "javascript",
+    feature = "python",
+    feature = "rust",
+    feature = "typescript"
+))]
+#[allow(clippy::too_many_arguments)]
+fn add_code_parse_error<T: Serialize>(
+    graph: &mut DocumentGraph,
+    identities: &GraphIdGenerator,
+    root_id: &str,
+    namespace: &str,
+    native: &T,
+    _ordinal: usize,
+    grammar_kind: &str,
+    _raw: &str,
+    missing: bool,
+    range: &SourceRange,
+) -> Result<(), TransformError> {
+    let native_bytes = canonical_json_bytes(native).unwrap_or_default();
+    let digest = sha256_hex(&native_bytes);
+    let native_id = format!("{}:{}:{}", range.byte_start, range.byte_end, digest);
+    let id = code_node_id(identities, "parse_error", Some(&native_id), Some(range))?;
+    let mut node = DocumentNode::new(&id, DocumentNodeKind::Diagnostic).with_range(range.clone());
+    insert_json_attr(&mut node.attrs, "grammar_kind", &grammar_kind);
+    insert_json_attr(&mut node.attrs, "missing", &missing);
+    retain_code_native(&mut node, namespace, native);
+    graph.add_node(node);
+    graph.add_contains(root_id, id);
+    Ok(())
+}
 
 #[cfg(any(
     feature = "latex",
@@ -6409,13 +7273,20 @@ fn symbol_parent_node(
 ))]
 fn parent_lookup(parent: Option<&str>, symbol_ids: &BTreeMap<String, String>) -> Option<String> {
     let parent = parent?;
-    symbol_ids.get(parent).cloned().or_else(|| {
-        symbol_ids.iter().find_map(|(qualified, id)| {
-            qualified
-                .ends_with(&format!(".{parent}"))
-                .then(|| id.clone())
+    if let Some(id) = symbol_ids.get(parent).filter(|id| !id.is_empty()) {
+        return Some(id.clone());
+    }
+    let suffixes = [format!(".{parent}"), format!("::{parent}")];
+    let matches = symbol_ids
+        .iter()
+        .filter(|(qualified, id)| {
+            !id.is_empty() && suffixes.iter().any(|suffix| qualified.ends_with(suffix))
         })
-    })
+        .map(|(_, id)| id.clone())
+        .collect::<BTreeSet<_>>();
+    (matches.len() == 1)
+        .then(|| matches.into_iter().next())
+        .flatten()
 }
 
 #[cfg(any(
@@ -6428,9 +7299,14 @@ fn node_parent_or_root(root_id: &str, parent: Option<String>) -> String {
     parent.unwrap_or_else(|| root_id.to_string())
 }
 
-#[cfg(any(feature = "javascript", feature = "python", feature = "typescript"))]
+#[cfg(any(
+    feature = "javascript",
+    feature = "python",
+    feature = "rust",
+    feature = "typescript"
+))]
 #[allow(clippy::too_many_arguments)]
-fn add_code_fact_node<F>(
+fn add_code_fact_node<F, T>(
     graph: &mut DocumentGraph,
     identities: &GraphIdGenerator,
     root_id: &str,
@@ -6441,19 +7317,34 @@ fn add_code_fact_node<F>(
     symbol_ids: &BTreeMap<String, String>,
     range: Option<SourceRange>,
     text: Option<String>,
+    namespace: &str,
+    native: &T,
     add_attrs: F,
 ) -> Result<(), TransformError>
 where
     F: FnOnce(&mut AttrMap),
+    T: Serialize,
 {
     let parent = parent_lookup(parent, symbol_ids).unwrap_or_else(|| root_id.to_string());
     let node_id = code_node_id(identities, category, Some(id), range.as_ref())?;
-    let mut node = DocumentNode::new(&node_id, kind);
-    node.range = range;
+    let mut node = DocumentNode::new(&node_id, kind.clone());
+    if let Some(range) = range.clone() {
+        node = node.with_range(range);
+    }
     node.text = text;
     add_attrs(&mut node.attrs);
+    retain_code_native(&mut node, namespace, native);
     graph.add_node(node);
-    graph.add_contains(parent, node_id);
+    graph.add_contains(&parent, &node_id);
+    let relation = match kind {
+        DocumentNodeKind::Assignment => Some(DocumentRelation::Assigns),
+        DocumentNodeKind::Return => Some(DocumentRelation::Returns),
+        DocumentNodeKind::Branch => Some(DocumentRelation::ConditionalOn),
+        _ => None,
+    };
+    if let (Some(relation), Some(range)) = (relation, range) {
+        graph.add_edge(DocumentEdge::new(parent, relation, node_id).with_range(range));
+    }
     Ok(())
 }
 
