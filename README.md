@@ -88,6 +88,8 @@ The `bibliography` feature enables lossless BibTeX/BibLaTeX parsing, bounded str
 
 The `pdf` feature enables bounded inert PDF object/xref, catalog, page-tree, label, metadata, filter, encryption, repair, native glyph/text, font/style, geometry, and reading-order parsing. It is included in `full` and `cli`.
 
+The `media` feature enables bounded native PNG, JPEG, TIFF, WebP, GIF, BMP, HEIF/HEIC, and inert SVG parsing, including animation frames, camera metadata, active-content inventory, exact locators, and graph projection. It is included in `full` and `cli`.
+
 The `word-ooxml` feature enables bounded inert DOCX, DOCM, DOTX, and DOTM package parsing, including content types, relationships, properties, quarantined macro inventory, and embedded child artifacts. It is included in `word-processing`, `full`, and `cli`.
 
 The `presentation-ooxml` feature enables bounded inert PPTX, PPTM, POTX, and PPSX package parsing, including slide order, masters/layouts/themes, properties, action inventory, macro quarantine, and embedded child artifacts. It is included in `presentations`, `full`, and `cli`.
@@ -110,6 +112,7 @@ The `cli` feature enables the `grist` binary and pulls in the parser features ne
 - docs/latex.md describes safe project-root detection, bounded includes and macro expansion, rich scholarly syntax, and inert active commands.
 - `docs/bibliography.md` describes BibTeX/BibLaTeX provenance, bounded value and crossref resolution, duplicate-key citation semantics, and graph projection.
 - docs/pdf.md describes the bounded inert PDF container plus native font, glyph, token, line, block, geometry, reading-order, diagnostic, and locator contract.
+- `docs/image.md` describes native image container parsing, bounded metadata retention, inert SVG active-content inventory, locators, and graph projection.
 - docs/word-ooxml.md describes safe Word OPC traversal, package metadata, relationships, macro quarantine, child artifacts, and exact locators.
 - docs/presentation-ooxml.md describes safe PresentationML OPC traversal, slide order, masters/layouts/themes, inert actions, macro quarantine, child artifacts, and exact locators.
 - docs/presentation-odf.md describes inert ODP/OTP package parsing, masters/styles, complete slide content, confidence-bearing reading order, embedded artifacts, security, graph, segment, schema, and CLI behavior.

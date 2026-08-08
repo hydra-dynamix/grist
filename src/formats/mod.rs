@@ -24,6 +24,8 @@ pub mod email;
 pub mod epub;
 #[cfg(feature = "html")]
 pub mod html;
+#[cfg(feature = "media")]
+pub mod image;
 #[cfg(feature = "javascript")]
 pub mod javascript;
 #[cfg(feature = "notebooks")]

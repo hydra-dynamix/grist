@@ -1328,6 +1328,36 @@ fn registrations() -> Vec<Registration> {
             crate::pdf::PdfOptions
         );
     }
+    #[cfg(feature = "media")]
+    {
+        add!(
+            "image",
+            "image",
+            SchemaVersion::IMAGE_V1,
+            SchemaKind::Payload,
+            "grist.image.v1.schema.json",
+            false,
+            crate::image::ImageDocument
+        );
+        add!(
+            "image-envelope",
+            "envelope",
+            SchemaVersion::ENVELOPE_V2,
+            SchemaKind::Envelope,
+            "grist.image-envelope.v2.schema.json",
+            false,
+            crate::core::Envelope<crate::image::ImageDocument>
+        );
+        add!(
+            "image-options",
+            "image-options",
+            "grist/image-options/v1",
+            SchemaKind::Options,
+            "grist.image-options.v1.schema.json",
+            false,
+            crate::image::ImageOptions
+        );
+    }
     #[cfg(feature = "word-ooxml")]
     {
         add!(

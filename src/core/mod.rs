@@ -115,6 +115,7 @@ impl SchemaVersion {
     pub const HTML_V2: &'static str = "grist/html/v2";
     pub const EPUB_V1: &'static str = "grist/epub/v1";
     pub const PDF_V1: &'static str = "grist/pdf/v1";
+    pub const IMAGE_V1: &'static str = "grist/image/v1";
     pub const WORD_OOXML_V1: &'static str = "grist/word-ooxml/v1";
     pub const PRESENTATION_OOXML_V1: &'static str = "grist/presentation-ooxml/v1";
     pub const SPREADSHEET_OOXML_V1: &'static str = "grist/spreadsheet-ooxml/v1";
@@ -198,6 +199,7 @@ pub enum ArtifactKind {
     Html,
     Epub,
     Pdf,
+    Image,
     WordOoxml,
     PresentationOoxml,
     SpreadsheetOoxml,

@@ -88,9 +88,38 @@ fn image_signature(bytes: &[u8]) -> Option<Signal> {
         ))
     } else if bytes.starts_with(b"BM") {
         Some(magic("bmp", "image/bmp", "BMP signature", 0.96))
+    } else if heif_signature(bytes) {
+        Some(magic(
+            "heif",
+            "image/heif",
+            "HEIF/HEIC compatible brand",
+            0.99,
+        ))
+    } else if std::str::from_utf8(bytes).ok().is_some_and(|text| {
+        let text = text.trim_start_matches(['\u{feff}', ' ', '\t', '\r', '\n']);
+        text.starts_with("<svg") || (text.starts_with("<?xml") && text.contains("<svg"))
+    }) {
+        Some(magic("svg", "image/svg+xml", "SVG root element", 0.98))
     } else {
         None
     }
+}
+
+fn heif_signature(bytes: &[u8]) -> bool {
+    if bytes.len() < 16 || &bytes[4..8] != b"ftyp" {
+        return false;
+    }
+    let size = u32::from_be_bytes(bytes[0..4].try_into().unwrap()) as usize;
+    if size < 16 || size > bytes.len() {
+        return false;
+    }
+    let supported = |brand: &[u8]| {
+        matches!(
+            brand,
+            b"heic" | b"heix" | b"hevc" | b"hevx" | b"mif1" | b"msf1" | b"avif" | b"avis"
+        )
+    };
+    supported(&bytes[8..12]) || bytes[16..size].chunks_exact(4).any(supported)
 }
 
 fn other_signature(bytes: &[u8]) -> Option<Signal> {

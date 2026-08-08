@@ -192,6 +192,10 @@ pub fn project_envelope_to_graph(
             let document: crate::pdf::PdfDocument = serde_json::from_value(payload)?;
             Ok(document.to_document_graph(context)?)
         }
+        crate::core::ArtifactKind::Image => {
+            let document: crate::image::ImageDocument = serde_json::from_value(payload)?;
+            Ok(document.to_document_graph(context)?)
+        }
         crate::core::ArtifactKind::WordOoxml => {
             let document: crate::word_ooxml::WordOoxmlDocument = serde_json::from_value(payload)?;
             Ok(document.to_document_graph(context)?)

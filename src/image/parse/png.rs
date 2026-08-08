@@ -1,0 +1,288 @@
+use super::{Builder, be_u16, be_u32};
+use crate::core::sha256_hex;
+use crate::image::{ImageDimensions, ImageMetadataKind};
+use flate2::read::ZlibDecoder;
+use std::collections::BTreeMap;
+use std::io::Read;
+
+pub(super) fn parse(bytes: &[u8], builder: &mut Builder<'_>) -> Result<(), String> {
+    const SIGNATURE: &[u8] = b"\x89PNG\r\n\x1a\n";
+    if !bytes.starts_with(SIGNATURE) {
+        return Err("PNG signature is invalid".into());
+    }
+    let mut offset = SIGNATURE.len();
+    let mut saw_header = false;
+    let mut saw_end = false;
+    while offset < bytes.len() {
+        builder.checkpoint()?;
+        if offset + 12 > bytes.len() {
+            return Err("PNG chunk header or CRC is truncated".into());
+        }
+        let length = be_u32(bytes, offset)? as usize;
+        let kind = String::from_utf8_lossy(&bytes[offset + 4..offset + 8]).into_owned();
+        let data_start = offset + 8;
+        let data_end = data_start
+            .checked_add(length)
+            .ok_or_else(|| "PNG chunk length overflows".to_string())?;
+        let chunk_end = data_end
+            .checked_add(4)
+            .filter(|end| *end <= bytes.len())
+            .ok_or_else(|| format!("PNG {kind} chunk is truncated"))?;
+        let data = &bytes[data_start..data_end];
+        let expected_crc = be_u32(bytes, data_end)?;
+        let actual_crc = png_crc32(&bytes[offset + 4..data_end]);
+        if actual_crc != expected_crc {
+            return Err(format!("PNG {kind} chunk CRC does not match its contents"));
+        }
+        let known = matches!(
+            kind.as_str(),
+            "IHDR"
+                | "PLTE"
+                | "IDAT"
+                | "IEND"
+                | "tRNS"
+                | "gAMA"
+                | "cHRM"
+                | "sRGB"
+                | "iCCP"
+                | "pHYs"
+                | "tIME"
+                | "eXIf"
+                | "tEXt"
+                | "zTXt"
+                | "iTXt"
+                | "acTL"
+                | "fcTL"
+                | "fdAT"
+                | "sBIT"
+                | "bKGD"
+                | "hIST"
+                | "sPLT"
+        );
+        if !known && bytes[offset + 4].is_ascii_uppercase() {
+            return Err(format!("PNG contains unsupported critical chunk {kind}"));
+        }
+        builder.chunk(kind.clone(), known, data, offset, chunk_end)?;
+        match kind.as_str() {
+            "IHDR" => parse_header(data, offset, saw_header, builder)?,
+            "acTL" => {
+                if data.len() != 8 {
+                    return Err("PNG acTL chunk must contain frame and play counts".into());
+                }
+                if u64::from(be_u32(data, 0)?) > builder.options.max_frames {
+                    return Err("PNG animation frame count exceeds ImageOptions::max_frames".into());
+                }
+            }
+            "fcTL" => parse_frame(data, builder)?,
+            "eXIf" => builder.exif(data, data_start)?,
+            "iCCP" => {
+                builder.color.icc_profile_sha256 = Some(sha256_hex(data));
+                builder.metadata(
+                    ImageMetadataKind::Icc,
+                    data,
+                    data_start,
+                    None,
+                    BTreeMap::new(),
+                )?;
+            }
+            "tEXt" | "zTXt" | "iTXt" => parse_text(&kind, data, data_start, builder)?,
+            "IEND" => {
+                if length != 0 {
+                    return Err("PNG IEND chunk must be empty".into());
+                }
+                saw_end = true;
+                offset = chunk_end;
+                break;
+            }
+            _ => {}
+        }
+        saw_header |= kind == "IHDR";
+        offset = chunk_end;
+    }
+    if !saw_header || !saw_end {
+        return Err("PNG is missing IHDR or IEND".into());
+    }
+    if offset != bytes.len() {
+        return Err("PNG contains trailing bytes after IEND".into());
+    }
+    Ok(())
+}
+
+fn parse_header(
+    data: &[u8],
+    offset: usize,
+    saw_header: bool,
+    builder: &mut Builder<'_>,
+) -> Result<(), String> {
+    if saw_header || data.len() != 13 || offset != 8 {
+        return Err("PNG IHDR must be the first unique 13-byte chunk".into());
+    }
+    builder.dimensions = ImageDimensions {
+        width: be_u32(data, 0)?,
+        height: be_u32(data, 4)?,
+    };
+    builder.color.bits_per_component = data.get(8).copied();
+    let color_type = *data
+        .get(9)
+        .ok_or_else(|| "PNG IHDR is truncated".to_string())?;
+    let bit_depth = data[8];
+    let valid_depth = match color_type {
+        0 => matches!(bit_depth, 1 | 2 | 4 | 8 | 16),
+        2 | 4 | 6 => matches!(bit_depth, 8 | 16),
+        3 => matches!(bit_depth, 1 | 2 | 4 | 8),
+        _ => false,
+    };
+    if !valid_depth || data[10] != 0 || data[11] != 0 || data[12] > 1 {
+        return Err(
+            "PNG IHDR bit depth, compression, filter, or interlace method is invalid".into(),
+        );
+    }
+    let (model, components, alpha) = match color_type {
+        0 => ("grayscale", 1, false),
+        2 => ("rgb", 3, false),
+        3 => ("indexed", 1, false),
+        4 => ("grayscale_alpha", 2, true),
+        6 => ("rgba", 4, true),
+        _ => return Err(format!("PNG color type {color_type} is invalid")),
+    };
+    builder.color.model = Some(model.into());
+    builder.color.component_count = Some(components);
+    builder.color.alpha = Some(alpha);
+    Ok(())
+}
+
+fn parse_frame(data: &[u8], builder: &mut Builder<'_>) -> Result<(), String> {
+    if data.len() != 26 {
+        return Err("PNG fcTL chunk has an invalid length".into());
+    }
+    let dimensions = ImageDimensions {
+        width: be_u32(data, 4)?,
+        height: be_u32(data, 8)?,
+    };
+    let x = be_u32(data, 12)?;
+    let y = be_u32(data, 16)?;
+    if dimensions.width == 0
+        || dimensions.height == 0
+        || x.checked_add(dimensions.width)
+            .is_none_or(|end| end > builder.dimensions.width)
+        || y.checked_add(dimensions.height)
+            .is_none_or(|end| end > builder.dimensions.height)
+    {
+        return Err("PNG animation frame is outside the image canvas".into());
+    }
+    let numerator = u64::from(be_u16(data, 20)?);
+    let denominator = match u64::from(be_u16(data, 22)?) {
+        0 => 100,
+        value => value,
+    };
+    builder.frame(
+        dimensions,
+        Some(numerator.saturating_mul(1000) / denominator),
+    )?;
+    let frame = builder.frames.last_mut().unwrap();
+    frame.x = x;
+    frame.y = y;
+    frame.disposal = Some(
+        match data[24] {
+            0 => "none",
+            1 => "background",
+            2 => "previous",
+            _ => return Err("PNG frame disposal operation is invalid".into()),
+        }
+        .into(),
+    );
+    frame.blend = Some(
+        match data[25] {
+            0 => "source",
+            1 => "over",
+            _ => return Err("PNG frame blend operation is invalid".into()),
+        }
+        .into(),
+    );
+    Ok(())
+}
+
+fn parse_text(
+    kind: &str,
+    data: &[u8],
+    start: usize,
+    builder: &mut Builder<'_>,
+) -> Result<(), String> {
+    let separator = data
+        .iter()
+        .position(|byte| *byte == 0)
+        .ok_or_else(|| format!("PNG {kind} text chunk has no keyword terminator"))?;
+    let keyword = String::from_utf8_lossy(&data[..separator]).to_string();
+    let value = if kind == "tEXt" {
+        String::from_utf8_lossy(&data[separator + 1..]).to_string()
+    } else if kind == "zTXt" {
+        let tail = &data[separator + 1..];
+        if tail.first() != Some(&0) {
+            return Err("PNG zTXt compression method is invalid".into());
+        }
+        decode_zlib_text(&tail[1..], builder.options.max_metadata_bytes)?
+    } else {
+        let tail = &data[separator + 1..];
+        if tail.len() < 4 {
+            return Err("PNG iTXt control fields are truncated".into());
+        }
+        if tail[0] > 1 || tail[1] != 0 {
+            return Err("PNG iTXt compression fields are invalid".into());
+        }
+        let language_end = tail[2..]
+            .iter()
+            .position(|byte| *byte == 0)
+            .ok_or_else(|| "PNG iTXt language tag is truncated".to_string())?
+            + 2;
+        let translated_end = tail[language_end + 1..]
+            .iter()
+            .position(|byte| *byte == 0)
+            .ok_or_else(|| "PNG iTXt translated keyword is truncated".to_string())?
+            + language_end
+            + 1;
+        let encoded = &tail[translated_end + 1..];
+        if tail[0] == 1 {
+            decode_zlib_text(encoded, builder.options.max_metadata_bytes)?
+        } else {
+            String::from_utf8_lossy(encoded).to_string()
+        }
+    };
+    let lower = keyword.to_ascii_lowercase();
+    if lower.contains("xmp") || value.contains("<x:xmpmeta") || value.contains("<rdf:RDF") {
+        builder.xmp(value.as_bytes(), start)
+    } else if lower.contains("iptc") {
+        builder.iptc(value.as_bytes(), start)
+    } else {
+        builder.metadata(
+            ImageMetadataKind::Text,
+            data,
+            start,
+            Some(value),
+            BTreeMap::from([("keyword".into(), keyword)]),
+        )
+    }
+}
+
+fn decode_zlib_text(bytes: &[u8], maximum: u64) -> Result<String, String> {
+    let mut decoder = ZlibDecoder::new(bytes).take(maximum.saturating_add(1));
+    let mut decoded = Vec::new();
+    decoder
+        .read_to_end(&mut decoded)
+        .map_err(|error| format!("PNG compressed text cannot be decoded: {error}"))?;
+    if decoded.len() as u64 > maximum {
+        return Err("PNG compressed text exceeds ImageOptions::max_metadata_bytes".into());
+    }
+    Ok(String::from_utf8_lossy(&decoded).into_owned())
+}
+
+fn png_crc32(bytes: &[u8]) -> u32 {
+    let mut crc = u32::MAX;
+    for byte in bytes {
+        crc ^= u32::from(*byte);
+        for _ in 0..8 {
+            let mask = (crc & 1).wrapping_neg();
+            crc = (crc >> 1) ^ (0xedb8_8320 & mask);
+        }
+    }
+    !crc
+}

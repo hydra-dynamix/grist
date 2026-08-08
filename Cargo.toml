@@ -79,7 +79,7 @@ archives = [
     "dep:zstd",
     "dep:sevenz-rust",
 ]
-media = []
+media = ["dep:quick-xml", "dep:flate2"]
 
 # Compatibility and individual-parser gates retained for downstream crates.
 basin = ["python", "document-graph"]

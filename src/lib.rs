@@ -49,6 +49,8 @@ pub mod asciidoc;
 pub mod bibliography;
 #[cfg(feature = "html")]
 pub mod html;
+#[cfg(feature = "media")]
+pub mod image;
 #[cfg(feature = "xml")]
 pub mod jats;
 #[cfg(feature = "javascript")]

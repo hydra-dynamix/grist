@@ -58,6 +58,7 @@ fn descriptor(
             | ArtifactKind::Html
             | ArtifactKind::Epub
             | ArtifactKind::Pdf
+            | ArtifactKind::Image
             | ArtifactKind::WordOoxml
             | ArtifactKind::PresentationOoxml
             | ArtifactKind::SpreadsheetOoxml
@@ -191,6 +192,7 @@ fn register_feature_parsers(registry: &mut ParserRegistry) -> Result<(), ParserR
     register_html(registry)?;
     register_epub(registry)?;
     register_pdf(registry)?;
+    register_image(registry)?;
     register_word_ooxml(registry)?;
     register_presentation_ooxml(registry)?;
     register_spreadsheet_ooxml(registry)?;
@@ -614,6 +616,97 @@ fn register_pdf(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError
         .capabilities
         .insert(Capability::ProviderDerivedContent);
     register(registry, metadata, crate::pdf::parse_registered)
+}
+
+#[cfg(feature = "media")]
+fn register_image(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    for (id, aliases, media_types, extensions) in image_format_definitions() {
+        let format = FormatMetadata::new(*id, ArtifactKind::Image)
+            .with_aliases(aliases.iter().copied())
+            .with_media_types(media_types.iter().copied())
+            .with_extensions(extensions.iter().copied());
+        let defaults =
+            serde_json::to_value(crate::image::ImageOptions::default()).unwrap_or_default();
+        let mut metadata = descriptor(
+            &format!("grist.{id}"),
+            format,
+            crate::image::parser_info(),
+            crate::core::SchemaVersion::IMAGE_V1,
+            Some("media"),
+            defaults.clone(),
+        );
+        metadata.payload_schema =
+            SchemaMetadata::new("image", crate::core::SchemaVersion::IMAGE_V1);
+        metadata.options = OptionsMetadata::new(
+            SchemaMetadata::new("image-options", "grist/image-options/v1"),
+            defaults,
+        );
+        metadata.allowed_providers.insert(ProviderKind::Ocr);
+        metadata
+            .capabilities
+            .insert(Capability::ProviderDerivedContent);
+        register(registry, metadata, crate::image::parse_registered)?;
+    }
+    Ok(())
+}
+
+#[cfg(not(feature = "media"))]
+fn register_image(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    for (id, aliases, media_types, extensions) in image_format_definitions() {
+        let format = FormatMetadata::new(*id, ArtifactKind::Image)
+            .with_aliases(aliases.iter().copied())
+            .with_media_types(media_types.iter().copied())
+            .with_extensions(extensions.iter().copied());
+        let mut metadata = descriptor(
+            &format!("grist.{id}"),
+            format,
+            ParserInfo::new("grist.image").with_feature("media"),
+            crate::core::SchemaVersion::IMAGE_V1,
+            Some("media"),
+            serde_json::json!({}),
+        );
+        metadata.payload_schema =
+            SchemaMetadata::new("image", crate::core::SchemaVersion::IMAGE_V1);
+        metadata.allowed_providers.insert(ProviderKind::Ocr);
+        metadata
+            .capabilities
+            .insert(Capability::ProviderDerivedContent);
+        register_disabled(registry, metadata, "media")?;
+    }
+    Ok(())
+}
+
+fn image_format_definitions() -> &'static [(
+    &'static str,
+    &'static [&'static str],
+    &'static [&'static str],
+    &'static [&'static str],
+)] {
+    &[
+        ("png", &[], &["image/png"], &["png"]),
+        (
+            "jpeg",
+            &["jpg", "jpe"],
+            &["image/jpeg"],
+            &["jpg", "jpeg", "jpe"],
+        ),
+        ("tiff", &["tif"], &["image/tiff"], &["tif", "tiff"]),
+        ("webp", &[], &["image/webp"], &["webp"]),
+        ("gif", &[], &["image/gif"], &["gif"]),
+        (
+            "bmp",
+            &[],
+            &["image/bmp", "image/x-ms-bmp"],
+            &["bmp", "dib"],
+        ),
+        (
+            "heif",
+            &["heic", "avif"],
+            &["image/heif", "image/heic", "image/avif"],
+            &["heif", "heic", "avif"],
+        ),
+        ("svg", &[], &["image/svg+xml"], &["svg"]),
+    ]
 }
 
 #[cfg(feature = "word-ooxml")]
@@ -2550,6 +2643,12 @@ fn register_unimplemented_formats(
     registry: &mut ParserRegistry,
 ) -> Result<(), ParserRegistryError> {
     for &(id, extension, feature) in unimplemented_formats() {
+        if matches!(
+            id,
+            "png" | "jpeg" | "tiff" | "webp" | "gif" | "bmp" | "heif" | "svg"
+        ) {
+            continue;
+        }
         let mut format = FormatMetadata::new(id, ArtifactKind::Unsupported);
         if !extension.is_empty() {
             format = format.with_extensions([extension]);

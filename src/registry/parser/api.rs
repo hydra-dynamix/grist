@@ -69,6 +69,11 @@ impl<'a> ParserContext<'a> {
         self.format_options
     }
 
+    /// Canonical format id selected by registry detection or an explicit hint.
+    pub fn format_id(&self) -> &str {
+        &self.descriptor.format.id
+    }
+
     pub fn control(&self) -> &OperationControl {
         &self.request.control
     }
