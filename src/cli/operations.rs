@@ -249,6 +249,15 @@ pub fn project_envelope_to_graph(
             let document: crate::outlook::OutlookMsgDocument = serde_json::from_value(payload)?;
             Ok(document.to_document_graph(context)?)
         }
+        crate::core::ArtifactKind::ICalendar => {
+            let document: crate::calendar_contact::ICalendarDocument =
+                serde_json::from_value(payload)?;
+            Ok(document.to_document_graph(context)?)
+        }
+        crate::core::ArtifactKind::VCard => {
+            let document: crate::calendar_contact::VCardDocument = serde_json::from_value(payload)?;
+            Ok(document.to_document_graph(context)?)
+        }
         crate::core::ArtifactKind::PythonCode => {
             let document: crate::python::PythonFile = serde_json::from_value(payload)?;
             Ok(document.to_document_graph(context)?)

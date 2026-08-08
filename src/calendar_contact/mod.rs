@@ -149,14 +149,22 @@ fn preflight<T>(
     schema: &str,
     parser: ParserInfo,
 ) -> Option<Envelope<T>> {
-    let error = control
-        .budget()
-        .consume_input_bytes(bytes.len() as u64)
-        .err()
-        .or_else(|| control.checkpoint().err());
-    error.map(|error| {
+    if let Err(error) = control.budget().consume_input_bytes(bytes.len() as u64) {
         let parser_name = parser_name_for_kind(&kind);
-        terminal(
+        return Some(terminal(
+            bytes,
+            source.clone(),
+            digest.to_string(),
+            kind.clone(),
+            schema,
+            parser.clone(),
+            error.operation_status(0),
+            error.diagnostic(parser_name),
+        ));
+    }
+    if let Err(error) = control.checkpoint() {
+        let parser_name = parser_name_for_kind(&kind);
+        return Some(terminal(
             bytes,
             source.clone(),
             digest.to_string(),
@@ -165,8 +173,9 @@ fn preflight<T>(
             parser,
             error.operation_status(0),
             error.diagnostic(parser_name),
-        )
-    })
+        ));
+    }
+    None
 }
 
 fn parser_name_for_kind(kind: &ArtifactKind) -> &'static str {

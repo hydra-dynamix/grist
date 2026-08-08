@@ -203,6 +203,8 @@ fn register_feature_parsers(registry: &mut ParserRegistry) -> Result<(), ParserR
     register_email(registry)?;
     register_mbox(registry)?;
     register_outlook_msg(registry)?;
+    register_icalendar(registry)?;
+    register_vcard(registry)?;
     register_structured_binary(registry)?;
     register_model_output(registry)?;
     register_ldgr_projection(registry)?;
@@ -1584,6 +1586,72 @@ fn parse_outlook_msg(context: &mut ParserContext<'_>) -> Result<ParserOutput, Pa
     ))
 }
 
+#[cfg(feature = "email-message")]
+fn register_icalendar(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    let format = FormatMetadata::new("icalendar", ArtifactKind::ICalendar)
+        .with_aliases(["ics", "calendar", "text_calendar"])
+        .with_extensions(["ics", "ifb"])
+        .with_media_types(["text/calendar", "application/ics"]);
+    register(
+        registry,
+        descriptor(
+            "grist.icalendar",
+            format,
+            crate::calendar_contact::icalendar_parser_info(),
+            crate::core::SchemaVersion::ICALENDAR_V1,
+            Some("email-message"),
+            serde_json::to_value(crate::calendar_contact::ICalendarOptions::default())
+                .unwrap_or_default(),
+        ),
+        parse_icalendar,
+    )
+}
+
+#[cfg(feature = "email-message")]
+fn parse_icalendar(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserError> {
+    let options = decode_options::<crate::calendar_contact::ICalendarOptions>(context)?;
+    output(
+        crate::calendar_contact::parse_icalendar_with_operation_control(
+            context.bytes(),
+            context.source().clone(),
+            &options,
+            context.control(),
+        ),
+    )
+}
+
+#[cfg(feature = "email-message")]
+fn register_vcard(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    let format = FormatMetadata::new("vcard", ArtifactKind::VCard)
+        .with_aliases(["vcf", "contact", "text_vcard"])
+        .with_extensions(["vcf", "vcard"])
+        .with_media_types(["text/vcard", "text/x-vcard"]);
+    register(
+        registry,
+        descriptor(
+            "grist.vcard",
+            format,
+            crate::calendar_contact::vcard_parser_info(),
+            crate::core::SchemaVersion::VCARD_V1,
+            Some("email-message"),
+            serde_json::to_value(crate::calendar_contact::VCardOptions::default())
+                .unwrap_or_default(),
+        ),
+        parse_vcard,
+    )
+}
+
+#[cfg(feature = "email-message")]
+fn parse_vcard(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserError> {
+    let options = decode_options::<crate::calendar_contact::VCardOptions>(context)?;
+    output(crate::calendar_contact::parse_vcard_with_operation_control(
+        context.bytes(),
+        context.source().clone(),
+        &options,
+        context.control(),
+    ))
+}
+
 #[cfg(not(feature = "email-message"))]
 fn register_outlook_msg(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
     let metadata = descriptor(
@@ -1594,6 +1662,38 @@ fn register_outlook_msg(registry: &mut ParserRegistry) -> Result<(), ParserRegis
             .with_media_types(["application/vnd.ms-outlook"]),
         ParserInfo::new("grist.outlook.msg").with_feature("email-message"),
         crate::core::SchemaVersion::OUTLOOK_MSG_V1,
+        Some("email-message"),
+        serde_json::json!({}),
+    );
+    register_disabled(registry, metadata, "email-message")
+}
+
+#[cfg(not(feature = "email-message"))]
+fn register_icalendar(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    let metadata = descriptor(
+        "grist.icalendar",
+        FormatMetadata::new("icalendar", ArtifactKind::ICalendar)
+            .with_aliases(["ics", "calendar", "text_calendar"])
+            .with_extensions(["ics", "ifb"])
+            .with_media_types(["text/calendar", "application/ics"]),
+        ParserInfo::new("grist.icalendar").with_feature("email-message"),
+        crate::core::SchemaVersion::ICALENDAR_V1,
+        Some("email-message"),
+        serde_json::json!({}),
+    );
+    register_disabled(registry, metadata, "email-message")
+}
+
+#[cfg(not(feature = "email-message"))]
+fn register_vcard(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    let metadata = descriptor(
+        "grist.vcard",
+        FormatMetadata::new("vcard", ArtifactKind::VCard)
+            .with_aliases(["vcf", "contact", "text_vcard"])
+            .with_extensions(["vcf", "vcard"])
+            .with_media_types(["text/vcard", "text/x-vcard"]),
+        ParserInfo::new("grist.vcard").with_feature("email-message"),
+        crate::core::SchemaVersion::VCARD_V1,
         Some("email-message"),
         serde_json::json!({}),
     );
@@ -2031,8 +2131,6 @@ fn unimplemented_formats() -> &'static [(&'static str, &'static str, &'static st
         ("protobuf", "pb", "structured-data"),
         ("pst", "pst", "email-message"),
         ("ost", "ost", "email-message"),
-        ("icalendar", "ics", "email-message"),
-        ("vcard", "vcf", "email-message"),
         ("tnef", "dat", "email-message"),
         ("smime", "p7m", "email-message"),
         ("ipynb", "ipynb", "notebooks"),

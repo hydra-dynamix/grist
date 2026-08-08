@@ -155,6 +155,15 @@
       ],
       "type": "string"
     },
+    "AttachmentValueKind": {
+      "enum": [
+        "uri",
+        "binary",
+        "content_id",
+        "unknown"
+      ],
+      "type": "string"
+    },
     "BoundingBox": {
       "description": "A rectangle in a declared coordinate system.",
       "properties": {
@@ -188,6 +197,494 @@
         "width",
         "x",
         "y"
+      ],
+      "type": "object"
+    },
+    "CalendarAttendee": {
+      "properties": {
+        "calendar_user_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "common_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "delegated_from": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "delegated_to": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "directory": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "language": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "member": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "parameters": {
+          "items": {
+            "$ref": "#/definitions/RecordParameter"
+          },
+          "type": "array"
+        },
+        "participation_status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "role": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rsvp": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "schedule_agent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "schedule_force_send": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "schedule_status": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "sent_by": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "uri": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "delegated_from",
+        "delegated_to",
+        "locator",
+        "member",
+        "parameters",
+        "schedule_status",
+        "uri"
+      ],
+      "type": "object"
+    },
+    "CalendarComponent": {
+      "properties": {
+        "children": {
+          "items": {
+            "$ref": "#/definitions/CalendarComponent"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "ordinal": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "properties": {
+          "items": {
+            "$ref": "#/definitions/RecordProperty"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "children",
+        "kind",
+        "locator",
+        "ordinal",
+        "properties"
+      ],
+      "type": "object"
+    },
+    "CalendarEvent": {
+      "properties": {
+        "alarms": {
+          "items": {
+            "$ref": "#/definitions/CalendarComponent"
+          },
+          "type": "array"
+        },
+        "attachments": {
+          "items": {
+            "$ref": "#/definitions/InertAttachment"
+          },
+          "type": "array"
+        },
+        "attendees": {
+          "items": {
+            "$ref": "#/definitions/CalendarAttendee"
+          },
+          "type": "array"
+        },
+        "categories": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "classification": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "component_kind": {
+          "type": "string"
+        },
+        "created": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TemporalValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "due": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TemporalValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "duration": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TemporalValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "end": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TemporalValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "exception_dates": {
+          "items": {
+            "$ref": "#/definitions/TemporalValue"
+          },
+          "type": "array"
+        },
+        "last_modified": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TemporalValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "location": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "ordinal": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "organizer": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CalendarAttendee"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "properties": {
+          "items": {
+            "$ref": "#/definitions/RecordProperty"
+          },
+          "type": "array"
+        },
+        "recurrence_dates": {
+          "items": {
+            "$ref": "#/definitions/TemporalValue"
+          },
+          "type": "array"
+        },
+        "recurrence_id": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TemporalValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "recurrence_rules": {
+          "items": {
+            "$ref": "#/definitions/RecurrenceRule"
+          },
+          "type": "array"
+        },
+        "relationships": {
+          "items": {
+            "$ref": "#/definitions/CalendarRelationship"
+          },
+          "type": "array"
+        },
+        "sequence": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "start": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TemporalValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "summary": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "timestamp": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TemporalValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "transparency": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "uid": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "url": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "alarms",
+        "attachments",
+        "attendees",
+        "categories",
+        "component_kind",
+        "exception_dates",
+        "locator",
+        "ordinal",
+        "properties",
+        "recurrence_dates",
+        "recurrence_rules",
+        "relationships"
+      ],
+      "type": "object"
+    },
+    "CalendarRelationship": {
+      "properties": {
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "relation_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "target_uid": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "locator",
+        "target_uid"
+      ],
+      "type": "object"
+    },
+    "CalendarTimeZone": {
+      "properties": {
+        "last_modified": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TemporalValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "observances": {
+          "items": {
+            "$ref": "#/definitions/TimeZoneObservance"
+          },
+          "type": "array"
+        },
+        "ordinal": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "properties": {
+          "items": {
+            "$ref": "#/definitions/RecordProperty"
+          },
+          "type": "array"
+        },
+        "timezone_id": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "url": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "locator",
+        "observances",
+        "ordinal",
+        "properties"
       ],
       "type": "object"
     },
@@ -670,6 +1167,119 @@
       ],
       "type": "object"
     },
+    "ICalendarDocument": {
+      "properties": {
+        "calendar_scale": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "components": {
+          "items": {
+            "$ref": "#/definitions/CalendarComponent"
+          },
+          "type": "array"
+        },
+        "diagnostics": {
+          "items": {
+            "$ref": "#/definitions/Diagnostic"
+          },
+          "type": "array"
+        },
+        "events": {
+          "items": {
+            "$ref": "#/definitions/CalendarEvent"
+          },
+          "type": "array"
+        },
+        "external_references": {
+          "items": {
+            "$ref": "#/definitions/InertExternalReference"
+          },
+          "type": "array"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "method": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mime_media_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mime_method": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "product_id": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "properties": {
+          "items": {
+            "$ref": "#/definitions/RecordProperty"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "time_zones": {
+          "items": {
+            "$ref": "#/definitions/CalendarTimeZone"
+          },
+          "type": "array"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "complete",
+        "components",
+        "diagnostics",
+        "events",
+        "external_references",
+        "locator",
+        "properties",
+        "schema_version",
+        "time_zones"
+      ],
+      "type": "object"
+    },
     "IndexBase": {
       "description": "Whether an ordinal is counted from zero or one.\n\nEvery format component carrying a page, slide, cell, frame, token, output, member, track, or record ordinal uses this type rather than relying on an undocumented convention.",
       "enum": [
@@ -720,812 +1330,110 @@
       ],
       "type": "object"
     },
-    "LdgrBatchStateDocument": {
+    "InertAttachment": {
       "properties": {
-        "batch_id": {
-          "default": "",
-          "type": "string"
-        },
-        "blocked": {
-          "default": [],
-          "items": {
-            "$ref": "#/definitions/LdgrBlockedTicket"
-          },
-          "type": "array"
-        },
-        "current_wave": {
-          "default": null,
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "graph_artifact_id": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/LdgrRef"
-            }
-          ],
-          "default": {
-            "kind": "",
-            "value": ""
-          }
-        },
-        "status": {
-          "default": "",
-          "type": "string"
-        },
-        "ticket_index_artifact_id": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/LdgrRef"
-            }
-          ],
-          "default": {
-            "kind": "",
-            "value": ""
-          }
-        },
-        "waves": {
-          "default": [],
-          "items": {
-            "$ref": "#/definitions/LdgrBatchWave"
-          },
-          "type": "array"
-        },
-        "workers": {
-          "default": [],
-          "items": {
-            "$ref": "#/definitions/LdgrBatchWorker"
-          },
-          "type": "array"
-        }
-      },
-      "type": "object"
-    },
-    "LdgrBatchWave": {
-      "properties": {
-        "node_ids": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "status": {
-          "type": "string"
-        },
-        "wave_id": {
-          "type": "string"
-        },
-        "worker_ids": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "node_ids",
-        "status",
-        "wave_id",
-        "worker_ids"
-      ],
-      "type": "object"
-    },
-    "LdgrBatchWorker": {
-      "properties": {
-        "process": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/LdgrBatchWorkerProcess"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "status": {
-          "default": "",
-          "type": "string"
-        },
-        "summary": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/LdgrBatchWorkerSummary"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "ticket_id": {
-          "default": "",
-          "type": "string"
-        },
-        "work_item_id": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/LdgrRef"
-            }
-          ],
-          "default": {
-            "kind": "",
-            "value": ""
-          }
-        },
-        "worker_artifact_root": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/LdgrRef"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "worker_db_path": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/LdgrRef"
-            }
-          ],
-          "default": {
-            "kind": "",
-            "value": ""
-          }
-        },
-        "worker_id": {
-          "default": "",
-          "type": "string"
-        },
-        "worktree_path": {
-          "allOf": [
-            {
-              "$ref": "#/definitions/LdgrRef"
-            }
-          ],
-          "default": {
-            "kind": "",
-            "value": ""
-          }
-        }
-      },
-      "type": "object"
-    },
-    "LdgrBatchWorkerProcess": {
-      "properties": {
-        "exit_status_path": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/LdgrRef"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "finished_at": {
-          "default": null,
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "launch_id": {
-          "default": "",
-          "type": "string"
-        },
-        "pid": {
-          "default": null,
-          "format": "uint32",
+        "decoded_bytes": {
+          "format": "uint",
           "minimum": 0.0,
           "type": [
             "integer",
             "null"
           ]
         },
-        "started_at": {
-          "default": null,
+        "decoded_sha256": {
           "type": [
             "string",
             "null"
           ]
         },
-        "status": {
-          "default": "",
+        "encoding": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inline_bytes_base64": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "media_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "property_name": {
           "type": "string"
         },
-        "stderr_path": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/LdgrRef"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "stdout_path": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/LdgrRef"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        }
-      },
-      "type": "object"
-    },
-    "LdgrBatchWorkerSummary": {
-      "properties": {
-        "artifact_refs": {
-          "default": [],
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "blocking_reason": {
-          "default": null,
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "changed_files": {
-          "default": [],
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "conflict_status": {
-          "default": null,
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "observations": {
-          "default": [],
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "recommended_action": {
-          "default": null,
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "run_status": {
-          "default": null,
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "validation_status": {
-          "default": null,
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "type": "object"
-    },
-    "LdgrBlockedTicket": {
-      "properties": {
-        "reason": {
+        "raw_value": {
           "type": "string"
         },
-        "ticket_id": {
+        "resolved": {
+          "type": "boolean"
+        },
+        "safety_classification": {
+          "type": "string"
+        },
+        "uri": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "value_kind": {
+          "$ref": "#/definitions/AttachmentValueKind"
+        }
+      },
+      "required": [
+        "locator",
+        "property_name",
+        "raw_value",
+        "resolved",
+        "safety_classification",
+        "value_kind"
+      ],
+      "type": "object"
+    },
+    "InertExternalReference": {
+      "properties": {
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "owner": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "resolved": {
+          "type": "boolean"
+        },
+        "source_property": {
+          "type": "string"
+        },
+        "uri": {
           "type": "string"
         }
       },
       "required": [
-        "reason",
-        "ticket_id"
+        "locator",
+        "resolved",
+        "source_property",
+        "uri"
       ],
       "type": "object"
     },
-    "LdgrConstraint": {
+    "LocatedText": {
       "properties": {
-        "id": {
-          "type": "string"
-        },
-        "text": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "id",
-        "text"
-      ],
-      "type": "object"
-    },
-    "LdgrDocument": {
-      "oneOf": [
-        {
-          "properties": {
-            "document": true,
-            "kind": {
-              "enum": [
-                "spec"
-              ],
-              "type": "string"
-            }
-          },
-          "required": [
-            "document",
-            "kind"
-          ],
-          "type": "object"
-        },
-        {
-          "properties": {
-            "document": true,
-            "kind": {
-              "enum": [
-                "epoch"
-              ],
-              "type": "string"
-            }
-          },
-          "required": [
-            "document",
-            "kind"
-          ],
-          "type": "object"
-        },
-        {
-          "properties": {
-            "document": {
-              "$ref": "#/definitions/LdgrTicketDocument"
-            },
-            "kind": {
-              "enum": [
-                "ticket"
-              ],
-              "type": "string"
-            }
-          },
-          "required": [
-            "document",
-            "kind"
-          ],
-          "type": "object"
-        },
-        {
-          "properties": {
-            "document": true,
-            "kind": {
-              "enum": [
-                "work_item"
-              ],
-              "type": "string"
-            }
-          },
-          "required": [
-            "document",
-            "kind"
-          ],
-          "type": "object"
-        },
-        {
-          "properties": {
-            "document": true,
-            "kind": {
-              "enum": [
-                "artifact"
-              ],
-              "type": "string"
-            }
-          },
-          "required": [
-            "document",
-            "kind"
-          ],
-          "type": "object"
-        },
-        {
-          "properties": {
-            "document": true,
-            "kind": {
-              "enum": [
-                "decision"
-              ],
-              "type": "string"
-            }
-          },
-          "required": [
-            "document",
-            "kind"
-          ],
-          "type": "object"
-        },
-        {
-          "properties": {
-            "document": true,
-            "kind": {
-              "enum": [
-                "claim"
-              ],
-              "type": "string"
-            }
-          },
-          "required": [
-            "document",
-            "kind"
-          ],
-          "type": "object"
-        },
-        {
-          "properties": {
-            "document": {
-              "$ref": "#/definitions/LdgrValidationDocument"
-            },
-            "kind": {
-              "enum": [
-                "validation"
-              ],
-              "type": "string"
-            }
-          },
-          "required": [
-            "document",
-            "kind"
-          ],
-          "type": "object"
-        },
-        {
-          "properties": {
-            "document": {
-              "$ref": "#/definitions/LdgrRunReportDocument"
-            },
-            "kind": {
-              "enum": [
-                "run_report"
-              ],
-              "type": "string"
-            }
-          },
-          "required": [
-            "document",
-            "kind"
-          ],
-          "type": "object"
-        },
-        {
-          "properties": {
-            "document": {
-              "$ref": "#/definitions/LdgrGraphDocument"
-            },
-            "kind": {
-              "enum": [
-                "graph"
-              ],
-              "type": "string"
-            }
-          },
-          "required": [
-            "document",
-            "kind"
-          ],
-          "type": "object"
-        },
-        {
-          "properties": {
-            "document": {
-              "$ref": "#/definitions/LdgrTicketIndexDocument"
-            },
-            "kind": {
-              "enum": [
-                "ticket_index"
-              ],
-              "type": "string"
-            }
-          },
-          "required": [
-            "document",
-            "kind"
-          ],
-          "type": "object"
-        },
-        {
-          "properties": {
-            "document": {
-              "$ref": "#/definitions/LdgrBatchStateDocument"
-            },
-            "kind": {
-              "enum": [
-                "batch_state"
-              ],
-              "type": "string"
-            }
-          },
-          "required": [
-            "document",
-            "kind"
-          ],
-          "type": "object"
-        }
-      ]
-    },
-    "LdgrDocumentKind": {
-      "enum": [
-        "spec",
-        "epoch",
-        "ticket",
-        "work_item",
-        "artifact",
-        "decision",
-        "claim",
-        "validation",
-        "run_report",
-        "graph",
-        "ticket_index",
-        "batch_state"
-      ],
-      "type": "string"
-    },
-    "LdgrFinding": {
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "status": {
-          "type": "string"
-        },
-        "text": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "id",
-        "status",
-        "text"
-      ],
-      "type": "object"
-    },
-    "LdgrGraphDocument": {
-      "properties": {
-        "edges": {
-          "default": [],
-          "items": {
-            "$ref": "#/definitions/LdgrGraphEdge"
-          },
-          "type": "array"
-        },
-        "nodes": {
-          "default": [],
-          "items": {
-            "$ref": "#/definitions/LdgrGraphNode"
-          },
-          "type": "array"
-        }
-      },
-      "type": "object"
-    },
-    "LdgrGraphEdge": {
-      "properties": {
-        "dependency": {
-          "type": "string"
-        },
-        "dependent": {
-          "type": "string"
-        },
-        "kind": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "required": [
-        "dependency",
-        "dependent"
-      ],
-      "type": "object"
-    },
-    "LdgrGraphNode": {
-      "properties": {
-        "artifact": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/LdgrRef"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "id": {
-          "type": "string"
-        },
-        "work_item": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/LdgrRef"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "required": [
-        "id"
-      ],
-      "type": "object"
-    },
-    "LdgrMachineBlock": {
-      "properties": {
-        "attributes": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "format": {
-          "type": "string"
-        },
-        "kind": {
-          "type": "string"
-        },
-        "range": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/SourceRange"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
         },
         "raw": {
-          "type": "string"
-        },
-        "value": true
-      },
-      "required": [
-        "attributes",
-        "format",
-        "kind",
-        "raw",
-        "value"
-      ],
-      "type": "object"
-    },
-    "LdgrProjectionDocument": {
-      "properties": {
-        "machine_blocks": {
-          "items": {
-            "$ref": "#/definitions/LdgrMachineBlock"
-          },
-          "type": "array"
-        },
-        "markdown": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/MarkdownProjectionTrace"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "metadata": {
-          "$ref": "#/definitions/LdgrProjectionMetadata"
-        },
-        "schema_version": {
-          "type": "string"
-        },
-        "typed": {
-          "$ref": "#/definitions/LdgrDocument"
-        }
-      },
-      "required": [
-        "machine_blocks",
-        "metadata",
-        "schema_version",
-        "typed"
-      ],
-      "type": "object"
-    },
-    "LdgrProjectionMetadata": {
-      "properties": {
-        "created": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "depends_on": {
-          "items": {
-            "$ref": "#/definitions/LdgrRef"
-          },
-          "type": "array"
-        },
-        "extra": {
-          "additionalProperties": true,
-          "type": "object"
-        },
-        "id": {
-          "type": "string"
-        },
-        "kind": {
-          "$ref": "#/definitions/LdgrDocumentKind"
-        },
-        "ldgr_doc": {
-          "format": "uint64",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "parent": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/LdgrRef"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "produces": {
-          "items": {
-            "$ref": "#/definitions/LdgrRef"
-          },
-          "type": "array"
-        },
-        "schema": {
-          "type": "string"
-        },
-        "status": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "tags": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "updated": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "required": [
-        "depends_on",
-        "extra",
-        "id",
-        "kind",
-        "ldgr_doc",
-        "produces",
-        "schema",
-        "tags"
-      ],
-      "type": "object"
-    },
-    "LdgrRef": {
-      "properties": {
-        "kind": {
           "type": "string"
         },
         "value": {
@@ -1533,229 +1441,10 @@
         }
       },
       "required": [
-        "kind",
+        "locator",
+        "raw",
         "value"
       ],
-      "type": "object"
-    },
-    "LdgrRequirement": {
-      "properties": {
-        "evidence_required": {
-          "default": false,
-          "type": "boolean"
-        },
-        "id": {
-          "type": "string"
-        },
-        "text": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "id",
-        "text"
-      ],
-      "type": "object"
-    },
-    "LdgrRunOutcome": {
-      "properties": {
-        "evidence": {
-          "items": {
-            "$ref": "#/definitions/LdgrRef"
-          },
-          "type": "array"
-        },
-        "id": {
-          "type": "string"
-        },
-        "status": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "evidence",
-        "id",
-        "status"
-      ],
-      "type": "object"
-    },
-    "LdgrRunReportDocument": {
-      "properties": {
-        "links": {
-          "additionalProperties": true,
-          "default": {},
-          "type": "object"
-        },
-        "outcomes": {
-          "default": [],
-          "items": {
-            "$ref": "#/definitions/LdgrRunOutcome"
-          },
-          "type": "array"
-        },
-        "status": {
-          "default": "",
-          "type": "string"
-        },
-        "summary": {
-          "default": null,
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "type": "object"
-    },
-    "LdgrTest": {
-      "properties": {
-        "command": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "id": {
-          "type": "string"
-        },
-        "required": {
-          "default": false,
-          "type": "boolean"
-        },
-        "scenario": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "required": [
-        "id"
-      ],
-      "type": "object"
-    },
-    "LdgrTicketDocument": {
-      "properties": {
-        "constraints": {
-          "default": [],
-          "items": {
-            "$ref": "#/definitions/LdgrConstraint"
-          },
-          "type": "array"
-        },
-        "description": {
-          "default": "",
-          "type": "string"
-        },
-        "expected_artifacts": {
-          "default": [],
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "requirements": {
-          "default": [],
-          "items": {
-            "$ref": "#/definitions/LdgrRequirement"
-          },
-          "type": "array"
-        },
-        "tests": {
-          "default": [],
-          "items": {
-            "$ref": "#/definitions/LdgrTest"
-          },
-          "type": "array"
-        },
-        "title": {
-          "default": "",
-          "type": "string"
-        },
-        "validation_instructions": {
-          "default": [],
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        }
-      },
-      "type": "object"
-    },
-    "LdgrTicketIndexDocument": {
-      "properties": {
-        "tickets": {
-          "default": [],
-          "items": {
-            "$ref": "#/definitions/LdgrTicketIndexEntry"
-          },
-          "type": "array"
-        }
-      },
-      "type": "object"
-    },
-    "LdgrTicketIndexEntry": {
-      "properties": {
-        "artifact": {
-          "$ref": "#/definitions/LdgrRef"
-        },
-        "id": {
-          "type": "string"
-        },
-        "title": {
-          "type": "string"
-        },
-        "work_item": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/LdgrRef"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "required": [
-        "artifact",
-        "id",
-        "title"
-      ],
-      "type": "object"
-    },
-    "LdgrValidationDocument": {
-      "properties": {
-        "evidence": {
-          "default": [],
-          "items": {
-            "$ref": "#/definitions/LdgrRef"
-          },
-          "type": "array"
-        },
-        "findings": {
-          "default": [],
-          "items": {
-            "$ref": "#/definitions/LdgrFinding"
-          },
-          "type": "array"
-        },
-        "status": {
-          "default": "",
-          "type": "string"
-        },
-        "targets": {
-          "default": [],
-          "items": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "validator": {
-          "default": "",
-          "type": "string"
-        }
-      },
       "type": "object"
     },
     "LocationComponent": {
@@ -2241,36 +1930,6 @@
       "minimum": 0.0,
       "type": "number"
     },
-    "MarkdownProjectionTrace": {
-      "properties": {
-        "frontmatter_range": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/SourceRange"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "machine_block_ranges": {
-          "items": {
-            "$ref": "#/definitions/SourceRange"
-          },
-          "type": "array"
-        },
-        "original_markdown_sha256": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "required": [
-        "machine_block_ranges"
-      ],
-      "type": "object"
-    },
     "OperationKind": {
       "description": "The public operation that produced an envelope.",
       "enum": [
@@ -2489,6 +2148,96 @@
       ],
       "type": "object"
     },
+    "RecordParameter": {
+      "properties": {
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "name": {
+          "type": "string"
+        },
+        "ordinal": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "raw_name": {
+          "type": "string"
+        },
+        "raw_value": {
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "locator",
+        "name",
+        "ordinal",
+        "raw_name",
+        "raw_value",
+        "values"
+      ],
+      "type": "object"
+    },
+    "RecordProperty": {
+      "properties": {
+        "group": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "name": {
+          "type": "string"
+        },
+        "ordinal": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "parameters": {
+          "items": {
+            "$ref": "#/definitions/RecordParameter"
+          },
+          "type": "array"
+        },
+        "raw": {
+          "type": "string"
+        },
+        "raw_name": {
+          "type": "string"
+        },
+        "raw_value": {
+          "type": "string"
+        },
+        "valid": {
+          "type": "boolean"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "locator",
+        "name",
+        "ordinal",
+        "parameters",
+        "raw",
+        "raw_name",
+        "raw_value",
+        "valid",
+        "value"
+      ],
+      "type": "object"
+    },
     "RecoveryAction": {
       "description": "A recovery action is guidance, never an action executed by Grist.",
       "properties": {
@@ -2522,6 +2271,156 @@
         "report_parser_defect"
       ],
       "type": "string"
+    },
+    "RecurrencePart": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "value"
+      ],
+      "type": "object"
+    },
+    "RecurrenceRule": {
+      "properties": {
+        "by_day": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "by_hour": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "by_minute": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "by_month": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "by_month_day": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "by_second": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "by_set_position": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "by_week_number": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "by_year_day": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "count": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "frequency": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "interval": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "raw": {
+          "type": "string"
+        },
+        "recurrence_scale": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "skip": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "unknown_parts": {
+          "items": {
+            "$ref": "#/definitions/RecurrencePart"
+          },
+          "type": "array"
+        },
+        "until": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "valid": {
+          "type": "boolean"
+        },
+        "week_start": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "by_day",
+        "by_hour",
+        "by_minute",
+        "by_month",
+        "by_month_day",
+        "by_second",
+        "by_set_position",
+        "by_week_number",
+        "by_year_day",
+        "locator",
+        "raw",
+        "unknown_parts",
+        "valid"
+      ],
+      "type": "object"
     },
     "SchemaVersion": {
       "type": "string"
@@ -2729,6 +2628,137 @@
         "start_line"
       ],
       "type": "object"
+    },
+    "TemporalValue": {
+      "properties": {
+        "date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "floating": {
+          "type": "boolean"
+        },
+        "kind": {
+          "$ref": "#/definitions/TemporalValueKind"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "period_end": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "raw": {
+          "type": "string"
+        },
+        "time": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "timezone_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "utc": {
+          "type": "boolean"
+        },
+        "valid": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "floating",
+        "kind",
+        "locator",
+        "raw",
+        "utc",
+        "valid"
+      ],
+      "type": "object"
+    },
+    "TemporalValueKind": {
+      "enum": [
+        "date",
+        "date_time",
+        "time",
+        "period",
+        "duration",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "TimeZoneObservance": {
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "offset_from": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "offset_to": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "properties": {
+          "items": {
+            "$ref": "#/definitions/RecordProperty"
+          },
+          "type": "array"
+        },
+        "recurrence_dates": {
+          "items": {
+            "$ref": "#/definitions/TemporalValue"
+          },
+          "type": "array"
+        },
+        "recurrence_rules": {
+          "items": {
+            "$ref": "#/definitions/RecurrenceRule"
+          },
+          "type": "array"
+        },
+        "start": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TemporalValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "locator",
+        "names",
+        "properties",
+        "recurrence_dates",
+        "recurrence_rules"
+      ],
+      "type": "object"
     }
   },
   "description": "Universal result for parse, ingest, transform, render, segment, and validation operations.",
@@ -2776,7 +2806,7 @@
     "payload": {
       "anyOf": [
         {
-          "$ref": "#/definitions/LdgrProjectionDocument"
+          "$ref": "#/definitions/ICalendarDocument"
         },
         {
           "type": "null"
@@ -2821,6 +2851,6 @@
     "source",
     "status"
   ],
-  "title": "Envelope_for_LdgrProjectionDocument",
+  "title": "Envelope_for_ICalendarDocument",
   "type": "object"
 }

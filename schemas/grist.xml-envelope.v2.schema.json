@@ -135,6 +135,8 @@
         "email",
         "mbox",
         "outlook_msg",
+        "i_calendar",
+        "v_card",
         "model_output",
         "repo_ingest",
         "file_ingest",

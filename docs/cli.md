@@ -62,6 +62,8 @@ grist parse sqlite records.sqlite --options sqlite-options.json
 grist parse eml message.eml --options email-options.json
 grist parse mbox mailbox.mbox --options mbox-options.json
 grist parse msg message.msg --options outlook-msg-options.json
+grist parse icalendar invite.ics --options icalendar-options.json
+grist parse vcard contacts.vcf --options vcard-options.json
 grist parse model-output response.txt --json-value
 grist parse ldgr-projection ticket.md --strict
 ```
@@ -79,6 +81,12 @@ text and transfer encodings, inventories exact attachment identities, and may
 recursively parse only attachment bytes already present in the message. Remote
 HTML images, links, and `Content-Location` values are retained but never fetched.
 See `docs/email.md`.
+
+iCalendar and vCard parsing preserves content-line folding, scheduling and
+contact fields, recurrence, time zones, attendee state, and attachment
+relationships. Calendar methods, RSVP state, alarms, URLs, and MIME calendar
+parts remain inert: the CLI never sends responses, edits calendars or contacts,
+or resolves remote content. See `docs/calendar-contact.md`.
 
 MBOX parsing emits ordered messages with stable decoded-content identities,
 source envelope separators and escaping evidence, mailbox-level thread links,

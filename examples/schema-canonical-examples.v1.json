@@ -129,23 +129,6 @@
         "schema_version": "grist/backend-output-manifest/v1"
       }
     },
-    "basin-code-graph": {
-      "schema_name": "basin-code-graph",
-      "schema_version": "grist/basin-code-graph/v1",
-      "canonical_sha256": "sha256:d8248000b7ccfa7ab697db673abcd29dcfdf708d3ee174c04e9237c9d1e6c8f1",
-      "value": {
-        "edges": [],
-        "module": "",
-        "nodes": [],
-        "roots": []
-      }
-    },
-    "basin-walk-options": {
-      "schema_name": "basin-walk-options",
-      "schema_version": "grist/basin-walk-options/v1",
-      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "value": {}
-    },
     "batch-result": {
       "schema_name": "batch-result",
       "schema_version": "grist/batch-result/v1",
@@ -1340,6 +1323,66 @@
       "schema_version": "grist/html-options/v1",
       "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
       "value": {}
+    },
+    "icalendar": {
+      "schema_name": "icalendar",
+      "schema_version": "grist/icalendar/v1",
+      "canonical_sha256": "sha256:1d14d6503d8c29877878a66695e22f6ecad066f5a8174e8cf9cd99679c8fe731",
+      "value": {
+        "complete": false,
+        "components": [],
+        "diagnostics": [],
+        "events": [],
+        "external_references": [],
+        "locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        },
+        "properties": [],
+        "schema_version": "grist/icalendar/v1",
+        "time_zones": []
+      }
+    },
+    "icalendar-envelope": {
+      "schema_name": "icalendar-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "value": {
+        "diagnostics": [],
+        "kind": "markdown",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "icalendar-options": {
+      "schema_name": "icalendar-options",
+      "schema_version": "grist/icalendar-options/v1",
+      "canonical_sha256": "sha256:3b04184d5dc33e2f90f2d497eabcd93af6282040e0c661bc99f6180d01d9ff1d",
+      "value": {
+        "max_components": 0,
+        "max_decoded_attachment_bytes": 0,
+        "max_nesting_depth": 0,
+        "max_properties": 0,
+        "max_unfolded_line_bytes": 0
+      }
     },
     "ingest-batch-result": {
       "schema_name": "ingest-batch-result",
@@ -3596,6 +3639,62 @@
       "value": {
         "unknown_values": [],
         "value": null
+      }
+    },
+    "vcard": {
+      "schema_name": "vcard",
+      "schema_version": "grist/vcard/v1",
+      "canonical_sha256": "sha256:292eb3ca26f68a5c335943327058aa944c141790e19475cf9e6ece2912428741",
+      "value": {
+        "cards": [],
+        "complete": false,
+        "diagnostics": [],
+        "external_references": [],
+        "locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        },
+        "schema_version": "grist/vcard/v1"
+      }
+    },
+    "vcard-envelope": {
+      "schema_name": "vcard-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "value": {
+        "diagnostics": [],
+        "kind": "markdown",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "vcard-options": {
+      "schema_name": "vcard-options",
+      "schema_version": "grist/vcard-options/v1",
+      "canonical_sha256": "sha256:9fc0c7107359f5ad36d5a0d4a7709b4e04be23e9721d8363cbf62da4ce70b979",
+      "value": {
+        "max_cards": 0,
+        "max_decoded_attachment_bytes": 0,
+        "max_properties": 0,
+        "max_unfolded_line_bytes": 0
       }
     },
     "word-ooxml": {

@@ -106,62 +106,12 @@
       ],
       "type": "object"
     },
-    "ArtifactKind": {
+    "AttachmentValueKind": {
       "enum": [
-        "markdown",
-        "restructured_text",
-        "ascii_doc",
-        "html",
-        "epub",
-        "pdf",
-        "word_ooxml",
-        "presentation_ooxml",
-        "spreadsheet_ooxml",
-        "spreadsheet_odf",
-        "presentation_odf",
-        "odf_word",
-        "rtf",
-        "xml",
-        "csv",
-        "rust_code",
-        "python_code",
-        "typescript_code",
-        "latex",
-        "bibliography",
-        "serialization",
-        "structured_binary",
-        "columnar",
-        "sqlite",
-        "email",
-        "mbox",
-        "outlook_msg",
-        "i_calendar",
-        "v_card",
-        "model_output",
-        "repo_ingest",
-        "file_ingest",
-        "text",
-        "ldgr_projection",
-        "detection",
-        "document_graph",
-        "graph_transform_result",
-        "render_result",
-        "reconstruction_result",
-        "segment_collection",
-        "schema_validation",
-        "container_traversal",
-        "capabilities",
-        "unsupported"
-      ],
-      "type": "string"
-    },
-    "BomKind": {
-      "enum": [
-        "utf8",
-        "utf16_le",
-        "utf16_be",
-        "utf32_le",
-        "utf32_be"
+        "uri",
+        "binary",
+        "content_id",
+        "unknown"
       ],
       "type": "string"
     },
@@ -198,6 +148,494 @@
         "width",
         "x",
         "y"
+      ],
+      "type": "object"
+    },
+    "CalendarAttendee": {
+      "properties": {
+        "calendar_user_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "common_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "delegated_from": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "delegated_to": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "directory": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "language": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "member": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "parameters": {
+          "items": {
+            "$ref": "#/definitions/RecordParameter"
+          },
+          "type": "array"
+        },
+        "participation_status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "role": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rsvp": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "schedule_agent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "schedule_force_send": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "schedule_status": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "sent_by": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "uri": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "delegated_from",
+        "delegated_to",
+        "locator",
+        "member",
+        "parameters",
+        "schedule_status",
+        "uri"
+      ],
+      "type": "object"
+    },
+    "CalendarComponent": {
+      "properties": {
+        "children": {
+          "items": {
+            "$ref": "#/definitions/CalendarComponent"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "ordinal": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "properties": {
+          "items": {
+            "$ref": "#/definitions/RecordProperty"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "children",
+        "kind",
+        "locator",
+        "ordinal",
+        "properties"
+      ],
+      "type": "object"
+    },
+    "CalendarEvent": {
+      "properties": {
+        "alarms": {
+          "items": {
+            "$ref": "#/definitions/CalendarComponent"
+          },
+          "type": "array"
+        },
+        "attachments": {
+          "items": {
+            "$ref": "#/definitions/InertAttachment"
+          },
+          "type": "array"
+        },
+        "attendees": {
+          "items": {
+            "$ref": "#/definitions/CalendarAttendee"
+          },
+          "type": "array"
+        },
+        "categories": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "classification": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "component_kind": {
+          "type": "string"
+        },
+        "created": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TemporalValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "due": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TemporalValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "duration": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TemporalValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "end": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TemporalValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "exception_dates": {
+          "items": {
+            "$ref": "#/definitions/TemporalValue"
+          },
+          "type": "array"
+        },
+        "last_modified": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TemporalValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "location": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "ordinal": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "organizer": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CalendarAttendee"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "properties": {
+          "items": {
+            "$ref": "#/definitions/RecordProperty"
+          },
+          "type": "array"
+        },
+        "recurrence_dates": {
+          "items": {
+            "$ref": "#/definitions/TemporalValue"
+          },
+          "type": "array"
+        },
+        "recurrence_id": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TemporalValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "recurrence_rules": {
+          "items": {
+            "$ref": "#/definitions/RecurrenceRule"
+          },
+          "type": "array"
+        },
+        "relationships": {
+          "items": {
+            "$ref": "#/definitions/CalendarRelationship"
+          },
+          "type": "array"
+        },
+        "sequence": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "start": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TemporalValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "summary": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "timestamp": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TemporalValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "transparency": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "uid": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "url": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "alarms",
+        "attachments",
+        "attendees",
+        "categories",
+        "component_kind",
+        "exception_dates",
+        "locator",
+        "ordinal",
+        "properties",
+        "recurrence_dates",
+        "recurrence_rules",
+        "relationships"
+      ],
+      "type": "object"
+    },
+    "CalendarRelationship": {
+      "properties": {
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "relation_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "target_uid": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "locator",
+        "target_uid"
+      ],
+      "type": "object"
+    },
+    "CalendarTimeZone": {
+      "properties": {
+        "last_modified": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TemporalValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "observances": {
+          "items": {
+            "$ref": "#/definitions/TimeZoneObservance"
+          },
+          "type": "array"
+        },
+        "ordinal": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "properties": {
+          "items": {
+            "$ref": "#/definitions/RecordProperty"
+          },
+          "type": "array"
+        },
+        "timezone_id": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "url": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "locator",
+        "observances",
+        "ordinal",
+        "properties"
       ],
       "type": "object"
     },
@@ -337,134 +775,6 @@
         "normalized"
       ],
       "type": "string"
-    },
-    "DecodeIssue": {
-      "description": "A precise loss or conflict range in both available coordinate systems.",
-      "properties": {
-        "conflicting_raw_range": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/RawByteRange"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "decoded_range": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/DecodedByteRange"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "kind": {
-          "$ref": "#/definitions/DecodeIssueKind"
-        },
-        "message": {
-          "type": "string"
-        },
-        "raw_range": {
-          "$ref": "#/definitions/RawByteRange"
-        }
-      },
-      "required": [
-        "kind",
-        "message",
-        "raw_range"
-      ],
-      "type": "object"
-    },
-    "DecodeIssueKind": {
-      "enum": [
-        "undecodable_sequence",
-        "truncated_code_unit",
-        "encoding_conflict",
-        "unsupported_declaration"
-      ],
-      "type": "string"
-    },
-    "DecodeReport": {
-      "description": "Serializable decoding evidence. Raw bytes remain on [`DecodedText`].",
-      "properties": {
-        "bom": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/BomKind"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "declarations": {
-          "items": {
-            "$ref": "#/definitions/EncodingDeclaration"
-          },
-          "type": "array"
-        },
-        "decoded_identity": {
-          "$ref": "#/definitions/DecodedContentIdentity"
-        },
-        "diagnostics": {
-          "items": {
-            "$ref": "#/definitions/Diagnostic"
-          },
-          "type": "array"
-        },
-        "encoding": {
-          "$ref": "#/definitions/TextEncoding"
-        },
-        "issues": {
-          "items": {
-            "$ref": "#/definitions/DecodeIssue"
-          },
-          "type": "array"
-        },
-        "newlines": {
-          "$ref": "#/definitions/NewlineFidelity"
-        },
-        "raw_identity": {
-          "$ref": "#/definitions/RawContentIdentity"
-        },
-        "schema_version": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "declarations",
-        "decoded_identity",
-        "diagnostics",
-        "encoding",
-        "issues",
-        "newlines",
-        "raw_identity",
-        "schema_version"
-      ],
-      "type": "object"
-    },
-    "DecodedByteRange": {
-      "description": "A zero-based half-open UTF-8 byte range in the decoded text.",
-      "properties": {
-        "end": {
-          "format": "uint64",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "start": {
-          "format": "uint64",
-          "minimum": 0.0,
-          "type": "integer"
-        }
-      },
-      "required": [
-        "end",
-        "start"
-      ],
-      "type": "object"
     },
     "DecodedContentIdentity": {
       "description": "SHA-256 of decoded text's UTF-8 bytes, including replacements when lossy.\n\nEncoding, loss state, and diagnostics are metadata outside the hashed bytes.",
@@ -767,68 +1077,6 @@
       ],
       "type": "string"
     },
-    "EncodingDeclaration": {
-      "description": "One retained piece of encoding evidence, whether selected or contradicted.",
-      "properties": {
-        "decoded_range": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/DecodedByteRange"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "encoding": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/TextEncoding"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "label": {
-          "type": "string"
-        },
-        "raw_range": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/RawByteRange"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "selected": {
-          "type": "boolean"
-        },
-        "source": {
-          "$ref": "#/definitions/EncodingDeclarationSource"
-        }
-      },
-      "required": [
-        "label",
-        "selected",
-        "source"
-      ],
-      "type": "object"
-    },
-    "EncodingDeclarationSource": {
-      "enum": [
-        "byte_order_mark",
-        "transport",
-        "html_meta",
-        "xml_declaration",
-        "xml_signature",
-        "heuristic",
-        "default"
-      ],
-      "type": "string"
-    },
     "FormatIdentity": {
       "description": "Detected parser-format name paired with an Internet media type when known.",
       "properties": {
@@ -846,75 +1094,6 @@
         "format"
       ],
       "type": "object"
-    },
-    "Hashes": {
-      "properties": {
-        "sha256": {
-          "type": "string"
-        },
-        "size_bytes": {
-          "format": "uint",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "text_sha256": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "required": [
-        "sha256",
-        "size_bytes"
-      ],
-      "type": "object"
-    },
-    "IncludeReference": {
-      "properties": {
-        "resolved": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/ResolvedInclude"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "resolved_path": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "status": {
-          "$ref": "#/definitions/IncludeStatus"
-        },
-        "target": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "status",
-        "target"
-      ],
-      "type": "object"
-    },
-    "IncludeStatus": {
-      "enum": [
-        "resolved",
-        "reference_only",
-        "remote_disabled",
-        "outside_project_root",
-        "missing",
-        "not_file",
-        "cycle",
-        "depth_exceeded",
-        "budget_exceeded",
-        "decode_failed"
-      ],
-      "type": "string"
     },
     "IndexBase": {
       "description": "Whether an ordinal is counted from zero or one.\n\nEvery format component carrying a page, slide, cell, frame, token, output, member, track, or record ordinal uses this type rather than relying on an undocumented convention.",
@@ -963,6 +1142,123 @@
         "base",
         "end",
         "start"
+      ],
+      "type": "object"
+    },
+    "InertAttachment": {
+      "properties": {
+        "decoded_bytes": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "decoded_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "encoding": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inline_bytes_base64": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "media_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "property_name": {
+          "type": "string"
+        },
+        "raw_value": {
+          "type": "string"
+        },
+        "resolved": {
+          "type": "boolean"
+        },
+        "safety_classification": {
+          "type": "string"
+        },
+        "uri": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "value_kind": {
+          "$ref": "#/definitions/AttachmentValueKind"
+        }
+      },
+      "required": [
+        "locator",
+        "property_name",
+        "raw_value",
+        "resolved",
+        "safety_classification",
+        "value_kind"
+      ],
+      "type": "object"
+    },
+    "InertExternalReference": {
+      "properties": {
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "owner": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "resolved": {
+          "type": "boolean"
+        },
+        "source_property": {
+          "type": "string"
+        },
+        "uri": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "locator",
+        "resolved",
+        "source_property",
+        "uri"
+      ],
+      "type": "object"
+    },
+    "LocatedText": {
+      "properties": {
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "raw": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "locator",
+        "raw",
+        "value"
       ],
       "type": "object"
     },
@@ -1449,95 +1745,6 @@
       "minimum": 0.0,
       "type": "number"
     },
-    "NewlineFidelity": {
-      "description": "Ordered newline evidence. The decoded text itself is never normalized.",
-      "properties": {
-        "cr_count": {
-          "format": "uint64",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "crlf_count": {
-          "format": "uint64",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "final_line_terminated": {
-          "type": "boolean"
-        },
-        "lf_count": {
-          "format": "uint64",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "sequences": {
-          "items": {
-            "$ref": "#/definitions/NewlineSequence"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "cr_count",
-        "crlf_count",
-        "final_line_terminated",
-        "lf_count",
-        "sequences"
-      ],
-      "type": "object"
-    },
-    "NewlineKind": {
-      "enum": [
-        "lf",
-        "cr_lf",
-        "cr"
-      ],
-      "type": "string"
-    },
-    "NewlineSequence": {
-      "properties": {
-        "decoded_range": {
-          "$ref": "#/definitions/DecodedByteRange"
-        },
-        "kind": {
-          "$ref": "#/definitions/NewlineKind"
-        },
-        "raw_range": {
-          "$ref": "#/definitions/RawByteRange"
-        }
-      },
-      "required": [
-        "decoded_range",
-        "kind",
-        "raw_range"
-      ],
-      "type": "object"
-    },
-    "OperationKind": {
-      "description": "The public operation that produced an envelope.",
-      "enum": [
-        "parse",
-        "ingest",
-        "transform",
-        "render",
-        "segment",
-        "validate"
-      ],
-      "type": "string"
-    },
-    "OperationStatus": {
-      "description": "Whether an operation satisfied its requested contract.",
-      "enum": [
-        "complete",
-        "partial",
-        "failed",
-        "unsupported",
-        "encrypted",
-        "ambiguous",
-        "cancelled"
-      ],
-      "type": "string"
-    },
     "ParserAvailability": {
       "description": "Whether a ranked candidate can be interpreted by the active registry.",
       "enum": [
@@ -1546,192 +1753,6 @@
         "unregistered"
       ],
       "type": "string"
-    },
-    "ParserInfo": {
-      "description": "Parser and backend identity used to interpret an input.\n\n`version` is the Grist crate version retained under its v1 JSON name.",
-      "properties": {
-        "build_identity": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "enabled_feature": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "grammar_version": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "implementation": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "implementation_version": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "name": {
-          "type": "string"
-        },
-        "version": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "name",
-        "version"
-      ],
-      "type": "object"
-    },
-    "ProvenanceStep": {
-      "description": "One declared derivation step that contributed to an operation result.\n\nA missing `loss_class` is the stable wire representation of an explicit lossless declaration; any lossy step names its loss class.",
-      "properties": {
-        "implementation": {
-          "type": "string"
-        },
-        "input_identity": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "loss_class": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "operation": {
-          "$ref": "#/definitions/OperationKind"
-        },
-        "options_digest": {
-          "type": "string"
-        },
-        "output_identity": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "provider": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "timestamp": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "warnings": {
-          "default": [],
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "implementation",
-        "operation",
-        "options_digest"
-      ],
-      "type": "object"
-    },
-    "ProviderInvocation": {
-      "description": "One explicitly attributed external-provider call.",
-      "properties": {
-        "confidence_model": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "configuration_digest": {
-          "type": "string"
-        },
-        "deterministic": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "diagnostics": {
-          "default": [],
-          "items": {
-            "$ref": "#/definitions/Diagnostic"
-          },
-          "type": "array"
-        },
-        "implementation": {
-          "type": "string"
-        },
-        "input_identity": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "model_version": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "output_identity": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "provider": {
-          "type": "string"
-        },
-        "timing": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "required": [
-        "configuration_digest",
-        "implementation",
-        "provider"
-      ],
-      "type": "object"
-    },
-    "RawByteRange": {
-      "description": "A zero-based half-open range in the exact original input bytes.",
-      "properties": {
-        "end": {
-          "format": "uint64",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "start": {
-          "format": "uint64",
-          "minimum": 0.0,
-          "type": "integer"
-        }
-      },
-      "required": [
-        "end",
-        "start"
-      ],
-      "type": "object"
     },
     "RawContentIdentity": {
       "description": "SHA-256 of exactly the original input bytes, without a prefix or suffix.",
@@ -1748,6 +1769,96 @@
       "required": [
         "byte_length",
         "sha256"
+      ],
+      "type": "object"
+    },
+    "RecordParameter": {
+      "properties": {
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "name": {
+          "type": "string"
+        },
+        "ordinal": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "raw_name": {
+          "type": "string"
+        },
+        "raw_value": {
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "locator",
+        "name",
+        "ordinal",
+        "raw_name",
+        "raw_value",
+        "values"
+      ],
+      "type": "object"
+    },
+    "RecordProperty": {
+      "properties": {
+        "group": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "name": {
+          "type": "string"
+        },
+        "ordinal": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "parameters": {
+          "items": {
+            "$ref": "#/definitions/RecordParameter"
+          },
+          "type": "array"
+        },
+        "raw": {
+          "type": "string"
+        },
+        "raw_name": {
+          "type": "string"
+        },
+        "raw_value": {
+          "type": "string"
+        },
+        "valid": {
+          "type": "boolean"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "locator",
+        "name",
+        "ordinal",
+        "parameters",
+        "raw",
+        "raw_name",
+        "raw_value",
+        "valid",
+        "value"
       ],
       "type": "object"
     },
@@ -1785,136 +1896,93 @@
       ],
       "type": "string"
     },
-    "ResolvedInclude": {
+    "RecurrencePart": {
       "properties": {
-        "content_sha256": {
+        "name": {
           "type": "string"
         },
-        "decoded_text": {
-          "type": "string"
-        },
-        "decoding": {
-          "$ref": "#/definitions/DecodeReport"
-        },
-        "encoding": {
-          "$ref": "#/definitions/TextEncoding"
-        },
-        "nodes": {
-          "items": {
-            "$ref": "#/definitions/RestructuredTextNode"
-          },
-          "type": "array"
-        },
-        "raw_bytes": {
-          "items": {
-            "format": "uint8",
-            "minimum": 0.0,
-            "type": "integer"
-          },
-          "type": "array"
-        },
-        "source": {
-          "$ref": "#/definitions/SourceInfo"
-        }
-      },
-      "required": [
-        "content_sha256",
-        "decoded_text",
-        "decoding",
-        "encoding",
-        "nodes",
-        "raw_bytes",
-        "source"
-      ],
-      "type": "object"
-    },
-    "RestructuredTextDocument": {
-      "properties": {
-        "decoded_range": {
-          "$ref": "#/definitions/SourceRange"
-        },
-        "decoded_text": {
-          "type": "string"
-        },
-        "decoding": {
-          "$ref": "#/definitions/DecodeReport"
-        },
-        "encoding": {
-          "$ref": "#/definitions/TextEncoding"
-        },
-        "locator": {
-          "$ref": "#/definitions/SourceLocator"
-        },
-        "nodes": {
-          "items": {
-            "$ref": "#/definitions/RestructuredTextNode"
-          },
-          "type": "array"
-        },
-        "raw_bytes": {
-          "items": {
-            "format": "uint8",
-            "minimum": 0.0,
-            "type": "integer"
-          },
-          "type": "array"
-        },
-        "raw_range": {
-          "$ref": "#/definitions/RawByteRange"
-        },
-        "schema_version": {
+        "value": {
           "type": "string"
         }
       },
       "required": [
-        "decoded_range",
-        "decoded_text",
-        "decoding",
-        "encoding",
-        "locator",
-        "nodes",
-        "raw_bytes",
-        "raw_range",
-        "schema_version"
+        "name",
+        "value"
       ],
       "type": "object"
     },
-    "RestructuredTextNode": {
+    "RecurrenceRule": {
       "properties": {
-        "argument": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "children": {
-          "default": [],
+        "by_day": {
           "items": {
             "type": "string"
           },
           "type": "array"
         },
-        "id": {
-          "type": "string"
+        "by_hour": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
-        "include": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/IncludeReference"
-            },
-            {
-              "type": "null"
-            }
+        "by_minute": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "by_month": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "by_month_day": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "by_second": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "by_set_position": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "by_week_number": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "by_year_day": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "count": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
           ]
         },
-        "kind": {
-          "$ref": "#/definitions/RestructuredTextNodeKind"
+        "frequency": {
+          "type": [
+            "string",
+            "null"
+          ]
         },
-        "known_syntax": {
-          "type": "boolean"
-        },
-        "level": {
-          "format": "uint8",
+        "interval": {
+          "format": "uint64",
           "minimum": 0.0,
           "type": [
             "integer",
@@ -1924,187 +1992,59 @@
         "locator": {
           "$ref": "#/definitions/SourceLocator"
         },
-        "name": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "options": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "default": {},
-          "type": "object"
-        },
-        "parent_id": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "range": {
-          "$ref": "#/definitions/SourceRange"
-        },
         "raw": {
           "type": "string"
         },
-        "raw_range": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/RawByteRange"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "role": {
+        "recurrence_scale": {
           "type": [
             "string",
             "null"
           ]
         },
-        "table": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/RestructuredTextTable"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "target": {
+        "skip": {
           "type": [
             "string",
             "null"
           ]
         },
-        "text": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "required": [
-        "id",
-        "kind",
-        "locator",
-        "range",
-        "raw"
-      ],
-      "type": "object"
-    },
-    "RestructuredTextNodeKind": {
-      "enum": [
-        "heading",
-        "paragraph",
-        "directive",
-        "role",
-        "include",
-        "code_block",
-        "literal_block",
-        "doctest_block",
-        "table",
-        "table_row",
-        "table_cell",
-        "footnote_definition",
-        "footnote_reference",
-        "citation_definition",
-        "citation_reference",
-        "target",
-        "cross_reference",
-        "hyperlink",
-        "list",
-        "list_item",
-        "definition_list",
-        "definition_term",
-        "definition_description",
-        "field_list",
-        "field",
-        "emphasis",
-        "strong",
-        "inline_code",
-        "substitution_definition",
-        "substitution_reference",
-        "transition",
-        "comment",
-        "raw_block",
-        "raw_inline"
-      ],
-      "type": "string"
-    },
-    "RestructuredTextTable": {
-      "properties": {
-        "rows": {
+        "unknown_parts": {
           "items": {
-            "$ref": "#/definitions/RestructuredTextTableRow"
+            "$ref": "#/definitions/RecurrencePart"
           },
           "type": "array"
         },
-        "style": {
-          "$ref": "#/definitions/RestructuredTextTableStyle"
-        }
-      },
-      "required": [
-        "rows",
-        "style"
-      ],
-      "type": "object"
-    },
-    "RestructuredTextTableCell": {
-      "properties": {
-        "locator": {
-          "$ref": "#/definitions/SourceLocator"
+        "until": {
+          "type": [
+            "string",
+            "null"
+          ]
         },
-        "range": {
-          "$ref": "#/definitions/SourceRange"
-        },
-        "text": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "locator",
-        "range",
-        "text"
-      ],
-      "type": "object"
-    },
-    "RestructuredTextTableRow": {
-      "properties": {
-        "cells": {
-          "items": {
-            "$ref": "#/definitions/RestructuredTextTableCell"
-          },
-          "type": "array"
-        },
-        "header": {
+        "valid": {
           "type": "boolean"
         },
-        "locator": {
-          "$ref": "#/definitions/SourceLocator"
-        },
-        "range": {
-          "$ref": "#/definitions/SourceRange"
+        "week_start": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
-        "cells",
-        "header",
+        "by_day",
+        "by_hour",
+        "by_minute",
+        "by_month",
+        "by_month_day",
+        "by_second",
+        "by_set_position",
+        "by_week_number",
+        "by_year_day",
         "locator",
-        "range"
+        "raw",
+        "unknown_parts",
+        "valid"
       ],
       "type": "object"
-    },
-    "RestructuredTextTableStyle": {
-      "enum": [
-        "grid",
-        "simple"
-      ],
-      "type": "string"
     },
     "SchemaVersion": {
       "type": "string"
@@ -2118,59 +2058,6 @@
         "fatal"
       ],
       "type": "string"
-    },
-    "SourceInfo": {
-      "description": "Descriptive source metadata supplied by the caller.\n\nURI values are labels only. Resolving or fetching them is outside Grist's source contract.",
-      "properties": {
-        "declared_mime_type": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "display_name": {
-          "type": "string"
-        },
-        "ingestion_timestamp": {
-          "description": "Caller-supplied timestamp. Grist never inserts the current time.",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "parent": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/SourceInfo"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "path": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "repository_relative_path": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "uri": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "required": [
-        "display_name"
-      ],
-      "type": "object"
     },
     "SourceLocator": {
       "description": "An outermost-to-innermost containment chain.\n\nComponent `n` is interpreted relative to component `n - 1`. For example, `[archive_member, email_part, ooxml_part, text_range]` identifies text in an OOXML part attached to an email stored in an archive without flattening any parent coordinate system.",
@@ -2313,204 +2200,248 @@
       ],
       "type": "object"
     },
-    "TextEncoding": {
-      "description": "Canonical encoding selected by the decoder.",
-      "oneOf": [
-        {
-          "properties": {
-            "kind": {
-              "enum": [
-                "utf8"
-              ],
-              "type": "string"
-            }
-          },
-          "required": [
-            "kind"
-          ],
-          "type": "object"
+    "TemporalValue": {
+      "properties": {
+        "date": {
+          "type": [
+            "string",
+            "null"
+          ]
         },
-        {
-          "properties": {
-            "kind": {
-              "enum": [
-                "utf16_le"
-              ],
-              "type": "string"
-            }
-          },
-          "required": [
-            "kind"
-          ],
-          "type": "object"
+        "floating": {
+          "type": "boolean"
         },
-        {
-          "properties": {
-            "kind": {
-              "enum": [
-                "utf16_be"
-              ],
-              "type": "string"
-            }
-          },
-          "required": [
-            "kind"
-          ],
-          "type": "object"
+        "kind": {
+          "$ref": "#/definitions/TemporalValueKind"
         },
-        {
-          "properties": {
-            "kind": {
-              "enum": [
-                "utf32_le"
-              ],
-              "type": "string"
-            }
-          },
-          "required": [
-            "kind"
-          ],
-          "type": "object"
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
         },
-        {
-          "properties": {
-            "kind": {
-              "enum": [
-                "utf32_be"
-              ],
-              "type": "string"
-            }
-          },
-          "required": [
-            "kind"
-          ],
-          "type": "object"
+        "period_end": {
+          "type": [
+            "string",
+            "null"
+          ]
         },
-        {
-          "properties": {
-            "kind": {
-              "enum": [
-                "windows1252"
-              ],
-              "type": "string"
-            }
-          },
-          "required": [
-            "kind"
-          ],
-          "type": "object"
+        "raw": {
+          "type": "string"
         },
-        {
-          "properties": {
-            "kind": {
-              "enum": [
-                "other"
-              ],
-              "type": "string"
-            },
-            "label": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "kind",
-            "label"
-          ],
-          "type": "object"
+        "time": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "timezone_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "utc": {
+          "type": "boolean"
+        },
+        "valid": {
+          "type": "boolean"
         }
-      ]
+      },
+      "required": [
+        "floating",
+        "kind",
+        "locator",
+        "raw",
+        "utc",
+        "valid"
+      ],
+      "type": "object"
+    },
+    "TemporalValueKind": {
+      "enum": [
+        "date",
+        "date_time",
+        "time",
+        "period",
+        "duration",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "TimeZoneObservance": {
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "offset_from": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "offset_to": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "properties": {
+          "items": {
+            "$ref": "#/definitions/RecordProperty"
+          },
+          "type": "array"
+        },
+        "recurrence_dates": {
+          "items": {
+            "$ref": "#/definitions/TemporalValue"
+          },
+          "type": "array"
+        },
+        "recurrence_rules": {
+          "items": {
+            "$ref": "#/definitions/RecurrenceRule"
+          },
+          "type": "array"
+        },
+        "start": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TemporalValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "locator",
+        "names",
+        "properties",
+        "recurrence_dates",
+        "recurrence_rules"
+      ],
+      "type": "object"
     }
   },
-  "description": "Universal result for parse, ingest, transform, render, segment, and validation operations.",
   "properties": {
+    "calendar_scale": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/LocatedText"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "complete": {
+      "type": "boolean"
+    },
+    "components": {
+      "items": {
+        "$ref": "#/definitions/CalendarComponent"
+      },
+      "type": "array"
+    },
     "diagnostics": {
       "items": {
         "$ref": "#/definitions/Diagnostic"
       },
       "type": "array"
     },
-    "hashes": {
+    "events": {
+      "items": {
+        "$ref": "#/definitions/CalendarEvent"
+      },
+      "type": "array"
+    },
+    "external_references": {
+      "items": {
+        "$ref": "#/definitions/InertExternalReference"
+      },
+      "type": "array"
+    },
+    "locator": {
+      "$ref": "#/definitions/SourceLocator"
+    },
+    "method": {
       "anyOf": [
         {
-          "$ref": "#/definitions/Hashes"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "description": "Legacy v1 hashes retained for wire and Rust compatibility."
-    },
-    "identity": {
-      "anyOf": [
-        {
-          "$ref": "#/definitions/ContentIdentity"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "description": "Versioned raw, decoded, canonical-payload, format, and aggregate identity."
-    },
-    "kind": {
-      "$ref": "#/definitions/ArtifactKind"
-    },
-    "operation": {
-      "$ref": "#/definitions/OperationKind"
-    },
-    "options_digest": {
-      "type": "string"
-    },
-    "parser": {
-      "$ref": "#/definitions/ParserInfo"
-    },
-    "payload": {
-      "anyOf": [
-        {
-          "$ref": "#/definitions/RestructuredTextDocument"
+          "$ref": "#/definitions/LocatedText"
         },
         {
           "type": "null"
         }
       ]
     },
-    "payload_schema_version": {
-      "$ref": "#/definitions/SchemaVersion"
+    "mime_media_type": {
+      "type": [
+        "string",
+        "null"
+      ]
     },
-    "provenance": {
-      "items": {
-        "$ref": "#/definitions/ProvenanceStep"
-      },
-      "type": "array"
+    "mime_method": {
+      "type": [
+        "string",
+        "null"
+      ]
     },
-    "providers": {
+    "product_id": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/LocatedText"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "properties": {
       "items": {
-        "$ref": "#/definitions/ProviderInvocation"
+        "$ref": "#/definitions/RecordProperty"
       },
       "type": "array"
     },
     "schema_version": {
-      "$ref": "#/definitions/SchemaVersion"
+      "type": "string"
     },
-    "source": {
-      "$ref": "#/definitions/SourceInfo"
+    "time_zones": {
+      "items": {
+        "$ref": "#/definitions/CalendarTimeZone"
+      },
+      "type": "array"
     },
-    "status": {
-      "$ref": "#/definitions/OperationStatus"
+    "version": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/LocatedText"
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   },
   "required": [
+    "complete",
+    "components",
     "diagnostics",
-    "kind",
-    "operation",
-    "options_digest",
-    "parser",
-    "payload_schema_version",
-    "provenance",
-    "providers",
+    "events",
+    "external_references",
+    "locator",
+    "properties",
     "schema_version",
-    "source",
-    "status"
+    "time_zones"
   ],
-  "title": "Envelope_for_RestructuredTextDocument",
+  "title": "ICalendarDocument",
   "type": "object"
 }

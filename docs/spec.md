@@ -49,6 +49,7 @@ Expected modules:
 - `grist::email` — inert RFC 5322/MIME parsing, attachments, and threading evidence.
 - `grist::mbox` — streaming MBOX variants, separator provenance, and aggregate threads.
 - `grist::outlook` — bounded, inert Outlook MSG compound-file and MAPI parsing.
+- `grist::calendar_contact` - inert iCalendar events/time zones and vCard contacts.
 - `grist::model_output` — model-output candidate extraction, normalization, repair, and streaming parsing.
 - `grist::schema` — generated JSON Schema emission and validation helpers.
 - `grist::cli` / binary `grist` — thin JSON-only CLI over the library API.
@@ -100,6 +101,8 @@ All public CLI/library JSON outputs include explicit schema versions, for exampl
 - `grist/email/v1`
 - `grist/mbox/v1`
 - `grist/outlook-msg/v1`
+- `grist/icalendar/v1`
+- `grist/vcard/v1`
 - `grist/csv/v1`
 - `grist/model-output/v1`
 - `grist/repo-ingest/v1`

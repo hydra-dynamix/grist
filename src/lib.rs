@@ -2,6 +2,8 @@
 
 #[cfg(feature = "basin")]
 pub mod basin;
+#[cfg(feature = "email-message")]
+pub mod calendar_contact;
 pub mod capabilities;
 #[cfg(feature = "cli")]
 pub mod cli;
@@ -23,8 +25,6 @@ pub mod epub;
 pub mod fixtures;
 pub mod formats;
 pub mod ingest;
-#[cfg(feature = "email-message")]
-pub mod calendar_contact;
 #[cfg(feature = "email-message")]
 pub mod mbox;
 #[cfg(feature = "email-message")]

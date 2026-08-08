@@ -1454,6 +1454,60 @@ fn registrations() -> Vec<Registration> {
             crate::outlook::OutlookMsgOptions
         );
         add!(
+            "icalendar",
+            "email-message",
+            SchemaVersion::ICALENDAR_V1,
+            SchemaKind::Payload,
+            "grist.icalendar.v1.schema.json",
+            true,
+            crate::calendar_contact::ICalendarDocument
+        );
+        add!(
+            "icalendar-envelope",
+            "envelope",
+            SchemaVersion::ENVELOPE_V2,
+            SchemaKind::Envelope,
+            "grist.icalendar-envelope.v2.schema.json",
+            true,
+            crate::core::Envelope<crate::calendar_contact::ICalendarDocument>
+        );
+        add!(
+            "icalendar-options",
+            "icalendar-options",
+            "grist/icalendar-options/v1",
+            SchemaKind::Options,
+            "grist.icalendar-options.v1.schema.json",
+            false,
+            crate::calendar_contact::ICalendarOptions
+        );
+        add!(
+            "vcard",
+            "email-message",
+            SchemaVersion::VCARD_V1,
+            SchemaKind::Payload,
+            "grist.vcard.v1.schema.json",
+            true,
+            crate::calendar_contact::VCardDocument
+        );
+        add!(
+            "vcard-envelope",
+            "envelope",
+            SchemaVersion::ENVELOPE_V2,
+            SchemaKind::Envelope,
+            "grist.vcard-envelope.v2.schema.json",
+            true,
+            crate::core::Envelope<crate::calendar_contact::VCardDocument>
+        );
+        add!(
+            "vcard-options",
+            "vcard-options",
+            "grist/vcard-options/v1",
+            SchemaKind::Options,
+            "grist.vcard-options.v1.schema.json",
+            false,
+            crate::calendar_contact::VCardOptions
+        );
+        add!(
             "mbox-stream-event",
             "stream-event",
             "grist/mbox-stream-event/v1",

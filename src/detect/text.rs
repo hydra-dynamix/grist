@@ -144,6 +144,22 @@ fn structure_signals(text: &str) -> Vec<Signal> {
             "RFC 5322 header block and message body separator",
         ));
     }
+    if looks_like_icalendar(trimmed) {
+        signals.push(structure(
+            "icalendar",
+            "text/calendar",
+            0.98,
+            "VCALENDAR content-line envelope with calendar components",
+        ));
+    }
+    if looks_like_vcard(trimmed) {
+        signals.push(structure(
+            "vcard",
+            "text/vcard",
+            0.98,
+            "VCARD content-line envelope with contact properties",
+        ));
+    }
     if lines.len() >= 2
         && lines
             .iter()
@@ -287,6 +303,35 @@ fn looks_like_mbox(text: &str) -> bool {
             .skip(1)
             .take(100)
             .any(|line| line.starts_with("From:") || line.starts_with("Message-ID:"))
+}
+
+fn looks_like_icalendar(text: &str) -> bool {
+    let upper = text.to_ascii_uppercase();
+    upper
+        .lines()
+        .any(|line| line.trim_end() == "BEGIN:VCALENDAR")
+        && upper.lines().any(|line| line.trim_end() == "END:VCALENDAR")
+        && upper.lines().any(|line| {
+            matches!(
+                line.trim_end(),
+                "BEGIN:VEVENT"
+                    | "BEGIN:VTODO"
+                    | "BEGIN:VJOURNAL"
+                    | "BEGIN:VFREEBUSY"
+                    | "BEGIN:VTIMEZONE"
+            )
+        })
+}
+
+fn looks_like_vcard(text: &str) -> bool {
+    let upper = text.to_ascii_uppercase();
+    upper.lines().any(|line| line.trim_end() == "BEGIN:VCARD")
+        && upper.lines().any(|line| line.trim_end() == "END:VCARD")
+        && upper.lines().any(|line| {
+            line.trim_start().starts_with("FN:")
+                || line.trim_start().starts_with("N:")
+                || line.trim_start().starts_with("VERSION:")
+        })
 }
 
 fn looks_like_email(text: &str) -> bool {

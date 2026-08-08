@@ -578,7 +578,7 @@ impl ParseState<'_> {
             .map(str::to_string)
             .unwrap_or_else(|| format!("mime-{}", display_path(&part.path)));
         let child_source = SourceInfo::new(member_name.clone())
-            .with_declared_mime_type(part.content_type.essence.clone())
+            .with_declared_mime_type(part.content_type.raw.clone())
             .with_parent(self.source.clone());
         let input = Input::compound_member(CompoundMemberInput::new(
             self.source.clone(),
@@ -1156,6 +1156,10 @@ fn should_capture_attachment(part: &MimePart) -> bool {
     matches!(disposition, Some("attachment" | "inline"))
         || named
         || part.content_id.is_some()
+        || matches!(
+            part.content_type.essence.as_str(),
+            "text/calendar" | "application/ics" | "text/vcard" | "text/x-vcard"
+        )
         || (!part.content_type.essence.starts_with("text/")
             && part.content_type.essence != "message/rfc822")
 }

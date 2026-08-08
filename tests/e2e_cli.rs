@@ -75,6 +75,35 @@ fn validate_with_schema(value: &serde_json::Value, schema_name: &str) {
 }
 
 #[test]
+fn cli_parses_icalendar_and_vcard_as_inert_records() {
+    let calendar = run_stdin(
+        &["parse", "icalendar", "-"],
+        "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//CLI//EN\r\nBEGIN:VEVENT\r\nUID:cli-event\r\nDTSTART:20260808T120000Z\r\nSUMMARY:CLI event\r\nATTACH:https://example.test/a\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n",
+    );
+    validate_with_schema(&calendar, "icalendar-envelope");
+    assert_eq!(calendar["kind"], "i_calendar");
+    assert_eq!(
+        calendar["payload"]["events"][0]["uid"]["value"],
+        "cli-event"
+    );
+    assert_eq!(
+        calendar["payload"]["external_references"][0]["resolved"],
+        false
+    );
+
+    let contact = run_stdin(
+        &["parse", "vcard", "-"],
+        "BEGIN:VCARD\r\nVERSION:4.0\r\nFN:CLI Contact\r\nEMAIL:contact@example.test\r\nEND:VCARD\r\n",
+    );
+    validate_with_schema(&contact, "vcard-envelope");
+    assert_eq!(contact["kind"], "v_card");
+    assert_eq!(
+        contact["payload"]["cards"][0]["formatted_names"][0]["value"],
+        "CLI Contact"
+    );
+}
+
+#[test]
 fn cli_parses_markdown_rich_structures_end_to_end() {
     let output = run_stdin(
         &["parse", "markdown", "-"],

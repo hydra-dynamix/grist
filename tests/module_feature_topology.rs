@@ -140,6 +140,15 @@ fn outlook_compatibility_path_has_identical_types() {
     let _: Option<grist::outlook::OutlookMsgDocument> = canonical;
 }
 
+#[cfg(feature = "email-message")]
+#[test]
+fn calendar_contact_compatibility_path_has_identical_types() {
+    let calendar: Option<grist::formats::calendar_contact::ICalendarDocument> = None;
+    let _: Option<grist::calendar_contact::ICalendarDocument> = calendar;
+    let contact: Option<grist::formats::calendar_contact::VCardDocument> = None;
+    let _: Option<grist::calendar_contact::VCardDocument> = contact;
+}
+
 #[cfg(feature = "html")]
 #[test]
 fn html_compatibility_path_has_identical_types() {

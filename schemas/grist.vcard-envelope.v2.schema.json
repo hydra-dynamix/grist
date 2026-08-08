@@ -155,6 +155,15 @@
       ],
       "type": "string"
     },
+    "AttachmentValueKind": {
+      "enum": [
+        "uri",
+        "binary",
+        "content_id",
+        "unknown"
+      ],
+      "type": "string"
+    },
     "BoundingBox": {
       "description": "A rectangle in a declared coordinate system.",
       "properties": {
@@ -720,6 +729,123 @@
       ],
       "type": "object"
     },
+    "InertAttachment": {
+      "properties": {
+        "decoded_bytes": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "decoded_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "encoding": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inline_bytes_base64": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "media_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "property_name": {
+          "type": "string"
+        },
+        "raw_value": {
+          "type": "string"
+        },
+        "resolved": {
+          "type": "boolean"
+        },
+        "safety_classification": {
+          "type": "string"
+        },
+        "uri": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "value_kind": {
+          "$ref": "#/definitions/AttachmentValueKind"
+        }
+      },
+      "required": [
+        "locator",
+        "property_name",
+        "raw_value",
+        "resolved",
+        "safety_classification",
+        "value_kind"
+      ],
+      "type": "object"
+    },
+    "InertExternalReference": {
+      "properties": {
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "owner": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "resolved": {
+          "type": "boolean"
+        },
+        "source_property": {
+          "type": "string"
+        },
+        "uri": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "locator",
+        "resolved",
+        "source_property",
+        "uri"
+      ],
+      "type": "object"
+    },
+    "LocatedText": {
+      "properties": {
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "raw": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "locator",
+        "raw",
+        "value"
+      ],
+      "type": "object"
+    },
     "LocationComponent": {
       "description": "One location inside its immediately preceding parent component.",
       "oneOf": [
@@ -1228,25 +1354,6 @@
       ],
       "type": "string"
     },
-    "PackageByteRange": {
-      "properties": {
-        "byte_end": {
-          "format": "uint",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "byte_start": {
-          "format": "uint",
-          "minimum": 0.0,
-          "type": "integer"
-        }
-      },
-      "required": [
-        "byte_end",
-        "byte_start"
-      ],
-      "type": "object"
-    },
     "ParserAvailability": {
       "description": "Whether a ranked candidate can be interpreted by the active registry.",
       "enum": [
@@ -1440,209 +1547,93 @@
       ],
       "type": "object"
     },
-    "ReconstructionDifference": {
+    "RecordParameter": {
       "properties": {
-        "affected_node_ids": {
-          "default": [],
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "name": {
+          "type": "string"
+        },
+        "ordinal": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "raw_name": {
+          "type": "string"
+        },
+        "raw_value": {
+          "type": "string"
+        },
+        "values": {
           "items": {
             "type": "string"
           },
           "type": "array"
-        },
-        "affected_package_parts": {
-          "default": [],
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "kind": {
-          "$ref": "#/definitions/ReconstructionDifferenceKind"
-        },
-        "message": {
-          "type": "string"
         }
       },
       "required": [
-        "kind",
-        "message"
+        "locator",
+        "name",
+        "ordinal",
+        "raw_name",
+        "raw_value",
+        "values"
       ],
       "type": "object"
     },
-    "ReconstructionDifferenceKind": {
-      "enum": [
-        "content",
-        "structure",
-        "formatting",
-        "metadata",
-        "ordering",
-        "packaging"
-      ],
-      "type": "string"
-    },
-    "ReconstructionFidelity": {
-      "enum": [
-        "lossy",
-        "semantic_equivalent",
-        "package_equivalent",
-        "byte_identical"
-      ],
-      "type": "string"
-    },
-    "ReconstructionFidelityReport": {
+    "RecordProperty": {
       "properties": {
-        "achieved_fidelity": {
-          "$ref": "#/definitions/ReconstructionFidelity"
-        },
-        "differences": {
-          "default": [],
-          "items": {
-            "$ref": "#/definitions/ReconstructionDifference"
-          },
-          "type": "array"
-        },
-        "fixture_evidence": {
-          "items": {
-            "$ref": "#/definitions/ReconstructionFixtureEvidence"
-          },
-          "minItems": 1,
-          "type": "array"
-        },
-        "format": {
-          "type": "string"
-        },
-        "implementation": {
-          "type": "string"
-        },
-        "implementation_version": {
-          "type": "string"
-        },
-        "media_type": {
-          "type": "string"
-        },
-        "package_profile": {
-          "type": "string"
-        },
-        "requested_fidelity": {
-          "$ref": "#/definitions/ReconstructionFidelity"
-        },
-        "schema_version": {
-          "type": "string"
-        },
-        "verification": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "achieved_fidelity",
-        "fixture_evidence",
-        "format",
-        "implementation",
-        "implementation_version",
-        "media_type",
-        "package_profile",
-        "requested_fidelity",
-        "schema_version",
-        "verification"
-      ],
-      "type": "object"
-    },
-    "ReconstructionFixtureEvidence": {
-      "properties": {
-        "expected_package_sha256": {
-          "type": "string"
-        },
-        "fixture_id": {
-          "type": "string"
-        },
-        "input_sha256": {
-          "type": "string"
-        },
-        "verified_fidelity": {
-          "$ref": "#/definitions/ReconstructionFidelity"
-        }
-      },
-      "required": [
-        "expected_package_sha256",
-        "fixture_id",
-        "input_sha256",
-        "verified_fidelity"
-      ],
-      "type": "object"
-    },
-    "ReconstructionResult": {
-      "properties": {
-        "fidelity_report": {
-          "$ref": "#/definitions/ReconstructionFidelityReport"
-        },
-        "format": {
-          "type": "string"
-        },
-        "media_type": {
-          "type": "string"
-        },
-        "package_bytes": {
-          "items": {
-            "format": "uint8",
-            "minimum": 0.0,
-            "type": "integer"
-          },
-          "type": "array"
-        },
-        "package_profile": {
-          "type": "string"
-        },
-        "package_sha256": {
-          "type": "string"
-        },
-        "schema_version": {
-          "type": "string"
-        },
-        "source_map": {
-          "default": [],
-          "items": {
-            "$ref": "#/definitions/ReconstructionSourceMapEntry"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "fidelity_report",
-        "format",
-        "media_type",
-        "package_bytes",
-        "package_profile",
-        "package_sha256",
-        "schema_version"
-      ],
-      "type": "object"
-    },
-    "ReconstructionSourceMapEntry": {
-      "properties": {
-        "generated": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/PackageByteRange"
-            },
-            {
-              "type": "null"
-            }
+        "group": {
+          "type": [
+            "string",
+            "null"
           ]
         },
-        "package_part": {
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "name": {
           "type": "string"
         },
-        "source_node_ids": {
+        "ordinal": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "parameters": {
           "items": {
-            "type": "string"
+            "$ref": "#/definitions/RecordParameter"
           },
-          "minItems": 1,
           "type": "array"
+        },
+        "raw": {
+          "type": "string"
+        },
+        "raw_name": {
+          "type": "string"
+        },
+        "raw_value": {
+          "type": "string"
+        },
+        "valid": {
+          "type": "boolean"
+        },
+        "value": {
+          "type": "string"
         }
       },
       "required": [
-        "package_part",
-        "source_node_ids"
+        "locator",
+        "name",
+        "ordinal",
+        "parameters",
+        "raw",
+        "raw_name",
+        "raw_value",
+        "valid",
+        "value"
       ],
       "type": "object"
     },
@@ -1886,6 +1877,546 @@
         "start_line"
       ],
       "type": "object"
+    },
+    "StructuredName": {
+      "properties": {
+        "additional": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "family": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "given": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "language": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "prefixes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "sort_as": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "suffixes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "additional",
+        "family",
+        "given",
+        "locator",
+        "prefixes",
+        "sort_as",
+        "suffixes"
+      ],
+      "type": "object"
+    },
+    "TemporalValue": {
+      "properties": {
+        "date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "floating": {
+          "type": "boolean"
+        },
+        "kind": {
+          "$ref": "#/definitions/TemporalValueKind"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "period_end": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "raw": {
+          "type": "string"
+        },
+        "time": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "timezone_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "utc": {
+          "type": "boolean"
+        },
+        "valid": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "floating",
+        "kind",
+        "locator",
+        "raw",
+        "utc",
+        "valid"
+      ],
+      "type": "object"
+    },
+    "TemporalValueKind": {
+      "enum": [
+        "date",
+        "date_time",
+        "time",
+        "period",
+        "duration",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "VCard": {
+      "properties": {
+        "addresses": {
+          "items": {
+            "$ref": "#/definitions/VCardAddress"
+          },
+          "type": "array"
+        },
+        "anniversary": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TemporalValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "attachments": {
+          "items": {
+            "$ref": "#/definitions/InertAttachment"
+          },
+          "type": "array"
+        },
+        "birthday": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TemporalValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "categories": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "communications": {
+          "items": {
+            "$ref": "#/definitions/VCardCommunication"
+          },
+          "type": "array"
+        },
+        "formatted_names": {
+          "items": {
+            "$ref": "#/definitions/LocatedText"
+          },
+          "type": "array"
+        },
+        "gender": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "geo": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/StructuredName"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "nicknames": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "notes": {
+          "items": {
+            "$ref": "#/definitions/LocatedText"
+          },
+          "type": "array"
+        },
+        "ordinal": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "organizations": {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "properties": {
+          "items": {
+            "$ref": "#/definitions/RecordProperty"
+          },
+          "type": "array"
+        },
+        "related": {
+          "items": {
+            "$ref": "#/definitions/VCardRelated"
+          },
+          "type": "array"
+        },
+        "roles": {
+          "items": {
+            "$ref": "#/definitions/LocatedText"
+          },
+          "type": "array"
+        },
+        "timezone": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "titles": {
+          "items": {
+            "$ref": "#/definitions/LocatedText"
+          },
+          "type": "array"
+        },
+        "uid": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "version": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "addresses",
+        "attachments",
+        "categories",
+        "communications",
+        "formatted_names",
+        "locator",
+        "nicknames",
+        "notes",
+        "ordinal",
+        "organizations",
+        "properties",
+        "related",
+        "roles",
+        "titles"
+      ],
+      "type": "object"
+    },
+    "VCardAddress": {
+      "properties": {
+        "country": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "extended": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "geo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "label": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "language": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locality": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "post_office_box": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "postal_code": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "preference": {
+          "format": "uint16",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "region": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "street": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "timezone": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "types": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "country",
+        "extended",
+        "locality",
+        "locator",
+        "post_office_box",
+        "postal_code",
+        "region",
+        "street",
+        "types"
+      ],
+      "type": "object"
+    },
+    "VCardCommunication": {
+      "properties": {
+        "alternative_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "kind": {
+          "type": "string"
+        },
+        "language": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "media_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "preference": {
+          "format": "uint16",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "types": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "locator",
+        "types",
+        "value"
+      ],
+      "type": "object"
+    },
+    "VCardDocument": {
+      "properties": {
+        "cards": {
+          "items": {
+            "$ref": "#/definitions/VCard"
+          },
+          "type": "array"
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "diagnostics": {
+          "items": {
+            "$ref": "#/definitions/Diagnostic"
+          },
+          "type": "array"
+        },
+        "external_references": {
+          "items": {
+            "$ref": "#/definitions/InertExternalReference"
+          },
+          "type": "array"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "cards",
+        "complete",
+        "diagnostics",
+        "external_references",
+        "locator",
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "VCardRelated": {
+      "properties": {
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "relation_types": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "resolved": {
+          "type": "boolean"
+        },
+        "value": {
+          "type": "string"
+        },
+        "value_kind": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "locator",
+        "relation_types",
+        "resolved",
+        "value",
+        "value_kind"
+      ],
+      "type": "object"
     }
   },
   "description": "Universal result for parse, ingest, transform, render, segment, and validation operations.",
@@ -1933,7 +2464,7 @@
     "payload": {
       "anyOf": [
         {
-          "$ref": "#/definitions/ReconstructionResult"
+          "$ref": "#/definitions/VCardDocument"
         },
         {
           "type": "null"
@@ -1978,6 +2509,6 @@
     "source",
     "status"
   ],
-  "title": "Envelope_for_ReconstructionResult",
+  "title": "Envelope_for_VCardDocument",
   "type": "object"
 }

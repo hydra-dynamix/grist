@@ -302,6 +302,8 @@
         "eml",
         "mbox",
         "msg",
+        "i_calendar",
+        "v_card",
         "sqlite",
         "png",
         "jpeg",
