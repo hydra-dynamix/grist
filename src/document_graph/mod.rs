@@ -7811,11 +7811,19 @@ mod tests {
                 .iter()
                 .any(|edge| edge.relation == DocumentRelation::Inherits && edge.target == "Base")
         );
+        let helper_id = graph
+            .nodes
+            .iter()
+            .find(|node| {
+                node.kind == DocumentNodeKind::Function && node.name.as_deref() == Some("helper")
+            })
+            .map(|node| node.id.as_str())
+            .expect("helper function is projected");
         assert!(
             graph
                 .edges
                 .iter()
-                .any(|edge| edge.relation == DocumentRelation::Calls && edge.target == "helper")
+                .any(|edge| edge.relation == DocumentRelation::Calls && edge.target == helper_id)
         );
     }
 

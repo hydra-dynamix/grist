@@ -663,7 +663,9 @@ def helper():
                 && edge.dst.contains("Form_create")
         }));
         assert!(graph.edges.iter().any(|edge| {
-            edge.relation == "CALLS" && edge.src.contains("Form_create") && edge.dst == "helper"
+            edge.relation == "CALLS"
+                && edge.src.contains("Form_create")
+                && edge.dst.starts_with("helper [")
         }));
 
         let document = parsed

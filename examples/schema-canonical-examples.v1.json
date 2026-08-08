@@ -491,6 +491,56 @@
         }
       }
     },
+    "code": {
+      "schema_name": "code",
+      "schema_version": "grist/code/v1",
+      "canonical_sha256": "sha256:2e23e032d74ea625d2aa7ba1bf96ba9eef09db3ab591718e6569a6cc812cfb8b",
+      "value": {
+        "adapter": {
+          "active_content_execution": false,
+          "capabilities": [],
+          "enabled_feature": "",
+          "grammar": "",
+          "grammar_version": "",
+          "language": "",
+          "network_access": false,
+          "schema_version": ""
+        },
+        "parse_errors": [],
+        "root_kind": "",
+        "schema_version": "grist/code/v1",
+        "syntax_nodes": []
+      }
+    },
+    "code-envelope": {
+      "schema_name": "code-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "value": {
+        "diagnostics": [],
+        "kind": "markdown",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "code-options": {
+      "schema_name": "code-options",
+      "schema_version": "grist/code-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
     "columnar": {
       "schema_name": "columnar",
       "schema_version": "grist/columnar/v1",
@@ -3886,6 +3936,21 @@
         "allow_lossy": false,
         "allow_raw_fallback": false,
         "fail_on_warning": false
+      }
+    },
+    "tree-sitter-language-adapter": {
+      "schema_name": "tree-sitter-language-adapter",
+      "schema_version": "grist/tree-sitter-language-adapter/v1",
+      "canonical_sha256": "sha256:f145116bdbda2dad90856d1e6029fe14b3b4027f9d9ecee3767def90f72fa4af",
+      "value": {
+        "active_content_execution": false,
+        "capabilities": [],
+        "enabled_feature": "",
+        "grammar": "",
+        "grammar_version": "",
+        "language": "",
+        "network_access": false,
+        "schema_version": "grist/tree-sitter-language-adapter/v1"
       }
     },
     "typescript-code": {

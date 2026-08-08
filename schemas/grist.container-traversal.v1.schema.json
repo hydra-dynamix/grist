@@ -258,6 +258,7 @@
         "python_code",
         "javascript_code",
         "typescript_code",
+        "code",
         "latex",
         "bibliography",
         "serialization",

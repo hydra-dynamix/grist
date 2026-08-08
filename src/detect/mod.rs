@@ -401,7 +401,8 @@ pub fn detect_with_registry(
         options.max_probe_bytes,
         &mut diagnostics,
     ));
-    if let Some(sample) = text::sample(bytes, options.max_probe_bytes) {
+    let text_sample = text::sample(bytes, options.max_probe_bytes);
+    if let Some(sample) = text_sample.as_ref() {
         signals.extend(grammar::signals(&sample.text, registry));
     }
     #[cfg(feature = "structured-binary")]
@@ -432,8 +433,25 @@ pub fn detect_with_registry(
             description,
         ));
     }
+    // Arbitrary printable ASCII can also be decoded as a sequence of tiny CBOR
+    // values. When a known non-binary suffix and a valid text sample agree, do
+    // not let that generic structural probe override the labeled text format.
+    // Explicit structured-binary suffixes and unlabeled inputs still receive
+    // the probe.
     #[cfg(feature = "structured-binary")]
-    for format in crate::structured_binary::probe_formats(bytes) {
+    let allow_structured_binary_probe = text_sample.is_none()
+        || extension.is_empty()
+        || matches!(
+            extension.as_str(),
+            "cbor" | "msgpack" | "mpk" | "pb" | "protobuf"
+        )
+        || (extension != "h" && extension_identity(&extension).is_none());
+    #[cfg(feature = "structured-binary")]
+    for format in allow_structured_binary_probe
+        .then(|| crate::structured_binary::probe_formats(bytes))
+        .into_iter()
+        .flatten()
+    {
         let (name, media, description, weight) = match format {
             crate::structured_binary::StructuredBinaryFormat::Cbor => (
                 "cbor",
