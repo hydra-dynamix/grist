@@ -116,6 +116,7 @@
         "epub",
         "pdf",
         "image",
+        "subtitle",
         "word_ooxml",
         "presentation_ooxml",
         "spreadsheet_ooxml",
@@ -357,6 +358,39 @@
         "encoding",
         "lossy",
         "sha256"
+      ],
+      "type": "object"
+    },
+    "DecryptionResult": {
+      "properties": {
+        "bytes": {
+          "items": {
+            "format": "uint8",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "diagnostics": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Diagnostic"
+          },
+          "type": "array"
+        },
+        "identity": {
+          "$ref": "#/definitions/RawContentIdentity"
+        },
+        "media_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "bytes",
+        "identity"
       ],
       "type": "object"
     },
@@ -942,6 +976,25 @@
         "schema_version": {
           "type": "string"
         },
+        "text": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/ImageTextContent"
+            }
+          ],
+          "default": {
+            "native": {
+              "diagnostics": [],
+              "identity": "sha256:550ca7ee10691ce50257f22a3adb2fbd1ae61d66e5ff6d55364947099fd9f504",
+              "value": {
+                "entries": [],
+                "text": ""
+              }
+            },
+            "ocr_attempts": []
+          },
+          "description": "Source-native embedded text, provider OCR attempts, and any explicitly recorded reconciliation remain independently addressable."
+        },
         "vector": {
           "anyOf": [
             {
@@ -1136,6 +1189,134 @@
       ],
       "type": "string"
     },
+    "ImageNativeText": {
+      "properties": {
+        "entries": {
+          "items": {
+            "$ref": "#/definitions/ImageText"
+          },
+          "type": "array"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "entries",
+        "text"
+      ],
+      "type": "object"
+    },
+    "ImageOcrAttempt": {
+      "properties": {
+        "layout_confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProviderConfidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reading_order_confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProviderConfidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "regions": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/ImageOcrTextRegion"
+          },
+          "type": "array"
+        },
+        "response": {
+          "$ref": "#/definitions/ProviderResponse"
+        },
+        "scope": {
+          "$ref": "#/definitions/ImageOcrScope"
+        }
+      },
+      "required": [
+        "response",
+        "scope"
+      ],
+      "type": "object"
+    },
+    "ImageOcrScope": {
+      "properties": {
+        "frame_index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        }
+      },
+      "required": [
+        "frame_index",
+        "locator"
+      ],
+      "type": "object"
+    },
+    "ImageOcrTextRegion": {
+      "properties": {
+        "bbox": {
+          "$ref": "#/definitions/BoundingBox"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProviderConfidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "language": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "reading_order": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "reading_order_inferred": {
+          "type": "boolean"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bbox",
+        "index",
+        "locator",
+        "reading_order",
+        "reading_order_inferred",
+        "text"
+      ],
+      "type": "object"
+    },
     "ImageOrientation": {
       "properties": {
         "exif_value": {
@@ -1160,6 +1341,150 @@
       ],
       "type": "object"
     },
+    "ImageReconciledText": {
+      "properties": {
+        "confidence_evidence": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/definitions/ImageReconciledTextItem"
+          },
+          "type": "array"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "items",
+        "text"
+      ],
+      "type": "object"
+    },
+    "ImageReconciledTextItem": {
+      "properties": {
+        "bbox": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/BoundingBox"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProviderConfidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "origin": {
+          "$ref": "#/definitions/ImageTextOrigin"
+        },
+        "source": {
+          "$ref": "#/definitions/ImageReconciledTextSource"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "index",
+        "locator",
+        "origin",
+        "source",
+        "text"
+      ],
+      "type": "object"
+    },
+    "ImageReconciledTextSource": {
+      "oneOf": [
+        {
+          "properties": {
+            "entry_index": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "origin": {
+              "enum": [
+                "native"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "entry_index",
+            "origin"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "attempt_index": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "origin": {
+              "enum": [
+                "ocr_overall"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "attempt_index",
+            "origin"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "attempt_index": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "origin": {
+              "enum": [
+                "ocr"
+              ],
+              "type": "string"
+            },
+            "region_index": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "attempt_index",
+            "origin",
+            "region_index"
+          ],
+          "type": "object"
+        }
+      ]
+    },
     "ImageText": {
       "properties": {
         "kind": {
@@ -1179,6 +1504,34 @@
       ],
       "type": "object"
     },
+    "ImageTextContent": {
+      "properties": {
+        "native": {
+          "$ref": "#/definitions/NativeRepresentation_for_ImageNativeText"
+        },
+        "ocr_attempts": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/ImageOcrAttempt"
+          },
+          "type": "array"
+        },
+        "reconciled": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ReconciledRepresentation_for_ImageReconciledText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "native"
+      ],
+      "type": "object"
+    },
     "ImageTextKind": {
       "enum": [
         "metadata",
@@ -1186,6 +1539,13 @@
         "vector_text",
         "vector_title",
         "vector_description"
+      ],
+      "type": "string"
+    },
+    "ImageTextOrigin": {
+      "enum": [
+        "native",
+        "ocr"
       ],
       "type": "string"
     },
@@ -1236,6 +1596,26 @@
         "base",
         "end",
         "start"
+      ],
+      "type": "object"
+    },
+    "IsolatedBackendResult": {
+      "properties": {
+        "diagnostics": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Diagnostic"
+          },
+          "type": "array"
+        },
+        "payload": true,
+        "payload_schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "payload",
+        "payload_schema_version"
       ],
       "type": "object"
     },
@@ -1722,6 +2102,132 @@
       "minimum": 0.0,
       "type": "number"
     },
+    "NativeRepresentation_for_ImageNativeText": {
+      "properties": {
+        "diagnostics": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Diagnostic"
+          },
+          "type": "array"
+        },
+        "identity": {
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/definitions/ImageNativeText"
+        }
+      },
+      "required": [
+        "identity",
+        "value"
+      ],
+      "type": "object"
+    },
+    "NetworkAccess": {
+      "description": "Whether a selected provider may access the network for this request.",
+      "enum": [
+        "denied",
+        "allowed"
+      ],
+      "type": "string"
+    },
+    "OcrRegion": {
+      "properties": {
+        "bounding_box": {
+          "$ref": "#/definitions/BoundingBox"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProviderConfidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "language": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reading_order": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bounding_box",
+        "text"
+      ],
+      "type": "object"
+    },
+    "OcrResult": {
+      "properties": {
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProviderConfidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "diagnostics": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Diagnostic"
+          },
+          "type": "array"
+        },
+        "layout_confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProviderConfidence"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Provider-assigned confidence in region boundaries and layout geometry."
+        },
+        "reading_order_confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProviderConfidence"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Provider-assigned confidence in the returned region ordering."
+        },
+        "regions": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/OcrRegion"
+          },
+          "type": "array"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "type": "object"
+    },
     "OperationKind": {
       "description": "The public operation that produced an envelope.",
       "enum": [
@@ -1859,6 +2365,77 @@
       ],
       "type": "object"
     },
+    "ProviderConfidence": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "type": "number"
+    },
+    "ProviderDeterminism": {
+      "enum": [
+        "guaranteed",
+        "guaranteed_with_recording",
+        "not_guaranteed"
+      ],
+      "type": "string"
+    },
+    "ProviderExecutionMetadata": {
+      "properties": {
+        "configuration_digest": {
+          "type": "string"
+        },
+        "diagnostics": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Diagnostic"
+          },
+          "type": "array"
+        },
+        "input_identity": {
+          "$ref": "#/definitions/RawContentIdentity"
+        },
+        "kind": {
+          "$ref": "#/definitions/ProviderKind"
+        },
+        "network_access": {
+          "$ref": "#/definitions/NetworkAccess"
+        },
+        "output_identity": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "provider": {
+          "$ref": "#/definitions/ProviderMetadata"
+        },
+        "recorded": {
+          "type": "boolean"
+        },
+        "request_digest": {
+          "type": "string"
+        },
+        "timing": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProviderTiming"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "configuration_digest",
+        "input_identity",
+        "kind",
+        "network_access",
+        "provider",
+        "recorded",
+        "request_digest"
+      ],
+      "type": "object"
+    },
     "ProviderInvocation": {
       "description": "One explicitly attributed external-provider call.",
       "properties": {
@@ -1922,6 +2499,207 @@
       ],
       "type": "object"
     },
+    "ProviderKind": {
+      "description": "Provider capabilities selectable by a parse request.",
+      "enum": [
+        "ocr",
+        "transcription",
+        "decryption",
+        "isolated_parser_backend"
+      ],
+      "type": "string"
+    },
+    "ProviderMetadata": {
+      "properties": {
+        "confidence_model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "determinism": {
+          "$ref": "#/definitions/ProviderDeterminism"
+        },
+        "implementation": {
+          "type": "string"
+        },
+        "implementation_version": {
+          "type": "string"
+        },
+        "model_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "determinism",
+        "implementation",
+        "implementation_version",
+        "name"
+      ],
+      "type": "object"
+    },
+    "ProviderOutcome": {
+      "oneOf": [
+        {
+          "properties": {
+            "result": {
+              "$ref": "#/definitions/ProviderResult"
+            },
+            "status": {
+              "enum": [
+                "succeeded"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "result",
+            "status"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "status": {
+              "enum": [
+                "failed"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "status"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "ProviderResponse": {
+      "properties": {
+        "metadata": {
+          "$ref": "#/definitions/ProviderExecutionMetadata"
+        },
+        "outcome": {
+          "$ref": "#/definitions/ProviderOutcome"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "metadata",
+        "outcome",
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "ProviderResult": {
+      "oneOf": [
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "ocr"
+              ],
+              "type": "string"
+            },
+            "result": {
+              "$ref": "#/definitions/OcrResult"
+            }
+          },
+          "required": [
+            "kind",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "transcription"
+              ],
+              "type": "string"
+            },
+            "result": {
+              "$ref": "#/definitions/TranscriptionResult"
+            }
+          },
+          "required": [
+            "kind",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "decryption"
+              ],
+              "type": "string"
+            },
+            "result": {
+              "$ref": "#/definitions/DecryptionResult"
+            }
+          },
+          "required": [
+            "kind",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "isolated_backend"
+              ],
+              "type": "string"
+            },
+            "result": {
+              "$ref": "#/definitions/IsolatedBackendResult"
+            }
+          },
+          "required": [
+            "kind",
+            "result"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "ProviderTiming": {
+      "properties": {
+        "elapsed_millis": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "source": {
+          "type": "string"
+        },
+        "started_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "type": "object"
+    },
     "RawContentIdentity": {
       "description": "SHA-256 of exactly the original input bytes, without a prefix or suffix.",
       "properties": {
@@ -1937,6 +2715,61 @@
       "required": [
         "byte_length",
         "sha256"
+      ],
+      "type": "object"
+    },
+    "ReconciledRepresentation_for_ImageReconciledText": {
+      "properties": {
+        "algorithm": {
+          "type": "string"
+        },
+        "algorithm_version": {
+          "type": "string"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProviderConfidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "configuration_digest": {
+          "type": "string"
+        },
+        "diagnostics": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Diagnostic"
+          },
+          "type": "array"
+        },
+        "identity": {
+          "type": "string"
+        },
+        "native_input_identity": {
+          "type": "string"
+        },
+        "provider_output_identities": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "value": {
+          "$ref": "#/definitions/ImageReconciledText"
+        }
+      },
+      "required": [
+        "algorithm",
+        "algorithm_version",
+        "configuration_digest",
+        "identity",
+        "native_input_identity",
+        "provider_output_identities",
+        "value"
       ],
       "type": "object"
     },
@@ -2210,6 +3043,86 @@
       "required": [
         "element_count",
         "unknown_elements"
+      ],
+      "type": "object"
+    },
+    "TranscriptSegment": {
+      "properties": {
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProviderConfidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "end_ms": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "speaker": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "start_ms": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "end_ms",
+        "start_ms",
+        "text"
+      ],
+      "type": "object"
+    },
+    "TranscriptionResult": {
+      "properties": {
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProviderConfidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "diagnostics": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Diagnostic"
+          },
+          "type": "array"
+        },
+        "language": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "segments": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/TranscriptSegment"
+          },
+          "type": "array"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
       ],
       "type": "object"
     }

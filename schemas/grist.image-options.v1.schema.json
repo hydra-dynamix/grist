@@ -1,5 +1,49 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "ImageOcrMode": {
+      "enum": [
+        "disabled",
+        "all_frames"
+      ],
+      "type": "string"
+    },
+    "ImageOcrOptions": {
+      "additionalProperties": false,
+      "properties": {
+        "language_hints": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "max_scopes": {
+          "default": 10000,
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "mode": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/ImageOcrMode"
+            }
+          ],
+          "default": "all_frames"
+        },
+        "recognize_tables": {
+          "default": false,
+          "type": "boolean"
+        },
+        "reconcile": {
+          "default": true,
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    }
+  },
   "properties": {
     "max_chunks": {
       "default": 100000,
@@ -48,6 +92,20 @@
       "format": "uint64",
       "minimum": 0.0,
       "type": "integer"
+    },
+    "ocr": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/ImageOcrOptions"
+        }
+      ],
+      "default": {
+        "language_hints": [],
+        "max_scopes": 10000,
+        "mode": "all_frames",
+        "recognize_tables": false,
+        "reconcile": true
+      }
     },
     "retain_metadata_bytes": {
       "default": true,

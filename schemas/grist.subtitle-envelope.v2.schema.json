@@ -162,275 +162,6 @@
       ],
       "type": "string"
     },
-    "AsciiDocDocument": {
-      "properties": {
-        "decoded_range": {
-          "$ref": "#/definitions/SourceRange"
-        },
-        "decoded_text": {
-          "type": "string"
-        },
-        "decoding": {
-          "$ref": "#/definitions/DecodeReport"
-        },
-        "encoding": {
-          "$ref": "#/definitions/TextEncoding"
-        },
-        "locator": {
-          "$ref": "#/definitions/SourceLocator"
-        },
-        "nodes": {
-          "items": {
-            "$ref": "#/definitions/AsciiDocNode"
-          },
-          "type": "array"
-        },
-        "raw_bytes": {
-          "items": {
-            "format": "uint8",
-            "minimum": 0.0,
-            "type": "integer"
-          },
-          "type": "array"
-        },
-        "raw_range": {
-          "$ref": "#/definitions/RawByteRange"
-        },
-        "schema_version": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "decoded_range",
-        "decoded_text",
-        "decoding",
-        "encoding",
-        "locator",
-        "nodes",
-        "raw_bytes",
-        "raw_range",
-        "schema_version"
-      ],
-      "type": "object"
-    },
-    "AsciiDocNode": {
-      "properties": {
-        "argument": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "children": {
-          "default": [],
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "id": {
-          "type": "string"
-        },
-        "include": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/IncludeReference"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "kind": {
-          "$ref": "#/definitions/AsciiDocNodeKind"
-        },
-        "known_syntax": {
-          "type": "boolean"
-        },
-        "level": {
-          "format": "uint8",
-          "minimum": 0.0,
-          "type": [
-            "integer",
-            "null"
-          ]
-        },
-        "locator": {
-          "$ref": "#/definitions/SourceLocator"
-        },
-        "name": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "options": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "default": {},
-          "type": "object"
-        },
-        "parent_id": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "range": {
-          "$ref": "#/definitions/SourceRange"
-        },
-        "raw": {
-          "type": "string"
-        },
-        "raw_range": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/RawByteRange"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "role": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "table": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/AsciiDocTable"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "target": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "text": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "required": [
-        "id",
-        "kind",
-        "locator",
-        "range",
-        "raw"
-      ],
-      "type": "object"
-    },
-    "AsciiDocNodeKind": {
-      "enum": [
-        "heading",
-        "paragraph",
-        "attribute",
-        "block_attribute",
-        "directive",
-        "role",
-        "include",
-        "code_block",
-        "literal_block",
-        "table",
-        "table_row",
-        "table_cell",
-        "footnote_definition",
-        "footnote_reference",
-        "target",
-        "cross_reference",
-        "hyperlink",
-        "list",
-        "list_item",
-        "emphasis",
-        "strong",
-        "inline_code",
-        "transition",
-        "comment",
-        "raw_block",
-        "raw_inline"
-      ],
-      "type": "string"
-    },
-    "AsciiDocTable": {
-      "properties": {
-        "rows": {
-          "items": {
-            "$ref": "#/definitions/AsciiDocTableRow"
-          },
-          "type": "array"
-        },
-        "style": {
-          "$ref": "#/definitions/AsciiDocTableStyle"
-        }
-      },
-      "required": [
-        "rows",
-        "style"
-      ],
-      "type": "object"
-    },
-    "AsciiDocTableCell": {
-      "properties": {
-        "locator": {
-          "$ref": "#/definitions/SourceLocator"
-        },
-        "range": {
-          "$ref": "#/definitions/SourceRange"
-        },
-        "text": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "locator",
-        "range",
-        "text"
-      ],
-      "type": "object"
-    },
-    "AsciiDocTableRow": {
-      "properties": {
-        "cells": {
-          "items": {
-            "$ref": "#/definitions/AsciiDocTableCell"
-          },
-          "type": "array"
-        },
-        "header": {
-          "type": "boolean"
-        },
-        "locator": {
-          "$ref": "#/definitions/SourceLocator"
-        },
-        "range": {
-          "$ref": "#/definitions/SourceRange"
-        }
-      },
-      "required": [
-        "cells",
-        "header",
-        "locator",
-        "range"
-      ],
-      "type": "object"
-    },
-    "AsciiDocTableStyle": {
-      "enum": [
-        "pipe"
-      ],
-      "type": "string"
-    },
     "BomKind": {
       "enum": [
         "utf8",
@@ -1145,52 +876,6 @@
         "size_bytes"
       ],
       "type": "object"
-    },
-    "IncludeReference": {
-      "properties": {
-        "resolved": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/ResolvedInclude"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "resolved_path": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "status": {
-          "$ref": "#/definitions/IncludeStatus"
-        },
-        "target": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "status",
-        "target"
-      ],
-      "type": "object"
-    },
-    "IncludeStatus": {
-      "enum": [
-        "resolved",
-        "reference_only",
-        "remote_disabled",
-        "outside_project_root",
-        "missing",
-        "not_file",
-        "cycle",
-        "depth_exceeded",
-        "budget_exceeded",
-        "decode_failed"
-      ],
-      "type": "string"
     },
     "IndexBase": {
       "description": "Whether an ordinal is counted from zero or one.\n\nEvery format component carrying a page, slide, cell, frame, token, output, member, track, or record ordinal uses this type rather than relying on an undocumented convention.",
@@ -2061,49 +1746,6 @@
       ],
       "type": "string"
     },
-    "ResolvedInclude": {
-      "properties": {
-        "content_sha256": {
-          "type": "string"
-        },
-        "decoded_text": {
-          "type": "string"
-        },
-        "decoding": {
-          "$ref": "#/definitions/DecodeReport"
-        },
-        "encoding": {
-          "$ref": "#/definitions/TextEncoding"
-        },
-        "nodes": {
-          "items": {
-            "$ref": "#/definitions/AsciiDocNode"
-          },
-          "type": "array"
-        },
-        "raw_bytes": {
-          "items": {
-            "format": "uint8",
-            "minimum": 0.0,
-            "type": "integer"
-          },
-          "type": "array"
-        },
-        "source": {
-          "$ref": "#/definitions/SourceInfo"
-        }
-      },
-      "required": [
-        "content_sha256",
-        "decoded_text",
-        "decoding",
-        "encoding",
-        "nodes",
-        "raw_bytes",
-        "source"
-      ],
-      "type": "object"
-    },
     "SchemaVersion": {
       "type": "string"
     },
@@ -2311,6 +1953,369 @@
       ],
       "type": "object"
     },
+    "SubtitleCue": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "raw_text": {
+          "type": "string"
+        },
+        "region_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "runs": {
+          "items": {
+            "$ref": "#/definitions/SubtitleTextRun"
+          },
+          "type": "array"
+        },
+        "settings": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "type": "object"
+        },
+        "source_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_index": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "speaker": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "structure_locator": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SourceLocator"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "text": {
+          "type": "string"
+        },
+        "text_locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "timing": {
+          "$ref": "#/definitions/SubtitleTiming"
+        },
+        "track_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "locator",
+        "raw_text",
+        "runs",
+        "source_index",
+        "text",
+        "text_locator",
+        "timing",
+        "track_id"
+      ],
+      "type": "object"
+    },
+    "SubtitleDocument": {
+      "properties": {
+        "complete": {
+          "type": "boolean"
+        },
+        "cues": {
+          "items": {
+            "$ref": "#/definitions/SubtitleCue"
+          },
+          "type": "array"
+        },
+        "decoded_range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "decoded_text": {
+          "type": "string"
+        },
+        "decoding": {
+          "$ref": "#/definitions/DecodeReport"
+        },
+        "diagnostics": {
+          "items": {
+            "$ref": "#/definitions/Diagnostic"
+          },
+          "type": "array"
+        },
+        "encoding": {
+          "$ref": "#/definitions/TextEncoding"
+        },
+        "format": {
+          "$ref": "#/definitions/SubtitleFormat"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "metadata": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "type": "object"
+        },
+        "raw_bytes": {
+          "items": {
+            "format": "uint8",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "raw_range": {
+          "$ref": "#/definitions/RawByteRange"
+        },
+        "regions": {
+          "items": {
+            "$ref": "#/definitions/SubtitleRegion"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "styles": {
+          "items": {
+            "$ref": "#/definitions/SubtitleStyle"
+          },
+          "type": "array"
+        },
+        "tracks": {
+          "items": {
+            "$ref": "#/definitions/SubtitleTrack"
+          },
+          "type": "array"
+        },
+        "transcript": {
+          "$ref": "#/definitions/TranscriptProjection"
+        }
+      },
+      "required": [
+        "complete",
+        "cues",
+        "decoded_range",
+        "decoded_text",
+        "decoding",
+        "diagnostics",
+        "encoding",
+        "format",
+        "locator",
+        "raw_bytes",
+        "raw_range",
+        "regions",
+        "schema_version",
+        "styles",
+        "tracks",
+        "transcript"
+      ],
+      "type": "object"
+    },
+    "SubtitleFormat": {
+      "enum": [
+        "srt",
+        "web_vtt",
+        "ttml"
+      ],
+      "type": "string"
+    },
+    "SubtitleRegion": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "settings": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "locator"
+      ],
+      "type": "object"
+    },
+    "SubtitleStyle": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "properties": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "type": "object"
+        },
+        "raw": {
+          "type": "string"
+        },
+        "selector": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "locator",
+        "raw"
+      ],
+      "type": "object"
+    },
+    "SubtitleTextRun": {
+      "properties": {
+        "kind": {
+          "$ref": "#/definitions/SubtitleTextRunKind"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "speaker": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "style": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "locator",
+        "text"
+      ],
+      "type": "object"
+    },
+    "SubtitleTextRunKind": {
+      "enum": [
+        "text",
+        "voice",
+        "span",
+        "ruby",
+        "timestamp",
+        "raw_markup",
+        "line_break"
+      ],
+      "type": "string"
+    },
+    "SubtitleTiming": {
+      "properties": {
+        "end_ms": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "locator": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SourceLocator"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "raw": {
+          "type": "string"
+        },
+        "start_ms": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "raw"
+      ],
+      "type": "object"
+    },
+    "SubtitleTrack": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "label": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "language": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "settings": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "locator"
+      ],
+      "type": "object"
+    },
     "TextEncoding": {
       "description": "Canonical encoding selected by the decoder.",
       "oneOf": [
@@ -2417,6 +2422,75 @@
           "type": "object"
         }
       ]
+    },
+    "TranscriptEntry": {
+      "properties": {
+        "cue_id": {
+          "type": "string"
+        },
+        "end_ms": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "source_index": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "speaker": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "start_ms": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        },
+        "text_locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "time_locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "track_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "cue_id",
+        "end_ms",
+        "source_index",
+        "start_ms",
+        "text",
+        "text_locator",
+        "time_locator",
+        "track_id"
+      ],
+      "type": "object"
+    },
+    "TranscriptProjection": {
+      "properties": {
+        "entries": {
+          "items": {
+            "$ref": "#/definitions/TranscriptEntry"
+          },
+          "type": "array"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "entries",
+        "text"
+      ],
+      "type": "object"
     }
   },
   "description": "Universal result for parse, ingest, transform, render, segment, and validation operations.",
@@ -2464,7 +2538,7 @@
     "payload": {
       "anyOf": [
         {
-          "$ref": "#/definitions/AsciiDocDocument"
+          "$ref": "#/definitions/SubtitleDocument"
         },
         {
           "type": "null"
@@ -2509,6 +2583,6 @@
     "source",
     "status"
   ],
-  "title": "Envelope_for_AsciiDocDocument",
+  "title": "Envelope_for_SubtitleDocument",
   "type": "object"
 }

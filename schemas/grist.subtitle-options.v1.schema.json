@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "encoding": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "max_cues": {
+      "default": 100000,
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_nesting_depth": {
+      "default": 256,
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_regions": {
+      "default": 10000,
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_styles": {
+      "default": 10000,
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_tracks": {
+      "default": 1000,
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    }
+  },
+  "title": "SubtitleOptions",
+  "type": "object"
+}

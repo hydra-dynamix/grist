@@ -4009,6 +4009,107 @@
       "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
       "value": {}
     },
+    "subtitle": {
+      "schema_name": "subtitle",
+      "schema_version": "grist/subtitle/v1",
+      "canonical_sha256": "sha256:49398ec98abaade112e78e090606ac09713108267ec67827d152be5b4448894b",
+      "value": {
+        "complete": false,
+        "cues": [],
+        "decoded_range": {
+          "byte_end": 0,
+          "byte_start": 0,
+          "end_column": 0,
+          "end_line": 0,
+          "start_column": 0,
+          "start_line": 0
+        },
+        "decoded_text": "",
+        "decoding": {
+          "declarations": [],
+          "decoded_identity": {
+            "byte_length": 0,
+            "encoding": "",
+            "lossy": false,
+            "sha256": ""
+          },
+          "diagnostics": [],
+          "encoding": {
+            "kind": "utf8"
+          },
+          "issues": [],
+          "newlines": {
+            "cr_count": 0,
+            "crlf_count": 0,
+            "final_line_terminated": false,
+            "lf_count": 0,
+            "sequences": []
+          },
+          "raw_identity": {
+            "byte_length": 0,
+            "sha256": ""
+          },
+          "schema_version": ""
+        },
+        "diagnostics": [],
+        "encoding": {
+          "kind": "utf8"
+        },
+        "format": "srt",
+        "locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        },
+        "raw_bytes": [],
+        "raw_range": {
+          "end": 0,
+          "start": 0
+        },
+        "regions": [],
+        "schema_version": "grist/subtitle/v1",
+        "styles": [],
+        "tracks": [],
+        "transcript": {
+          "entries": [],
+          "text": ""
+        }
+      }
+    },
+    "subtitle-envelope": {
+      "schema_name": "subtitle-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "subtitle-options": {
+      "schema_name": "subtitle-options",
+      "schema_version": "grist/subtitle-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
     "summary-options": {
       "schema_name": "summary-options",
       "schema_version": "grist/summary-options/v1",

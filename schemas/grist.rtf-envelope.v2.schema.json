@@ -247,6 +247,7 @@
         "epub",
         "pdf",
         "image",
+        "subtitle",
         "word_ooxml",
         "presentation_ooxml",
         "spreadsheet_ooxml",
