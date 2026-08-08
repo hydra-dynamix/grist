@@ -735,6 +735,7 @@
             "bibliography",
             "email",
             "mbox",
+            "notebook",
             "text",
             "csv",
             "serialization",

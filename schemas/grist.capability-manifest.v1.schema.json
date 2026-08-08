@@ -57,6 +57,7 @@
         "outlook_msg",
         "i_calendar",
         "v_card",
+        "notebook",
         "model_output",
         "repo_ingest",
         "file_ingest",
