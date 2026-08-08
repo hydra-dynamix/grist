@@ -1,9 +1,9 @@
-use super::{Builder, le_i32, le_u16, le_u32};
+use super::{Builder, ImageResult, le_i32, le_u16, le_u32};
 use crate::core::sha256_hex;
 use crate::image::{ImageDimensions, ImageMetadataKind};
 use std::collections::BTreeMap;
 
-pub(super) fn parse(bytes: &[u8], builder: &mut Builder<'_>) -> Result<(), String> {
+pub(super) fn parse(bytes: &[u8], builder: &mut Builder<'_>) -> ImageResult<()> {
     if bytes.len() < 26 || !bytes.starts_with(b"BM") {
         return Err("BMP file or DIB header is truncated".into());
     }
@@ -73,15 +73,13 @@ pub(super) fn parse(bytes: &[u8], builder: &mut Builder<'_>) -> Result<(), Strin
             }
         }
     } else {
-        return Err(format!("BMP DIB header size {dib} is unsupported"));
+        return Err(format!("BMP DIB header size {dib} is unsupported").into());
     }
     if !matches!(bits, 1 | 4 | 8 | 16 | 24 | 32) {
-        return Err(format!("BMP bit depth {bits} is unsupported"));
+        return Err(format!("BMP bit depth {bits} is unsupported").into());
     }
     if !matches!(compression, 0 | 1 | 2 | 3 | 6) {
-        return Err(format!(
-            "BMP compression method {compression} is unsupported"
-        ));
+        return Err(format!("BMP compression method {compression} is unsupported").into());
     }
     let end = 14usize
         .checked_add(dib as usize)

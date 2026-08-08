@@ -95,14 +95,81 @@ fn image_signature(bytes: &[u8]) -> Option<Signal> {
             "HEIF/HEIC compatible brand",
             0.99,
         ))
-    } else if std::str::from_utf8(bytes).ok().is_some_and(|text| {
-        let text = text.trim_start_matches(['\u{feff}', ' ', '\t', '\r', '\n']);
-        text.starts_with("<svg") || (text.starts_with("<?xml") && text.contains("<svg"))
-    }) {
+    } else if has_svg_root(bytes) {
         Some(magic("svg", "image/svg+xml", "SVG root element", 0.98))
     } else {
         None
     }
+}
+
+pub(crate) fn has_svg_root(bytes: &[u8]) -> bool {
+    xml_root_name(bytes)
+        .is_some_and(|name| name.rsplit(|byte| *byte == b':').next() == Some(b"svg"))
+}
+
+fn xml_root_name(bytes: &[u8]) -> Option<&[u8]> {
+    std::str::from_utf8(bytes).ok()?;
+    let mut cursor = usize::from(bytes.starts_with(b"\xef\xbb\xbf")) * 3;
+    loop {
+        cursor += bytes
+            .get(cursor..)?
+            .iter()
+            .take_while(|byte| byte.is_ascii_whitespace())
+            .count();
+        let tail = bytes.get(cursor..)?;
+        if tail.starts_with(b"<?") {
+            cursor += find_terminator(tail, b"?>")? + 2;
+        } else if tail.starts_with(b"<!--") {
+            cursor += find_terminator(tail, b"-->")? + 3;
+        } else if starts_ascii_case_insensitive(tail, b"<!doctype") {
+            cursor += declaration_end(tail)?;
+        } else {
+            break;
+        }
+    }
+    let tail = bytes.get(cursor..)?;
+    if tail.first() != Some(&b'<') || matches!(tail.get(1), Some(b'/' | b'!' | b'?')) {
+        return None;
+    }
+    let start = cursor + 1;
+    let length = bytes[start..]
+        .iter()
+        .take_while(|byte| !byte.is_ascii_whitespace() && !matches!(byte, b'/' | b'>'))
+        .count();
+    (length > 0).then(|| &bytes[start..start + length])
+}
+
+fn find_terminator(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+    haystack
+        .windows(needle.len())
+        .position(|window| window == needle)
+}
+
+fn starts_ascii_case_insensitive(value: &[u8], prefix: &[u8]) -> bool {
+    value
+        .get(..prefix.len())
+        .is_some_and(|candidate| candidate.eq_ignore_ascii_case(prefix))
+}
+
+fn declaration_end(bytes: &[u8]) -> Option<usize> {
+    let mut quote = None;
+    let mut subset_depth = 0u64;
+    for (index, byte) in bytes.iter().copied().enumerate() {
+        if let Some(current) = quote {
+            if byte == current {
+                quote = None;
+            }
+            continue;
+        }
+        match byte {
+            b'\'' | b'"' => quote = Some(byte),
+            b'[' => subset_depth = subset_depth.saturating_add(1),
+            b']' => subset_depth = subset_depth.saturating_sub(1),
+            b'>' if subset_depth == 0 => return Some(index + 1),
+            _ => {}
+        }
+    }
+    None
 }
 
 fn heif_signature(bytes: &[u8]) -> bool {

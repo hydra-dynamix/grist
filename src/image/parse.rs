@@ -1,7 +1,10 @@
 use super::metadata::{parse_iptc, parse_tiff};
 use super::model::*;
 use super::svg::{frame_locator, parse_svg};
-use crate::core::{LocationComponent, OperationControl, SourceLocator, sha256_hex};
+use crate::core::{
+    BudgetExceeded, LocationComponent, OperationControl, OperationControlError, SourceLocator,
+    sha256_hex,
+};
 use std::collections::BTreeMap;
 
 mod bmp;
@@ -12,10 +15,48 @@ mod png;
 mod tiff;
 mod webp;
 
-pub(crate) fn parse_document(
-    bytes: &[u8],
-    options: &ImageOptions,
-) -> Result<ImageDocument, String> {
+#[derive(Debug)]
+pub(crate) enum ImageParseError {
+    Malformed(String),
+    Control(OperationControlError),
+}
+
+impl std::fmt::Display for ImageParseError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Malformed(message) => formatter.write_str(message),
+            Self::Control(error) => error.fmt(formatter),
+        }
+    }
+}
+
+impl From<String> for ImageParseError {
+    fn from(value: String) -> Self {
+        Self::Malformed(value)
+    }
+}
+
+impl From<&str> for ImageParseError {
+    fn from(value: &str) -> Self {
+        Self::Malformed(value.into())
+    }
+}
+
+impl From<OperationControlError> for ImageParseError {
+    fn from(value: OperationControlError) -> Self {
+        Self::Control(value)
+    }
+}
+
+impl From<BudgetExceeded> for ImageParseError {
+    fn from(value: BudgetExceeded) -> Self {
+        Self::Control(OperationControlError::BudgetExceeded(value))
+    }
+}
+
+pub(super) type ImageResult<T> = Result<T, ImageParseError>;
+
+pub(crate) fn parse_document(bytes: &[u8], options: &ImageOptions) -> ImageResult<ImageDocument> {
     parse_document_controlled(bytes, options, None)
 }
 
@@ -23,13 +64,15 @@ pub(crate) fn parse_document_controlled<'a>(
     bytes: &[u8],
     options: &'a ImageOptions,
     control: Option<&'a OperationControl>,
-) -> Result<ImageDocument, String> {
+) -> ImageResult<ImageDocument> {
     if options.max_frames == 0
         || options.max_dimension == 0
         || options.max_metadata_bytes == 0
         || options.max_unknown_chunk_bytes == 0
         || options.max_chunks == 0
         || options.max_svg_elements == 0
+        || options.max_svg_depth == 0
+        || options.max_svg_path_bytes == 0
     {
         return Err("image limits must all be greater than zero".into());
     }
@@ -115,9 +158,29 @@ impl<'a> Builder<'a> {
         }
     }
 
-    pub fn checkpoint(&self) -> Result<(), String> {
+    pub fn checkpoint(&self) -> ImageResult<()> {
+        self.control
+            .map_or(Ok(()), |control| control.checkpoint().map_err(Into::into))
+    }
+
+    pub fn charge_nodes(&self, count: u64) -> ImageResult<()> {
         self.control.map_or(Ok(()), |control| {
-            control.checkpoint().map_err(|error| error.to_string())
+            control.budget().consume_nodes(count).map_err(Into::into)
+        })
+    }
+
+    pub fn charge_records(&self, count: u64) -> ImageResult<()> {
+        self.control.map_or(Ok(()), |control| {
+            control.budget().consume_records(count).map_err(Into::into)
+        })
+    }
+
+    pub fn charge_decoded_characters(&self, count: u64) -> ImageResult<()> {
+        self.control.map_or(Ok(()), |control| {
+            control
+                .budget()
+                .consume_decoded_characters(count)
+                .map_err(Into::into)
         })
     }
 
@@ -128,7 +191,7 @@ impl<'a> Builder<'a> {
         bytes: &[u8],
         start: usize,
         end: usize,
-    ) -> Result<(), String> {
+    ) -> ImageResult<()> {
         self.checkpoint()?;
         if self.chunks.len() as u64 >= self.options.max_chunks {
             return Err("image chunk count exceeds ImageOptions::max_chunks".into());
@@ -145,6 +208,7 @@ impl<'a> Builder<'a> {
                 );
             }
         }
+        self.charge_nodes(1)?;
         self.chunks.push(ImageChunk {
             kind: kind.into(),
             known,
@@ -163,12 +227,35 @@ impl<'a> Builder<'a> {
         start: usize,
         text: Option<String>,
         fields: BTreeMap<String, String>,
-    ) -> Result<(), String> {
-        self.reserve_metadata(bytes.len())?;
-        self.metadata_reserved(kind, bytes, start, text, fields, true)
+    ) -> ImageResult<()> {
+        self.metadata_with_charge(kind, bytes, start, text, fields, false)
     }
 
-    fn reserve_metadata(&mut self, length: usize) -> Result<(), String> {
+    pub fn metadata_precharged(
+        &mut self,
+        kind: ImageMetadataKind,
+        bytes: &[u8],
+        start: usize,
+        text: Option<String>,
+        fields: BTreeMap<String, String>,
+    ) -> ImageResult<()> {
+        self.metadata_with_charge(kind, bytes, start, text, fields, true)
+    }
+
+    fn metadata_with_charge(
+        &mut self,
+        kind: ImageMetadataKind,
+        bytes: &[u8],
+        start: usize,
+        text: Option<String>,
+        fields: BTreeMap<String, String>,
+        decoded_precharged: bool,
+    ) -> ImageResult<()> {
+        self.reserve_metadata(bytes.len())?;
+        self.metadata_reserved(kind, bytes, start, text, fields, true, decoded_precharged)
+    }
+
+    fn reserve_metadata(&mut self, length: usize) -> ImageResult<()> {
         self.metadata_bytes = self
             .metadata_bytes
             .checked_add(length as u64)
@@ -187,9 +274,14 @@ impl<'a> Builder<'a> {
         text: Option<String>,
         fields: BTreeMap<String, String>,
         retain_raw: bool,
-    ) -> Result<(), String> {
+        decoded_precharged: bool,
+    ) -> ImageResult<()> {
         self.checkpoint()?;
         if let Some(value) = text.as_ref().filter(|value| !value.is_empty()) {
+            if !decoded_precharged {
+                self.charge_decoded_characters(value.chars().count() as u64)?;
+            }
+            self.charge_nodes(1)?;
             self.embedded_text.push(ImageText {
                 kind: if kind == ImageMetadataKind::Comment {
                     ImageTextKind::Comment
@@ -200,6 +292,7 @@ impl<'a> Builder<'a> {
                 locator: byte_locator(start, start.saturating_add(bytes.len())),
             });
         }
+        self.charge_nodes(1)?;
         self.metadata.blocks.push(ImageMetadataBlock {
             kind,
             sha256: sha256_hex(bytes),
@@ -212,7 +305,7 @@ impl<'a> Builder<'a> {
         Ok(())
     }
 
-    pub fn exif(&mut self, bytes: &[u8], start: usize) -> Result<(), String> {
+    pub fn exif(&mut self, bytes: &[u8], start: usize) -> ImageResult<()> {
         self.reserve_metadata(bytes.len())?;
         let tiff = parse_tiff(bytes, self.options.max_metadata_bytes)?;
         self.metadata_reserved(
@@ -222,6 +315,7 @@ impl<'a> Builder<'a> {
             None,
             BTreeMap::new(),
             true,
+            false,
         )?;
         merge_camera(&mut self.metadata.camera, tiff.camera);
         if let Some(value) = tiff.orientation {
@@ -236,7 +330,20 @@ impl<'a> Builder<'a> {
         Ok(())
     }
 
-    pub fn xmp(&mut self, bytes: &[u8], start: usize) -> Result<(), String> {
+    pub fn xmp(&mut self, bytes: &[u8], start: usize) -> ImageResult<()> {
+        self.xmp_with_charge(bytes, start, false)
+    }
+
+    pub fn xmp_precharged(&mut self, bytes: &[u8], start: usize) -> ImageResult<()> {
+        self.xmp_with_charge(bytes, start, true)
+    }
+
+    fn xmp_with_charge(
+        &mut self,
+        bytes: &[u8],
+        start: usize,
+        decoded_precharged: bool,
+    ) -> ImageResult<()> {
         self.reserve_metadata(bytes.len())?;
         let text = String::from_utf8_lossy(bytes)
             .trim_matches(char::from(0))
@@ -248,20 +355,42 @@ impl<'a> Builder<'a> {
             Some(text),
             BTreeMap::new(),
             true,
+            decoded_precharged,
         )
     }
 
-    pub fn iptc(&mut self, bytes: &[u8], start: usize) -> Result<(), String> {
+    pub fn iptc(&mut self, bytes: &[u8], start: usize) -> ImageResult<()> {
+        self.iptc_with_charge(bytes, start, false)
+    }
+
+    pub fn iptc_precharged(&mut self, bytes: &[u8], start: usize) -> ImageResult<()> {
+        self.iptc_with_charge(bytes, start, true)
+    }
+
+    fn iptc_with_charge(
+        &mut self,
+        bytes: &[u8],
+        start: usize,
+        decoded_precharged: bool,
+    ) -> ImageResult<()> {
         self.reserve_metadata(bytes.len())?;
         let fields = parse_iptc(bytes);
         let text = fields
             .get("caption")
             .or_else(|| fields.get("headline"))
             .cloned();
-        self.metadata_reserved(ImageMetadataKind::Iptc, bytes, start, text, fields, true)
+        self.metadata_reserved(
+            ImageMetadataKind::Iptc,
+            bytes,
+            start,
+            text,
+            fields,
+            true,
+            decoded_precharged,
+        )
     }
 
-    fn xmp_embedded(&mut self, bytes: &[u8], start: usize) -> Result<(), String> {
+    fn xmp_embedded(&mut self, bytes: &[u8], start: usize) -> ImageResult<()> {
         let text = String::from_utf8_lossy(bytes)
             .trim_matches(char::from(0))
             .to_string();
@@ -272,27 +401,38 @@ impl<'a> Builder<'a> {
             Some(text),
             BTreeMap::new(),
             false,
+            false,
         )
     }
 
-    fn iptc_embedded(&mut self, bytes: &[u8], start: usize) -> Result<(), String> {
+    fn iptc_embedded(&mut self, bytes: &[u8], start: usize) -> ImageResult<()> {
         let fields = parse_iptc(bytes);
         let text = fields
             .get("caption")
             .or_else(|| fields.get("headline"))
             .cloned();
-        self.metadata_reserved(ImageMetadataKind::Iptc, bytes, start, text, fields, false)
+        self.metadata_reserved(
+            ImageMetadataKind::Iptc,
+            bytes,
+            start,
+            text,
+            fields,
+            false,
+            false,
+        )
     }
 
     pub fn frame(
         &mut self,
         dimensions: ImageDimensions,
         duration_ms: Option<u64>,
-    ) -> Result<(), String> {
+    ) -> ImageResult<()> {
         self.checkpoint()?;
         if self.frames.len() as u64 >= self.options.max_frames {
             return Err("image frame/page count exceeds ImageOptions::max_frames".into());
         }
+        self.charge_records(1)?;
+        self.charge_nodes(1)?;
         let index = self.frames.len() as u64;
         self.frames.push(ImageFrame {
             index,
@@ -307,13 +447,14 @@ impl<'a> Builder<'a> {
         Ok(())
     }
 
-    fn finish(mut self) -> Result<ImageDocument, String> {
+    fn finish(mut self) -> ImageResult<ImageDocument> {
         self.checkpoint()?;
         if self.dimensions.width == 0 || self.dimensions.height == 0 {
             return Err(format!(
                 "{} image dimensions are missing or zero",
                 self.format.as_str()
-            ));
+            )
+            .into());
         }
         if self.dimensions.width > self.options.max_dimension
             || self.dimensions.height > self.options.max_dimension
@@ -347,7 +488,7 @@ impl<'a> Builder<'a> {
     }
 }
 
-fn parse_svg_image(bytes: &[u8], builder: &mut Builder<'_>) -> Result<(), String> {
+fn parse_svg_image(bytes: &[u8], builder: &mut Builder<'_>) -> ImageResult<()> {
     let parsed = parse_svg(bytes, builder.options, builder.control)?;
     builder.dimensions = parsed.dimensions;
     builder.vector = Some(parsed.vector);
@@ -391,10 +532,7 @@ pub(super) fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {
         .flatten()
 }
 fn looks_like_svg(bytes: &[u8]) -> bool {
-    std::str::from_utf8(bytes).ok().is_some_and(|text| {
-        let value = text.trim_start_matches(['\u{feff}', ' ', '\t', '\r', '\n']);
-        value.starts_with("<svg") || (value.starts_with("<?xml") && value.contains("<svg"))
-    })
+    crate::detect::has_svg_root(bytes)
 }
 pub(super) fn be_u16(bytes: &[u8], offset: usize) -> Result<u16, String> {
     Ok(u16::from_be_bytes(

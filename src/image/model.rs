@@ -19,6 +19,8 @@ pub struct ImageOptions {
     pub max_unknown_chunk_bytes: u64,
     pub max_chunks: u64,
     pub max_svg_elements: u64,
+    pub max_svg_depth: u64,
+    pub max_svg_path_bytes: u64,
 }
 
 impl Default for ImageOptions {
@@ -32,6 +34,8 @@ impl Default for ImageOptions {
             max_unknown_chunk_bytes: 16 * 1024 * 1024,
             max_chunks: 100_000,
             max_svg_elements: 1_000_000,
+            max_svg_depth: 256,
+            max_svg_path_bytes: 64 * 1024,
         }
     }
 }

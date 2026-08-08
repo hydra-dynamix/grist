@@ -1,9 +1,9 @@
-use super::Builder;
+use super::{Builder, ImageResult};
 use crate::image::ImageMetadataKind;
 use crate::image::metadata::parse_tiff;
 use std::collections::BTreeMap;
 
-pub(super) fn parse(bytes: &[u8], builder: &mut Builder<'_>) -> Result<(), String> {
+pub(super) fn parse(bytes: &[u8], builder: &mut Builder<'_>) -> ImageResult<()> {
     let parsed = parse_tiff(bytes, builder.options.max_metadata_bytes)?;
     let mut camera_fields = parsed.camera.tags.clone();
     if let Some(make) = &parsed.camera.make {

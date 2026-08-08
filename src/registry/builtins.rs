@@ -625,8 +625,7 @@ fn register_image(registry: &mut ParserRegistry) -> Result<(), ParserRegistryErr
             .with_aliases(aliases.iter().copied())
             .with_media_types(media_types.iter().copied())
             .with_extensions(extensions.iter().copied());
-        let defaults =
-            serde_json::to_value(crate::image::ImageOptions::default()).unwrap_or_default();
+        let defaults = image_options_defaults();
         let mut metadata = descriptor(
             &format!("grist.{id}"),
             format,
@@ -641,10 +640,6 @@ fn register_image(registry: &mut ParserRegistry) -> Result<(), ParserRegistryErr
             SchemaMetadata::new("image-options", "grist/image-options/v1"),
             defaults,
         );
-        metadata.allowed_providers.insert(ProviderKind::Ocr);
-        metadata
-            .capabilities
-            .insert(Capability::ProviderDerivedContent);
         register(registry, metadata, crate::image::parse_registered)?;
     }
     Ok(())
@@ -663,17 +658,32 @@ fn register_image(registry: &mut ParserRegistry) -> Result<(), ParserRegistryErr
             ParserInfo::new("grist.image").with_feature("media"),
             crate::core::SchemaVersion::IMAGE_V1,
             Some("media"),
-            serde_json::json!({}),
+            image_options_defaults(),
         );
         metadata.payload_schema =
             SchemaMetadata::new("image", crate::core::SchemaVersion::IMAGE_V1);
-        metadata.allowed_providers.insert(ProviderKind::Ocr);
-        metadata
-            .capabilities
-            .insert(Capability::ProviderDerivedContent);
+        metadata.options = OptionsMetadata::new(
+            SchemaMetadata::new("image-options", "grist/image-options/v1"),
+            image_options_defaults(),
+        );
         register_disabled(registry, metadata, "media")?;
     }
     Ok(())
+}
+
+fn image_options_defaults() -> serde_json::Value {
+    serde_json::json!({
+        "retain_metadata_bytes": true,
+        "retain_unknown_chunk_bytes": true,
+        "max_frames": 10_000,
+        "max_dimension": 1_000_000,
+        "max_metadata_bytes": 16 * 1024 * 1024,
+        "max_unknown_chunk_bytes": 16 * 1024 * 1024,
+        "max_chunks": 100_000,
+        "max_svg_elements": 1_000_000,
+        "max_svg_depth": 256,
+        "max_svg_path_bytes": 64 * 1024,
+    })
 }
 
 fn image_format_definitions() -> &'static [(

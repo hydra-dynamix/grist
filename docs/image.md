@@ -20,8 +20,10 @@ handlers, resolve links, or fetch external resources.
   transparency, and bounded image-data blocks.
 - BMP validates its declared file, DIB, palette/pixel offsets, dimensions, planes,
   bit depth, compression mode, and uncompressed pixel extent.
-- HEIF/HEIC validates ISO BMFF box extents, identifies brands, and inventories
-  image properties and retained metadata boxes with bounded nesting.
+- HEIF/HEIC validates ISO BMFF box extents and associates the `pitm` primary
+  item through `iinf`/`infe`, `iloc`, `iref`, and `iprp`/`ipma`. Only properties
+  associated with the primary item supply dimensions or orientation, and only
+  associated Exif/XMP item extents inside `mdat` become metadata.
 - SVG retains ordered XML elements, attributes, text, exact byte ranges, and
   sibling-indexed XML paths.
 
@@ -38,11 +40,16 @@ remain source data; the parser has no execution, rendering, or network path.
 
 ## Public surfaces and limits
 
-`ImageOptions` controls total input, dimensions, pixels, frames, chunks, metadata,
-unknown retained bytes, SVG events/depth/text, and decompressed text. The registry
-routes each descriptor only to its matching detected container, and controlled
-parsing observes operation checkpoints. `ImageDocument` projects deterministically
-to `DocumentGraph` with source locators for the root and retained children.
+`ImageOptions` controls dimensions, frames, chunks, metadata, unknown retained
+bytes, SVG element count, nesting depth, and locator-path size. Shared operation
+budgets independently control input and output bytes and parser work.
+The registry routes each descriptor only to its matching detected container, and
+controlled parsing observes cancellation/parse-time checkpoints while charging
+nodes, records, nesting, and decoded characters incrementally. PNG requires IDAT
+(and data for every declared APNG frame), JPEG requires an SOS scan, and HEIF
+requires primary item/property/data association before reporting completion.
+`ImageDocument` projects deterministically to `DocumentGraph` with source locators
+for the root and retained children.
 
 The payload, envelope, and options schemas are registered as `image-v1`,
 `image-envelope-v1`, and `image-options-v1`. The CLI accepts the registered image

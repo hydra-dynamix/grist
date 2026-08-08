@@ -15,6 +15,9 @@ use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
+#[cfg(feature = "media")]
+pub(crate) use signatures::has_svg_root;
+
 #[cfg(feature = "schemas")]
 use schemars::JsonSchema;
 

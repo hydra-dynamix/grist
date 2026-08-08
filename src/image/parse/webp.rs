@@ -1,9 +1,9 @@
-use super::{Builder, le_u16, le_u24, le_u32};
+use super::{Builder, ImageResult, le_u16, le_u24, le_u32};
 use crate::core::sha256_hex;
 use crate::image::{ImageDimensions, ImageMetadataKind};
 use std::collections::BTreeMap;
 
-pub(super) fn parse(bytes: &[u8], builder: &mut Builder<'_>) -> Result<(), String> {
+pub(super) fn parse(bytes: &[u8], builder: &mut Builder<'_>) -> ImageResult<()> {
     if bytes.len() < 12 || !bytes.starts_with(b"RIFF") || &bytes[8..12] != b"WEBP" {
         return Err("WebP RIFF signature is invalid".into());
     }

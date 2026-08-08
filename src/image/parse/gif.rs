@@ -1,8 +1,8 @@
-use super::{Builder, find_bytes, le_u16};
+use super::{Builder, ImageResult, find_bytes, le_u16};
 use crate::image::{ImageDimensions, ImageMetadataKind};
 use std::collections::BTreeMap;
 
-pub(super) fn parse(bytes: &[u8], builder: &mut Builder<'_>) -> Result<(), String> {
+pub(super) fn parse(bytes: &[u8], builder: &mut Builder<'_>) -> ImageResult<()> {
     if bytes.len() < 13 || !(bytes.starts_with(b"GIF87a") || bytes.starts_with(b"GIF89a")) {
         return Err("GIF header or logical screen descriptor is truncated".into());
     }
@@ -132,9 +132,7 @@ pub(super) fn parse(bytes: &[u8], builder: &mut Builder<'_>) -> Result<(), Strin
                 break;
             }
             value => {
-                return Err(format!(
-                    "GIF contains unknown top-level block 0x{value:02x}"
-                ));
+                return Err(format!("GIF contains unknown top-level block 0x{value:02x}").into());
             }
         }
     }

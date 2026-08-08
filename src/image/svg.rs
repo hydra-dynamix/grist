@@ -1,4 +1,5 @@
 use super::model::*;
+use super::parse::ImageResult;
 use crate::core::{
     BoundingBox, CoordinateOrigin, CoordinateUnit, IndexPosition, LocationComponent,
     OperationControl, SourceLocator, sha256_hex,
@@ -18,7 +19,6 @@ pub(crate) struct SvgParsed {
 #[derive(Debug)]
 struct SvgStackEntry {
     name: String,
-    path: String,
     next_child: u64,
 }
 
@@ -26,13 +26,15 @@ pub(crate) fn parse_svg(
     bytes: &[u8],
     options: &ImageOptions,
     control: Option<&OperationControl>,
-) -> Result<SvgParsed, String> {
+) -> ImageResult<SvgParsed> {
     let source = std::str::from_utf8(bytes).map_err(|_| "SVG source is not valid UTF-8")?;
     let mut reader = Reader::from_str(source);
     reader.config_mut().trim_text(false);
     let mut dimensions = ImageDimensions::default();
     let mut view_box = None;
     let mut element_count = 0u64;
+    let mut saw_root = false;
+    let mut locator_index = 0u64;
     let mut unknown = BTreeSet::new();
     let mut stack = Vec::<SvgStackEntry>::new();
     let mut text = Vec::new();
@@ -40,19 +42,32 @@ pub(crate) fn parse_svg(
     let mut active = Vec::new();
     loop {
         if let Some(control) = control {
-            control.checkpoint().map_err(|error| error.to_string())?;
+            control.checkpoint()?;
         }
         match reader.read_event() {
             Ok(Event::Start(event)) => {
+                charge_nodes(control, 1)?;
                 let name = local_name(event.name().as_ref());
                 element_count = element_count.saturating_add(1);
                 if element_count > options.max_svg_elements {
                     return Err("SVG element count exceeds ImageOptions::max_svg_elements".into());
                 }
-                if stack.is_empty() && name != "svg" {
-                    return Err("SVG root element is not <svg>".into());
+                if stack.is_empty() {
+                    if saw_root {
+                        return Err("SVG contains more than one root element".into());
+                    }
+                    if name != "svg" {
+                        return Err("SVG root element is not <svg>".into());
+                    }
+                    saw_root = true;
                 }
-                let path = next_element_path(&mut stack, &name);
+                let depth = stack.len().saturating_add(1) as u64;
+                if depth > options.max_svg_depth {
+                    return Err("SVG nesting exceeds ImageOptions::max_svg_depth".into());
+                }
+                observe_depth(control, depth)?;
+                let path =
+                    next_element_path(&mut stack, &name, depth, &mut locator_index, options)?;
                 let locator = event_locator(&reader, event.len() + 2, &path);
                 inspect_element(
                     &event,
@@ -63,14 +78,17 @@ pub(crate) fn parse_svg(
                     &mut view_box,
                     &mut links,
                     &mut active,
+                    control,
                 )?;
                 if !known_element(&name) {
                     unknown.insert(name.clone());
                 }
                 if name == "script" {
+                    charge_nodes(control, 1)?;
                     active.push(active_item("script", None, b"", locator.clone()));
                 }
                 if is_smil_element(&name) {
+                    charge_nodes(control, 1)?;
                     active.push(active_item(
                         "smil_animation",
                         Some(name.clone()),
@@ -80,20 +98,32 @@ pub(crate) fn parse_svg(
                 }
                 stack.push(SvgStackEntry {
                     name,
-                    path,
                     next_child: 0,
                 });
             }
             Ok(Event::Empty(event)) => {
+                charge_nodes(control, 1)?;
                 let name = local_name(event.name().as_ref());
                 element_count = element_count.saturating_add(1);
                 if element_count > options.max_svg_elements {
                     return Err("SVG element count exceeds ImageOptions::max_svg_elements".into());
                 }
-                if stack.is_empty() && name != "svg" {
-                    return Err("SVG root element is not <svg>".into());
+                if stack.is_empty() {
+                    if saw_root {
+                        return Err("SVG contains more than one root element".into());
+                    }
+                    if name != "svg" {
+                        return Err("SVG root element is not <svg>".into());
+                    }
+                    saw_root = true;
                 }
-                let path = next_element_path(&mut stack, &name);
+                let depth = stack.len().saturating_add(1) as u64;
+                if depth > options.max_svg_depth {
+                    return Err("SVG nesting exceeds ImageOptions::max_svg_depth".into());
+                }
+                observe_depth(control, depth)?;
+                let path =
+                    next_element_path(&mut stack, &name, depth, &mut locator_index, options)?;
                 let locator = event_locator(&reader, event.len() + 2, &path);
                 inspect_element(
                     &event,
@@ -104,14 +134,17 @@ pub(crate) fn parse_svg(
                     &mut view_box,
                     &mut links,
                     &mut active,
+                    control,
                 )?;
                 if !known_element(&name) {
                     unknown.insert(name.clone());
                 }
                 if name == "script" {
+                    charge_nodes(control, 1)?;
                     active.push(active_item("script", None, b"", locator.clone()));
                 }
                 if is_smil_element(&name) {
+                    charge_nodes(control, 1)?;
                     active.push(active_item(
                         "smil_animation",
                         Some(name.clone()),
@@ -124,38 +157,62 @@ pub(crate) fn parse_svg(
                 stack.pop();
             }
             Ok(Event::Text(event)) => {
-                let path = stack
-                    .last()
-                    .map(|entry| format!("{}/text()", entry.path))
-                    .unwrap_or_else(|| "/text()".into());
+                let raw: &[u8] = event.as_ref();
+                if raw.iter().all(u8::is_ascii_whitespace) {
+                    continue;
+                }
+                charge_decoded_characters(control, raw.len() as u64)?;
+                let path = text_path(&stack, &mut locator_index, options)?;
                 let locator = event_locator(&reader, event.len(), &path);
                 let value = event
                     .unescape()
                     .map_err(|error| error.to_string())?
                     .into_owned();
-                inspect_text(value, locator, &stack, &mut text, &mut links, &mut active);
+                inspect_text(
+                    value,
+                    locator,
+                    &stack,
+                    &mut text,
+                    &mut links,
+                    &mut active,
+                    control,
+                )?;
             }
             Ok(Event::CData(event)) => {
-                let path = stack
-                    .last()
-                    .map(|entry| format!("{}/text()", entry.path))
-                    .unwrap_or_else(|| "/text()".into());
+                let raw: &[u8] = event.as_ref();
+                if raw.iter().all(u8::is_ascii_whitespace) {
+                    continue;
+                }
+                charge_decoded_characters(control, raw.len() as u64)?;
+                let path = text_path(&stack, &mut locator_index, options)?;
                 let locator = event_locator(&reader, event.len(), &path);
                 let value = reader
                     .decoder()
                     .decode(event.as_ref())
                     .map_err(|error| error.to_string())?
                     .into_owned();
-                inspect_text(value, locator, &stack, &mut text, &mut links, &mut active);
+                inspect_text(
+                    value,
+                    locator,
+                    &stack,
+                    &mut text,
+                    &mut links,
+                    &mut active,
+                    control,
+                )?;
             }
             Ok(Event::DocType(event)) => {
+                charge_nodes(control, 1)?;
                 let locator = event_locator(&reader, event.len() + 3, "/doctype()");
                 active.push(active_item("doctype", None, event.as_ref(), locator));
             }
             Ok(Event::Eof) => break,
-            Err(error) => return Err(format!("malformed SVG XML: {error}")),
+            Err(error) => return Err(format!("malformed SVG XML: {error}").into()),
             _ => {}
         }
+    }
+    if !stack.is_empty() {
+        return Err("SVG contains an unclosed element".into());
     }
     if element_count == 0 {
         return Err("SVG contains no elements".into());
@@ -189,33 +246,38 @@ fn inspect_text(
     text: &mut Vec<ImageText>,
     links: &mut Vec<ImageLink>,
     active: &mut Vec<ImageActiveContent>,
-) {
+    control: Option<&OperationControl>,
+) -> ImageResult<()> {
     if value.trim().is_empty() {
-        return;
+        return Ok(());
     }
     let current = stack.last().map(|entry| entry.name.as_str()).unwrap_or("");
     if current == "script" {
+        charge_nodes(control, 1)?;
         active.push(active_item("script_body", None, value.as_bytes(), locator));
     } else if current == "style" {
+        charge_nodes(control, 1)?;
         active.push(active_item(
             "style_block",
             None,
             value.as_bytes(),
             locator.clone(),
         ));
-        inventory_css(&value, &locator, links, active);
+        inventory_css(&value, &locator, links, active, control)?;
     } else if matches!(current, "text" | "tspan" | "textPath" | "title" | "desc") {
         let kind = match current {
             "title" => ImageTextKind::VectorTitle,
             "desc" => ImageTextKind::VectorDescription,
             _ => ImageTextKind::VectorText,
         };
+        charge_nodes(control, 1)?;
         text.push(ImageText {
             kind,
             text: value,
             locator,
         });
     }
+    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -228,10 +290,12 @@ fn inspect_element(
     view_box: &mut Option<[f64; 4]>,
     links: &mut Vec<ImageLink>,
     active: &mut Vec<ImageActiveContent>,
-) -> Result<(), String> {
+    control: Option<&OperationControl>,
+) -> ImageResult<()> {
     for attribute in event.attributes().with_checks(false) {
         let attribute = attribute.map_err(|error| format!("malformed SVG attribute: {error}"))?;
         let key = local_name(attribute.key.as_ref());
+        charge_decoded_characters(control, attribute.value.as_ref().len() as u64)?;
         let value = attribute
             .unescape_value()
             .map_err(|error| format!("malformed SVG attribute value: {error}"))?
@@ -245,6 +309,7 @@ fn inspect_element(
             }
         }
         if matches!(key.as_str(), "href" | "src" | "poster") {
+            charge_nodes(control, 1)?;
             links.push(ImageLink {
                 external: !value.starts_with('#'),
                 target: value.clone(),
@@ -256,6 +321,7 @@ fn inspect_element(
                 .to_ascii_lowercase()
                 .starts_with("javascript:")
             {
+                charge_nodes(control, 1)?;
                 active.push(active_item(
                     "javascript_uri",
                     Some(key.clone()),
@@ -265,9 +331,10 @@ fn inspect_element(
             }
         }
         if key == "style" {
-            inventory_css(&value, locator, links, active);
+            inventory_css(&value, locator, links, active, control)?;
         }
         if key.to_ascii_lowercase().starts_with("on") {
+            charge_nodes(control, 1)?;
             active.push(active_item(
                 "event_handler",
                 Some(key),
@@ -275,6 +342,7 @@ fn inspect_element(
                 locator.clone(),
             ));
         } else if is_smil_timing_attribute(&key) {
+            charge_nodes(control, 1)?;
             active.push(active_item(
                 "smil_timing",
                 Some(key),
@@ -284,6 +352,7 @@ fn inspect_element(
         }
     }
     if matches!(name, "foreignObject" | "iframe" | "audio" | "video") {
+        charge_nodes(control, 1)?;
         active.push(active_item(
             "active_element",
             Some(name.into()),
@@ -328,17 +397,68 @@ fn event_locator(reader: &Reader<&[u8]>, event_length: usize, path: &str) -> Sou
     svg_locator(end.saturating_sub(event_length), end, path)
 }
 
-fn next_element_path(stack: &mut [SvgStackEntry], name: &str) -> String {
+fn next_element_path(
+    stack: &mut [SvgStackEntry],
+    name: &str,
+    depth: u64,
+    locator_index: &mut u64,
+    options: &ImageOptions,
+) -> ImageResult<String> {
     let ordinal = if let Some(parent) = stack.last_mut() {
         parent.next_child = parent.next_child.saturating_add(1);
         parent.next_child
     } else {
         1
     };
-    stack.last().map_or_else(
-        || format!("/{name}[{ordinal}]"),
-        |parent| format!("{}/{name}[{ordinal}]", parent.path),
+    *locator_index = locator_index.saturating_add(1);
+    let path_bytes = "/element()[;name=;sibling=;depth=]"
+        .len()
+        .saturating_add(decimal_digits(*locator_index))
+        .saturating_add(name.len())
+        .saturating_add(decimal_digits(ordinal))
+        .saturating_add(decimal_digits(depth));
+    if path_bytes as u64 > options.max_svg_path_bytes {
+        return Err("SVG locator path exceeds ImageOptions::max_svg_path_bytes".into());
+    }
+    let mut path = String::with_capacity(path_bytes);
+    use std::fmt::Write as _;
+    write!(
+        path,
+        "/element()[{};name={name};sibling={ordinal};depth={depth}]",
+        *locator_index
     )
+    .expect("writing to a String cannot fail");
+    Ok(path)
+}
+
+fn text_path(
+    stack: &[SvgStackEntry],
+    locator_index: &mut u64,
+    options: &ImageOptions,
+) -> ImageResult<String> {
+    *locator_index = locator_index.saturating_add(1);
+    let name = stack.last().map_or("document", |entry| entry.name.as_str());
+    let path_bytes = "/text()[;parent=]"
+        .len()
+        .saturating_add(decimal_digits(*locator_index))
+        .saturating_add(name.len());
+    if path_bytes as u64 > options.max_svg_path_bytes {
+        return Err("SVG locator path exceeds ImageOptions::max_svg_path_bytes".into());
+    }
+    let mut path = String::with_capacity(path_bytes);
+    use std::fmt::Write as _;
+    write!(path, "/text()[{};parent={name}]", *locator_index)
+        .expect("writing to a String cannot fail");
+    Ok(path)
+}
+
+fn decimal_digits(mut value: u64) -> usize {
+    let mut digits = 1;
+    while value >= 10 {
+        value /= 10;
+        digits += 1;
+    }
+    digits
 }
 
 fn inventory_css(
@@ -346,39 +466,36 @@ fn inventory_css(
     locator: &SourceLocator,
     links: &mut Vec<ImageLink>,
     active: &mut Vec<ImageActiveContent>,
-) {
-    for (kind, target) in css_resource_targets(css) {
-        links.push(ImageLink {
-            external: !target.starts_with('#'),
-            target: target.clone(),
-            locator: locator.clone(),
-            disposition: ImageActiveContentDisposition::InventoriedNotExecuted,
-        });
-        active.push(active_item(kind, None, target.as_bytes(), locator.clone()));
-    }
-}
-
-fn css_resource_targets(css: &str) -> Vec<(&'static str, String)> {
-    let lower = css.to_ascii_lowercase();
-    let mut found = Vec::new();
+    control: Option<&OperationControl>,
+) -> ImageResult<()> {
     let mut cursor = 0usize;
-    while let Some(relative) = lower[cursor..].find("url(") {
+    while let Some(relative) = find_ascii_case_insensitive(&css.as_bytes()[cursor..], b"url(") {
+        if let Some(control) = control {
+            control.checkpoint()?;
+        }
         let start = cursor + relative + 4;
         let Some(relative_end) = css[start..].find(')') else {
             break;
         };
         let end = start + relative_end;
-        let target = css[start..end].trim().trim_matches(['\'', '"']).to_string();
+        let target = css[start..end].trim().trim_matches(['\'', '"']);
         if !target.is_empty() {
-            found.push(("css_url", target));
+            emit_css_resource("css_url", target, locator, links, active, control)?;
         }
-        cursor = end + 1;
+        cursor = end.saturating_add(1);
     }
     cursor = 0;
-    while let Some(relative) = lower[cursor..].find("@import") {
+    while let Some(relative) = find_ascii_case_insensitive(&css.as_bytes()[cursor..], b"@import") {
+        if let Some(control) = control {
+            control.checkpoint()?;
+        }
         let start = cursor + relative + "@import".len();
         let tail = css[start..].trim_start();
-        let target = if tail.to_ascii_lowercase().starts_with("url(") {
+        let target = if tail
+            .as_bytes()
+            .get(..4)
+            .is_some_and(|prefix| prefix.eq_ignore_ascii_case(b"url("))
+        {
             tail[4..]
                 .split(')')
                 .next()
@@ -392,11 +509,63 @@ fn css_resource_targets(css: &str) -> Vec<(&'static str, String)> {
                 .unwrap_or("")
         };
         if !target.is_empty() {
-            found.push(("css_import", target.to_string()));
+            emit_css_resource("css_import", target, locator, links, active, control)?;
         }
         cursor = start.saturating_add(1);
     }
-    found
+    Ok(())
+}
+
+fn emit_css_resource(
+    kind: &'static str,
+    target: &str,
+    locator: &SourceLocator,
+    links: &mut Vec<ImageLink>,
+    active: &mut Vec<ImageActiveContent>,
+    control: Option<&OperationControl>,
+) -> ImageResult<()> {
+    if let Some(control) = control {
+        control.checkpoint()?;
+    }
+    charge_nodes(control, 2)?;
+    links.push(ImageLink {
+        external: !target.starts_with('#'),
+        target: target.to_string(),
+        locator: locator.clone(),
+        disposition: ImageActiveContentDisposition::InventoriedNotExecuted,
+    });
+    active.push(active_item(kind, None, target.as_bytes(), locator.clone()));
+    Ok(())
+}
+
+fn find_ascii_case_insensitive(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+    haystack
+        .windows(needle.len())
+        .position(|window| window.eq_ignore_ascii_case(needle))
+}
+
+fn charge_nodes(control: Option<&OperationControl>, count: u64) -> ImageResult<()> {
+    control.map_or(Ok(()), |control| {
+        control.budget().consume_nodes(count).map_err(Into::into)
+    })
+}
+
+fn charge_decoded_characters(control: Option<&OperationControl>, count: u64) -> ImageResult<()> {
+    control.map_or(Ok(()), |control| {
+        control
+            .budget()
+            .consume_decoded_characters(count)
+            .map_err(Into::into)
+    })
+}
+
+fn observe_depth(control: Option<&OperationControl>, depth: u64) -> ImageResult<()> {
+    control.map_or(Ok(()), |control| {
+        control
+            .budget()
+            .observe_nesting_depth(depth)
+            .map_err(Into::into)
+    })
 }
 
 fn is_smil_element(name: &str) -> bool {
