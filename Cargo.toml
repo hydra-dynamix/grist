@@ -52,6 +52,7 @@ structured-data = ["csv", "serialization", "structured-binary", "columnar", "sql
 email-message = []
 notebooks = ["markdown"]
 code = [
+    "manifests",
     "rust",
     "python",
     "javascript",
@@ -109,6 +110,7 @@ swift = ["secondary-code", "dep:tree-sitter-swift"]
 bash = ["secondary-code", "dep:tree-sitter-bash"]
 sql = ["secondary-code", "dep:tree-sitter-sequel"]
 css = ["secondary-code", "dep:tree-sitter-css"]
+manifests = ["dep:quick-xml", "dep:serde_yaml", "dep:toml"]
 serialization = ["dep:serde_yaml", "dep:toml", "dep:toml_edit", "dep:unsafe-libyaml", "dep:jsonschema", "xml"]
 structured-binary = []
 columnar = ["dep:flate2"]

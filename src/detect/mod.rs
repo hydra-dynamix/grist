@@ -67,6 +67,7 @@ pub enum ContentKind {
     Jsonl,
     Yaml,
     Toml,
+    Manifest,
     Cbor,
     MessagePack,
     Protobuf,
@@ -368,6 +369,24 @@ pub fn detect_with_registry(
     if signatures::is_zip(bytes) {
         signals.extend(packages::zip_signals(bytes, &mut diagnostics));
     }
+    let normalized_path = path
+        .to_string_lossy()
+        .replace('\\', "/")
+        .to_ascii_lowercase();
+    if normalized_path.contains("/.github/workflows/")
+        || normalized_path.starts_with(".github/workflows/")
+    {
+        signals.push(
+            Signal::new(
+                "manifest",
+                Some("application/vnd.grist.manifest"),
+                0.92,
+                DetectionEvidenceKind::Filename,
+                "GitHub Actions workflow path",
+            )
+            .decisive(),
+        );
+    }
     add_label_signals(
         &mut signals,
         &filename,
@@ -403,6 +422,26 @@ pub fn detect_with_registry(
     ));
     let text_sample = text::sample(bytes, options.max_probe_bytes);
     if let Some(sample) = text_sample.as_ref() {
+        if sample
+            .text
+            .lines()
+            .any(|line| line.trim_start().starts_with("apiVersion:"))
+            && sample
+                .text
+                .lines()
+                .any(|line| line.trim_start().starts_with("kind:"))
+        {
+            signals.push(
+                Signal::new(
+                    "manifest",
+                    Some("application/vnd.grist.manifest"),
+                    0.94,
+                    DetectionEvidenceKind::Structure,
+                    "Kubernetes apiVersion and kind fields",
+                )
+                .decisive(),
+            );
+        }
         signals.extend(grammar::signals(&sample.text, registry));
     }
     #[cfg(feature = "structured-binary")]
@@ -824,48 +863,92 @@ fn registry_descriptors(registry: &ParserRegistry) -> Vec<crate::registry::Parse
 }
 
 fn add_special_filename_signal(signals: &mut Vec<Signal>, filename: &str) {
-    let (format, media_type, label) = match filename {
-        "cargo.toml" | "pyproject.toml" | "pipfile" => {
-            ("toml", "application/toml", "package manifest")
-        }
-        "cargo.lock" | "poetry.lock" => ("toml", "application/toml", "package lockfile"),
-        "package.json" | "tsconfig.json" | "composer.json" => {
-            ("json", "application/json", "package manifest")
-        }
-        "package-lock.json" | "npm-shrinkwrap.json" | "pipfile.lock" => {
-            ("json", "application/json", "package lockfile")
-        }
-        "pnpm-lock.yaml" | "pnpm-lock.yml" => ("yaml", "application/yaml", "package lockfile"),
-        "docker-compose.yml" | "docker-compose.yaml" | "compose.yml" | "compose.yaml" => {
-            ("yaml", "application/yaml", "deployment manifest")
-        }
-        "pom.xml" => ("xml", "application/xml", "package manifest"),
-        "dockerfile"
-        | "containerfile"
+    if matches!(filename, "tsconfig.json" | "composer.json") {
+        signals.push(Signal::new(
+            "json",
+            Some("application/json"),
+            0.68,
+            DetectionEvidenceKind::Filename,
+            "package configuration",
+        ));
+        return;
+    }
+    if matches!(
+        filename,
+        ".gitignore" | ".ignore" | ".gitattributes" | ".gitmodules"
+    ) {
+        signals.push(Signal::new(
+            "text",
+            Some("text/plain"),
+            0.68,
+            DetectionEvidenceKind::Filename,
+            "repository metadata",
+        ));
+        return;
+    }
+    let label = match filename {
+        "cargo.toml"
+        | "pyproject.toml"
+        | "pipfile"
+        | "package.json"
+        | "pom.xml"
+        | "setup.py"
+        | "setup.cfg"
         | "go.mod"
-        | "go.sum"
-        | "yarn.lock"
+        | "dockerfile"
+        | "containerfile"
         | "build.gradle"
         | "build.gradle.kts"
         | "settings.gradle"
-        | "settings.gradle.kts"
-        | ".gitignore"
-        | ".ignore"
-        | ".gitattributes"
-        | ".gitmodules" => ("text", "text/plain", "repository manifest or lockfile"),
-        "readme" => ("markdown", "text/markdown", "README special filename"),
+        | "settings.gradle.kts" => "package or build manifest",
+        "cargo.lock"
+        | "poetry.lock"
+        | "package-lock.json"
+        | "npm-shrinkwrap.json"
+        | "pipfile.lock"
+        | "pnpm-lock.yaml"
+        | "pnpm-lock.yml"
+        | "yarn.lock"
+        | "go.sum" => "package lockfile",
+        "docker-compose.yml" | "docker-compose.yaml" | "compose.yml" | "compose.yaml" => {
+            "service composition manifest"
+        }
+        ".gitlab-ci.yml" | ".gitlab-ci.yaml" => "continuous integration workflow",
+        _ if filename.starts_with("requirements") && filename.ends_with(".txt") => {
+            "Python requirements manifest"
+        }
+        "readme" => {
+            signals.push(Signal::new(
+                "markdown",
+                Some("text/markdown"),
+                0.68,
+                DetectionEvidenceKind::Filename,
+                "README special filename",
+            ));
+            return;
+        }
         "readme.md" | "readme.markdown" => {
-            ("markdown", "text/markdown", "README markdown filename")
+            signals.push(Signal::new(
+                "markdown",
+                Some("text/markdown"),
+                0.68,
+                DetectionEvidenceKind::Filename,
+                "README markdown filename",
+            ));
+            return;
         }
         _ => return,
     };
-    signals.push(Signal::new(
-        format,
-        Some(media_type),
-        0.68,
-        DetectionEvidenceKind::Filename,
-        label,
-    ));
+    signals.push(
+        Signal::new(
+            "manifest",
+            Some("application/vnd.grist.manifest"),
+            0.92,
+            DetectionEvidenceKind::Filename,
+            label,
+        )
+        .decisive(),
+    );
 }
 
 fn add_extension_signal(signals: &mut Vec<Signal>, extension: &str) {
@@ -1199,6 +1282,7 @@ fn format_for_kind(kind: &ContentKind) -> Option<&'static str> {
         ContentKind::Jsonl => "jsonl",
         ContentKind::Yaml => "yaml",
         ContentKind::Toml => "toml",
+        ContentKind::Manifest => "manifest",
         ContentKind::Cbor => "cbor",
         ContentKind::MessagePack => "messagepack",
         ContentKind::Protobuf => "protobuf",
@@ -1274,6 +1358,7 @@ fn content_kind_for_format(format: &str) -> ContentKind {
         "jsonl" | "ndjson" => ContentKind::Jsonl,
         "yaml" => ContentKind::Yaml,
         "toml" => ContentKind::Toml,
+        "manifest" | "lockfile" | "infrastructure" => ContentKind::Manifest,
         "cbor" => ContentKind::Cbor,
         "messagepack" | "msgpack" | "message_pack" => ContentKind::MessagePack,
         "protobuf" | "protocol_buffers" | "proto_binary" => ContentKind::Protobuf,

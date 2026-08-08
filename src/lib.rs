@@ -26,6 +26,8 @@ pub mod epub;
 pub mod fixtures;
 pub mod formats;
 pub mod ingest;
+#[cfg(feature = "manifests")]
+pub mod manifests;
 #[cfg(feature = "email-message")]
 pub mod mbox;
 #[cfg(feature = "email-message")]

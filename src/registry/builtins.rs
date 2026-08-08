@@ -80,6 +80,7 @@ fn descriptor(
             | ArtifactKind::JavaScriptCode
             | ArtifactKind::TypeScriptCode
             | ArtifactKind::Code
+            | ArtifactKind::Manifest
     ) {
         capabilities.insert(Capability::DocumentGraphProjection);
     }
@@ -204,6 +205,7 @@ fn register_feature_parsers(registry: &mut ParserRegistry) -> Result<(), ParserR
     register_javascript(registry)?;
     register_typescript(registry)?;
     register_secondary_code(registry)?;
+    register_manifests(registry)?;
     register_serialization(registry)?;
     register_columnar(registry)?;
     register_sqlite(registry)?;
@@ -2014,6 +2016,55 @@ fn register_columnar(registry: &mut ParserRegistry) -> Result<(), ParserRegistry
     Ok(())
 }
 
+#[cfg(feature = "manifests")]
+fn register_manifests(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    let format = FormatMetadata::new("manifest", ArtifactKind::Manifest)
+        .with_aliases(["lockfile", "infrastructure"])
+        .with_media_types(["application/vnd.grist.manifest"]);
+    register(
+        registry,
+        descriptor(
+            "grist.manifests",
+            format,
+            crate::manifests::parser_info(),
+            crate::core::SchemaVersion::MANIFEST_V1,
+            Some("manifests"),
+            serde_json::to_value(crate::manifests::ManifestOptions::default()).unwrap_or_default(),
+        ),
+        parse_manifest,
+    )
+}
+#[cfg(feature = "manifests")]
+fn parse_manifest(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserError> {
+    let options = decode_options::<crate::manifests::ManifestOptions>(context)?;
+    let text = context.utf8_text()?;
+    context.consume_decoded_characters(text.chars().count() as u64)?;
+    let envelope = crate::manifests::parse_manifest(text, context.source().clone(), &options);
+    if let Some(payload) = envelope.payload.as_ref() {
+        context.consume_nodes(
+            (payload.dependencies.len()
+                + payload.references.len()
+                + payload.instructions.len()
+                + payload.unknown_fields.len()
+                + 1) as u64,
+        )?;
+    }
+    output(envelope)
+}
+#[cfg(not(feature = "manifests"))]
+fn register_manifests(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    let format = FormatMetadata::new("manifest", ArtifactKind::Manifest)
+        .with_aliases(["lockfile", "infrastructure"]);
+    let metadata = descriptor(
+        "grist.manifests",
+        format,
+        ParserInfo::new("grist.manifests").with_feature("manifests"),
+        crate::core::SchemaVersion::MANIFEST_V1,
+        Some("manifests"),
+        serde_json::json!({}),
+    );
+    register_disabled(registry, metadata, "manifests")
+}
 #[cfg(feature = "serialization")]
 fn register_serialization(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
     register_serialization_format(registry, "json", "json", parse_json)?;

@@ -174,7 +174,7 @@ fn extensionless_shebang_and_special_manifest_names_are_evidence() {
         None,
         &DetectionOptions::default(),
     );
-    assert_eq!(manifest.content_kind, ContentKind::Toml);
+    assert_eq!(manifest.content_kind, ContentKind::Manifest);
     assert!(
         manifest.candidates[0]
             .evidence

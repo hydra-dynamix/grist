@@ -1749,6 +1749,48 @@
         "max_repo_files": 0
       }
     },
+    "manifest": {
+      "schema_name": "manifest",
+      "schema_version": "grist/manifest/v1",
+      "canonical_sha256": "sha256:c784f25d71fbaba7c3988d3dd88f8708698926711a3519956dcea7579324276f",
+      "value": {
+        "active_content_execution": false,
+        "detected_name": "",
+        "format": "cargo_toml",
+        "locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        },
+        "network_access": false,
+        "range": {
+          "byte_end": 0,
+          "byte_start": 0,
+          "end_column": 0,
+          "end_line": 0,
+          "start_column": 0,
+          "start_line": 0
+        },
+        "raw": "",
+        "role": "package_manifest",
+        "schema_version": "grist/manifest/v1",
+        "source": {
+          "display_name": ""
+        },
+        "template_evaluation": false
+      }
+    },
+    "manifest-options": {
+      "schema_name": "manifest-options",
+      "schema_version": "grist/manifest-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
     "markdown": {
       "schema_name": "markdown",
       "schema_version": "grist/markdown/v2",

@@ -1863,6 +1863,26 @@ fn registrations() -> Vec<Registration> {
         true,
         crate::core::Envelope<crate::code::CodeFile>
     );
+    #[cfg(feature = "manifests")]
+    add!(
+        "manifest",
+        "manifest",
+        SchemaVersion::MANIFEST_V1,
+        SchemaKind::Payload,
+        "grist.manifest.v1.schema.json",
+        false,
+        crate::manifests::ManifestDocument
+    );
+    #[cfg(feature = "manifests")]
+    add!(
+        "manifest-options",
+        "manifest",
+        crate::manifests::MANIFEST_OPTIONS_SCHEMA_V1,
+        SchemaKind::Options,
+        "grist.manifest-options.v1.schema.json",
+        false,
+        crate::manifests::ManifestOptions
+    );
     add!(
         "code-options",
         "code-options",

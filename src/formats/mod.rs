@@ -28,6 +28,8 @@ pub mod jupyter;
 pub mod latex;
 #[cfg(feature = "ldgr-projection")]
 pub mod ldgr_projection;
+#[cfg(feature = "manifests")]
+pub mod manifests;
 #[cfg(feature = "markdown")]
 pub mod markdown;
 #[cfg(feature = "email-message")]

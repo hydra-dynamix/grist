@@ -278,6 +278,10 @@ pub fn project_envelope_to_graph(
             let document: crate::typescript::TypeScriptFile = serde_json::from_value(payload)?;
             Ok(document.to_document_graph(context)?)
         }
+        crate::core::ArtifactKind::Manifest => {
+            let document: crate::manifests::ManifestDocument = serde_json::from_value(payload)?;
+            Ok(document.to_document_graph(context)?)
+        }
         crate::core::ArtifactKind::Code => {
             let document: crate::code::CodeFile = serde_json::from_value(payload)?;
             Ok(document.to_document_graph(context)?)
