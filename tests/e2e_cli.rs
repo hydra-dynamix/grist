@@ -44,6 +44,29 @@ fn run_stdin(args: &[&str], input: &str) -> serde_json::Value {
     serde_json::from_slice(&output.stdout).unwrap()
 }
 
+fn run_stdin_failure(args: &[&str], input: &str) -> String {
+    let mut child = Command::new(grist())
+        .args(args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(input.as_bytes())
+        .unwrap();
+    let output = child.wait_with_output().unwrap();
+    assert!(!output.status.success(), "command unexpectedly succeeded");
+    format!(
+        "{}{}",
+        String::from_utf8(output.stdout).unwrap(),
+        String::from_utf8(output.stderr).unwrap()
+    )
+}
+
 fn run(args: &[&str]) -> serde_json::Value {
     let output = Command::new(grist()).args(args).output().unwrap();
     assert!(
@@ -441,6 +464,61 @@ fn cli_preserves_latex_commands_with_single_backslashes() {
         value,
         "Explain how $\\lambda_{obs} = \\lambda_{emit} \\frac{a(t_{obs})}{a(t_{emit})}$."
     );
+}
+
+#[test]
+fn cli_json_value_reports_selected_incomplete_and_malformed_positions() {
+    let incomplete = r#"{"name":"apply_beat_text_edits","arguments":"#;
+    let stderr = run_stdin_failure(&["parse", "model-output", "-", "--json-value"], incomplete);
+    assert!(stderr.contains("selected model-output candidate candidate-0 is incomplete"));
+    assert!(stderr.contains("at byte"));
+    assert!(stderr.contains("line 1, column"));
+
+    let malformed =
+        "{\n\"name\":\"apply_beat_text_edits\",\n\"arguments\":{\"edits\":[]}},\"call_id\":???}";
+    let envelope = run_stdin(&["parse", "model-output", "-"], malformed);
+    assert_eq!(envelope["payload"]["status"], "malformed");
+    assert_eq!(envelope["payload"]["candidates"][0]["status"], "malformed");
+    assert!(envelope["payload"]["candidates"][0]["json_error"]["byte_offset"].is_number());
+    assert!(envelope["payload"]["candidates"][0]["json_error"]["line"].is_number());
+    assert!(envelope["payload"]["candidates"][0]["json_error"]["column"].is_number());
+
+    let stderr = run_stdin_failure(&["parse", "model-output", "-", "--json-value"], malformed);
+    assert!(stderr.contains("selected model-output candidate candidate-0 is malformed"));
+    assert!(stderr.contains("at byte"));
+    assert!(stderr.contains("line 3, column"));
+}
+
+#[test]
+fn cli_json_value_distinguishes_no_candidate_and_ambiguity() {
+    let none = run_stdin_failure(
+        &["parse", "model-output", "-", "--json-value"],
+        "plain prose",
+    );
+    assert!(none.contains("no model-output candidate was detected"));
+
+    let ambiguous = run_stdin_failure(
+        &["parse", "model-output", "-", "--json-value"],
+        r#"first {"a":1} second {"b":2}"#,
+    );
+    assert!(ambiguous.contains("ambiguous model-output candidates: 2 candidates"));
+}
+
+#[test]
+fn cli_repairs_premature_tool_call_brace_and_emits_value() {
+    let input = r#"{"name":"apply_beat_text_edits","arguments":{"edits":[]}},"call_id":"cli"}"#;
+    let envelope = run_stdin(&["parse", "model-output", "-"], input);
+    let candidate = &envelope["payload"]["candidates"][0];
+    assert_eq!(candidate["status"], "recovered");
+    assert_eq!(
+        candidate["repairs"][0]["kind"],
+        "remove_premature_closing_brace"
+    );
+    assert_eq!(candidate["repairs"][0]["original_text"], "}");
+    assert!(candidate["repairs"][0]["source_range"].is_object());
+
+    let value = run_stdin(&["parse", "model-output", "-", "--json-value"], input);
+    assert_eq!(value["edits"], serde_json::json!([]));
 }
 
 #[test]

@@ -28,6 +28,7 @@ pub struct ModelOutputReport {
 pub enum ModelOutputStatus {
     Empty,
     Incomplete,
+    Malformed,
     Parsed,
     Ambiguous,
     Unparsed,
@@ -40,14 +41,93 @@ pub struct ModelOutputCandidate {
     pub grammar: CandidateGrammar,
     pub command_name: Option<String>,
     pub argument_name: Option<String>,
+    /// The value before repair projection and runtime alias normalization.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub original_value: Option<Value>,
+    /// The repaired and alias-normalized value. Parsing does not make it trusted.
     pub value: Option<Value>,
     pub raw_text: Option<String>,
     pub raw_range: Option<SourceRange>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub repaired_text: Option<String>,
+    #[serde(default)]
+    pub repairs: Vec<RepairOperation>,
+    #[serde(default)]
+    pub alias_applications: Vec<AliasApplication>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub json_error: Option<JsonErrorPosition>,
     pub status: CandidateStatus,
     pub confidence: f32,
     pub normalizations: Vec<String>,
     pub diagnostics: Vec<Diagnostic>,
     pub validation: Option<SchemaValidationResult>,
+    /// Grist parses and validates structure but never establishes downstream trust.
+    #[serde(default)]
+    pub trusted: bool,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct RepairOperation {
+    pub kind: RepairKind,
+    /// Byte range in the input to this operation (half-open and zero-based).
+    pub input_byte_start: usize,
+    pub input_byte_end: usize,
+    /// Exact bytes replaced by this operation.
+    pub original_text: String,
+    /// Exact replacement bytes; empty for a bounded deletion.
+    pub replacement_text: String,
+    /// Exact source range when the operation applies directly to original candidate bytes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_range: Option<SourceRange>,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum RepairKind {
+    RemovePrematureClosingBrace,
+    ReplacePythonLiteral,
+    RemoveRedundantObjectOpener,
+    QuoteSingleQuotedString,
+    QuoteUnquotedObjectKey,
+    PreserveBackslashCommand,
+    EscapeUnescapedStringQuote,
+    InsertMissingComma,
+    RemoveTrailingComma,
+    CloseUnterminatedContainer,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct AliasApplication {
+    pub kind: AliasKind,
+    pub from: String,
+    pub to: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub original_value: Option<Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub normalized_value: Option<Value>,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum AliasKind {
+    Field,
+    Command,
+    Argument,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct JsonErrorPosition {
+    /// Zero-based byte offset in the original complete model-output source.
+    pub byte_offset: usize,
+    /// One-based line and column reported by the JSON parser.
+    pub line: usize,
+    pub column: usize,
+    pub message: String,
 }
 
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
@@ -106,12 +186,30 @@ pub struct AliasRule {
 }
 
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default, deny_unknown_fields)]
+pub struct RepairLimits {
+    pub max_operations: usize,
+    pub max_changed_bytes: usize,
+}
+
+impl Default for RepairLimits {
+    fn default() -> Self {
+        Self {
+            max_operations: 32,
+            max_changed_bytes: 64 * 1024,
+        }
+    }
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct ModelOutputOptions {
     pub accepted_commands: Vec<String>,
     pub accepted_arguments: Vec<String>,
     pub aliases: AliasRules,
+    pub repair_limits: RepairLimits,
     pub strip_think_blocks: bool,
     pub schema: Option<Value>,
     /// Enable legacy Python-style command calls such as `Namespace.Command(arg={...})`.
@@ -191,16 +289,22 @@ pub fn parse_model_output(
             "empty model output",
         ));
     } else {
-        extract_fenced_blocks(&working, &index, &mut candidates, &mut failures);
-        extract_nested_json_fences(&working, &index, &mut candidates);
-        extract_json_candidates(&working, &index, &mut candidates);
+        extract_fenced_blocks(
+            &working,
+            &index,
+            &mut candidates,
+            &options.repair_limits,
+            &mut failures,
+        );
+        extract_nested_json_fences(&working, &index, &mut candidates, &options.repair_limits);
+        extract_json_candidates(&working, &index, &options.repair_limits, &mut candidates);
         extract_xml_tool_calls(&working, &index, &mut candidates);
         if options.parse_python_style_commands {
             extract_python_style_commands(&working, &index, options, &mut candidates);
         }
     }
 
-    candidates = expand_compound_json_candidates(candidates, text, &index);
+    candidates = expand_compound_json_candidates(candidates, text, &index, &options.repair_limits);
     for (id, candidate) in candidates.iter_mut().enumerate() {
         candidate.id = format!("candidate-{id}");
     }
@@ -209,6 +313,9 @@ pub fn parse_model_output(
         candidate
             .normalizations
             .extend(global_normalizations.clone());
+        if candidate.original_value.is_none() {
+            candidate.original_value = candidate.value.clone();
+        }
         apply_aliases(candidate, &options.aliases);
         if candidate.raw_text.is_none() {
             candidate.raw_text = candidate
@@ -254,6 +361,16 @@ pub fn parse_model_output(
         .all(|candidate| candidate.status == CandidateStatus::Incomplete)
     {
         ModelOutputStatus::Incomplete
+    } else if candidates.iter().all(|candidate| {
+        matches!(
+            candidate.status,
+            CandidateStatus::Incomplete | CandidateStatus::Malformed
+        )
+    }) && candidates
+        .iter()
+        .any(|candidate| candidate.status == CandidateStatus::Malformed)
+    {
+        ModelOutputStatus::Malformed
     } else if select_candidate_id(&candidates, options).is_some() {
         ModelOutputStatus::Parsed
     } else {
@@ -302,6 +419,7 @@ fn extract_nested_json_fences(
     text: &str,
     index: &LineIndex,
     candidates: &mut Vec<ModelOutputCandidate>,
+    limits: &RepairLimits,
 ) {
     for marker in ["```json\n", "```JSON\n", "```json\r\n", "```JSON\r\n"] {
         let mut search = 0;
@@ -320,19 +438,19 @@ fn extract_nested_json_fences(
                     .is_some_and(|range| range.byte_start == start && range.byte_end == range_end)
             }) {
                 let body = text[body_start..end].trim();
-                if let Ok(parsed) = parse_jsonish_value_with_repairs(body) {
+                if let Ok(parsed) = parse_jsonish_value_with_limits(body, limits) {
                     let mut candidate = base_candidate(
                         candidates.len(),
                         CandidateGrammar::FencedJson,
                         Some(SourceRange::new(start, range_end, index)),
                     );
-                    candidate.value = Some(parsed.value);
                     candidate.normalizations = vec!["extracted_nested_markdown_fence".into()];
-                    candidate.normalizations.extend(parsed.normalizations);
+                    let parsed_start = body_start + text[body_start..end].find(body).unwrap_or(0);
+                    adopt_jsonish_parse(&mut candidate, parsed, parsed_start, index);
                     if candidate.normalizations.len() > 1 {
                         candidate.status = CandidateStatus::Recovered;
                     }
-                    classify_json_tool_shape(&mut candidate);
+                    classify_json_tool_shape(&mut candidate, limits, text, index);
                     candidates.push(candidate);
                 }
             }
@@ -426,6 +544,7 @@ fn extract_fenced_blocks(
     text: &str,
     index: &LineIndex,
     candidates: &mut Vec<ModelOutputCandidate>,
+    limits: &RepairLimits,
     failures: &mut Vec<ModelOutputFailure>,
 ) {
     let mut search = 0;
@@ -444,7 +563,9 @@ fn extract_fenced_blocks(
             .unwrap_or("")
             .to_ascii_lowercase();
         let Some(end_rel) = text[body_start..].find("```") else {
-            let body = text[body_start..].trim();
+            let untrimmed_body = &text[body_start..];
+            let body = untrimmed_body.trim();
+            let parsed_start = body_start + untrimmed_body.find(body).unwrap_or(0);
             let mut candidate = base_candidate(
                 candidates.len(),
                 if language == "json" {
@@ -459,10 +580,9 @@ fn extract_fenced_blocks(
                 .normalizations
                 .push("extracted_incomplete_markdown_fence".into());
             if language == "json" || body.starts_with('{') || body.starts_with('[') {
-                if let Ok(parsed) = parse_jsonish_value_with_repairs(body) {
-                    candidate.value = Some(parsed.value);
-                    candidate.normalizations.extend(parsed.normalizations);
-                    classify_json_tool_shape(&mut candidate);
+                if let Ok(parsed) = parse_jsonish_value_with_limits(body, limits) {
+                    adopt_jsonish_parse(&mut candidate, parsed, parsed_start, index);
+                    classify_json_tool_shape(&mut candidate, limits, text, index);
                     candidate.status = CandidateStatus::Recovered;
                     candidate
                         .normalizations
@@ -491,7 +611,9 @@ fn extract_fenced_blocks(
             break;
         };
         let end = body_start + end_rel;
-        let body = text[body_start..end].trim();
+        let untrimmed_body = &text[body_start..end];
+        let body = untrimmed_body.trim();
+        let parsed_start = body_start + untrimmed_body.find(body).unwrap_or(0);
         let mut candidate = base_candidate(
             candidates.len(),
             if language == "json" {
@@ -506,17 +628,16 @@ fn extract_fenced_blocks(
             .push("extracted_markdown_fence".into());
         match language.as_str() {
             "json" if body.starts_with('{') || body.starts_with('[') || !body.is_empty() => {
-                match parse_jsonish_value_with_repairs(body) {
+                match parse_jsonish_value_with_limits(body, limits) {
                     Ok(parsed) => {
-                        candidate.value = Some(parsed.value);
-                        candidate.normalizations.extend(parsed.normalizations);
+                        adopt_jsonish_parse(&mut candidate, parsed, parsed_start, index);
                         if candidate.normalizations.len() > 1 {
                             candidate.status = CandidateStatus::Recovered;
                         }
-                        classify_json_tool_shape(&mut candidate);
+                        classify_json_tool_shape(&mut candidate, limits, text, index);
                     }
                     Err(err) => {
-                        candidate.status = CandidateStatus::Malformed;
+                        retain_json_failure(&mut candidate, &err, body, parsed_start, index);
                         let diagnostic = Diagnostic::error(
                             "grist.model_output.fence",
                             "fence.json_parse",
@@ -626,17 +747,16 @@ fn extract_fenced_blocks(
                 }
             },
             _ if body.starts_with('{') || body.starts_with('[') => {
-                match parse_jsonish_value_with_repairs(body) {
+                match parse_jsonish_value_with_limits(body, limits) {
                     Ok(parsed) => {
-                        candidate.value = Some(parsed.value);
-                        candidate.normalizations.extend(parsed.normalizations);
+                        adopt_jsonish_parse(&mut candidate, parsed, parsed_start, index);
                         if candidate.normalizations.len() > 1 {
                             candidate.status = CandidateStatus::Recovered;
                         }
-                        classify_json_tool_shape(&mut candidate);
+                        classify_json_tool_shape(&mut candidate, limits, text, index);
                     }
                     Err(err) => {
-                        candidate.status = CandidateStatus::Malformed;
+                        retain_json_failure(&mut candidate, &err, body, parsed_start, index);
                         let diagnostic = Diagnostic::error(
                             "grist.model_output.fence",
                             "fence.jsonish_parse",
@@ -746,7 +866,9 @@ fn extract_python_style_commands(
             if let Some(close) = find_matching(text, open, '(', ')') {
                 let call = &text[start..=close];
                 for arg in &args {
-                    if let Ok((value, arg_name, normalizations)) = parse_command_arg(call, arg) {
+                    if let Ok((parsed, arg_name, normalizations, relative_start)) =
+                        parse_command_arg(call, arg, &options.repair_limits)
+                    {
                         let mut candidate = base_candidate(
                             candidates.len(),
                             CandidateGrammar::PythonStyleCommand,
@@ -754,8 +876,11 @@ fn extract_python_style_commands(
                         );
                         candidate.command_name = Some(command.clone());
                         candidate.argument_name = Some(arg_name);
-                        candidate.value = Some(value);
                         candidate.normalizations = normalizations;
+                        adopt_jsonish_parse(&mut candidate, parsed, start + relative_start, index);
+                        if !candidate.repairs.is_empty() {
+                            candidate.status = CandidateStatus::Recovered;
+                        }
                         candidates.push(candidate);
                         break;
                     }
@@ -765,8 +890,8 @@ fn extract_python_style_commands(
                         range.byte_start == start && range.byte_end == close + 1
                     })
                 }) {
-                    if let Ok((value, arg_name, normalizations)) =
-                        parse_positional_command_arg(call)
+                    if let Ok((parsed, arg_name, normalizations, relative_start)) =
+                        parse_positional_command_arg(call, &options.repair_limits)
                     {
                         let mut candidate = base_candidate(
                             candidates.len(),
@@ -775,8 +900,11 @@ fn extract_python_style_commands(
                         );
                         candidate.command_name = Some(command.clone());
                         candidate.argument_name = Some(arg_name);
-                        candidate.value = Some(value);
                         candidate.normalizations = normalizations;
+                        adopt_jsonish_parse(&mut candidate, parsed, start + relative_start, index);
+                        if !candidate.repairs.is_empty() {
+                            candidate.status = CandidateStatus::Recovered;
+                        }
                         candidates.push(candidate);
                     }
                 }
@@ -791,33 +919,39 @@ fn extract_python_style_commands(
 fn extract_json_candidates(
     text: &str,
     index: &LineIndex,
+    limits: &RepairLimits,
     candidates: &mut Vec<ModelOutputCandidate>,
 ) {
     let trimmed = text.trim();
-    if let Ok(parsed) = parse_jsonish_value_with_repairs(trimmed) {
-        let start = text.find(trimmed).unwrap_or(0);
-        let mut candidate = json_candidate(
-            candidates.len(),
-            CandidateGrammar::RawJson,
-            parsed.value,
-            SourceRange::new(start, start + trimmed.len(), index),
-        );
-        candidate.normalizations.extend(parsed.normalizations);
-        if !candidate.normalizations.is_empty() {
-            candidate.status = CandidateStatus::Recovered;
+    let start = text.find(trimmed).unwrap_or(0);
+    let raw_failure = match parse_jsonish_value_with_limits(trimmed, limits) {
+        Ok(parsed) => {
+            let mut candidate = base_candidate(
+                candidates.len(),
+                CandidateGrammar::RawJson,
+                Some(SourceRange::new(start, start + trimmed.len(), index)),
+            );
+            adopt_jsonish_parse(&mut candidate, parsed, start, index);
+            if !candidate.repairs.is_empty() {
+                candidate.status = CandidateStatus::Recovered;
+            }
+            classify_json_tool_shape(&mut candidate, limits, text, index);
+            candidates.push(candidate);
+            return;
         }
-        classify_json_tool_shape(&mut candidate);
-        candidates.push(candidate);
-        return;
-    }
-    let initial_candidate_count = candidates.len();
+        Err(failure) => failure,
+    };
+    let raw_error_absolute = start + pending_json_error(trimmed, &raw_failure.error).byte_offset;
     let mut covered_until = 0usize;
     for (absolute_start, absolute_end) in balanced_json_spans(text) {
-        if absolute_start < covered_until {
+        if absolute_start < covered_until
+            || ((trimmed.starts_with('{') || trimmed.starts_with('['))
+                && absolute_start < raw_error_absolute)
+        {
             continue;
         }
         let slice = &text[absolute_start..absolute_end];
-        if let Ok(parsed) = parse_jsonish_value_with_repairs(slice) {
+        if let Ok(parsed) = parse_jsonish_value_with_limits(slice, limits) {
             if is_duplicate_of_existing_candidate(
                 absolute_start,
                 absolute_end,
@@ -827,47 +961,39 @@ fn extract_json_candidates(
                 covered_until = absolute_end;
                 continue;
             }
-            let mut candidate = json_candidate(
+            let mut candidate = base_candidate(
                 candidates.len(),
                 CandidateGrammar::JsonObjectInText,
-                parsed.value,
-                SourceRange::new(absolute_start, absolute_end, index),
+                Some(SourceRange::new(absolute_start, absolute_end, index)),
             );
             candidate
                 .normalizations
                 .push("extracted_balanced_json".into());
-            candidate.normalizations.extend(parsed.normalizations);
-            if candidate.normalizations.len() > 1 {
+            adopt_jsonish_parse(&mut candidate, parsed, absolute_start, index);
+            if !candidate.repairs.is_empty() {
                 candidate.status = CandidateStatus::Recovered;
             }
-            classify_json_tool_shape(&mut candidate);
+            classify_json_tool_shape(&mut candidate, limits, text, index);
             candidates.push(candidate);
             // Match the previous outermost-candidate behavior: once a complete
             // container parses, do not also emit each nested container.
             covered_until = absolute_end;
         }
     }
-    if candidates.len() == initial_candidate_count
-        && (trimmed.starts_with('{') || trimmed.starts_with('['))
-    {
-        let start = text.find(trimmed).unwrap_or(0);
+    if trimmed.starts_with('{') || trimmed.starts_with('[') {
         let mut candidate = base_candidate(
             candidates.len(),
             CandidateGrammar::RawJson,
             Some(SourceRange::new(start, start + trimmed.len(), index)),
         );
-        candidate.status = CandidateStatus::Incomplete;
-        candidate.confidence = 0.4;
-        candidate
-            .normalizations
-            .push("preserved_incomplete_raw_json".into());
-        candidate.diagnostics.push(
-            Diagnostic::warning(
-                "grist.model_output.json",
-                "json.incomplete",
-                "raw JSON-like output started but did not parse as a complete value",
-            )
-            .partial(),
+        retain_json_failure(&mut candidate, &raw_failure, trimmed, start, index);
+        candidate.normalizations.push(
+            if candidate.status == CandidateStatus::Incomplete {
+                "preserved_incomplete_raw_json"
+            } else {
+                "preserved_malformed_raw_json"
+            }
+            .into(),
         );
         candidates.push(candidate);
     }
@@ -889,7 +1015,12 @@ fn is_duplicate_of_existing_candidate(
     })
 }
 
-fn classify_json_tool_shape(candidate: &mut ModelOutputCandidate) {
+fn classify_json_tool_shape(
+    candidate: &mut ModelOutputCandidate,
+    limits: &RepairLimits,
+    source_text: &str,
+    source_index: &LineIndex,
+) {
     let Some(value) = candidate.value.clone() else {
         return;
     };
@@ -904,23 +1035,41 @@ fn classify_json_tool_shape(candidate: &mut ModelOutputCandidate) {
             candidate.value = Some(params);
         }
     } else if let Some(function) = value.get("function") {
-        apply_openai_call(candidate, function, "parsed_stringified_arguments");
+        apply_openai_call(
+            candidate,
+            function,
+            "parsed_stringified_arguments",
+            limits,
+            source_text,
+            source_index,
+        );
     } else if let Some(tool_calls) = openai_tool_calls(&value) {
         candidate.grammar = CandidateGrammar::OpenAiToolCall;
         if tool_calls.len() == 1 {
             if let Some(first_call) = tool_calls.first() {
                 let function = first_call.get("function").unwrap_or(first_call);
-                apply_openai_call(candidate, function, "parsed_first_tool_call_arguments");
+                apply_openai_call(
+                    candidate,
+                    function,
+                    "parsed_first_tool_call_arguments",
+                    limits,
+                    source_text,
+                    source_index,
+                );
             }
         }
     } else if let Some(content) = openai_chat_content(&value).map(str::to_string) {
         candidate.grammar = CandidateGrammar::OpenAiChatContent;
         candidate.argument_name = Some("content".into());
-        if let Ok(parsed) = parse_nested_jsonish_value(&content) {
-            candidate.value = Some(parsed);
-            candidate
-                .normalizations
-                .push("parsed_openai_chat_message_content".into());
+        if let Ok(parsed) = parse_nested_jsonish_value_with_limits(&content, limits) {
+            adopt_nested_jsonish_parse(
+                candidate,
+                parsed,
+                "parsed_openai_chat_message_content",
+                &content,
+                source_text,
+                source_index,
+            );
         } else if let Some((start, end)) = first_balanced_json_value(&content) {
             if let Ok(parsed) = parse_jsonish_value(&content[start..end]) {
                 candidate.value = Some(parsed);
@@ -930,9 +1079,16 @@ fn classify_json_tool_shape(candidate: &mut ModelOutputCandidate) {
             }
         }
     } else if value.get("name").is_some() && value.get("arguments").is_some() {
-        apply_openai_call(candidate, &value, "parsed_root_stringified_arguments");
+        apply_openai_call(
+            candidate,
+            &value,
+            "parsed_root_stringified_arguments",
+            limits,
+            source_text,
+            source_index,
+        );
     } else {
-        unwrap_stringified_json(candidate);
+        unwrap_stringified_json(candidate, limits, source_text, source_index);
     }
 }
 
@@ -955,6 +1111,9 @@ fn apply_openai_call(
     candidate: &mut ModelOutputCandidate,
     call: &Value,
     stringified_normalization: &str,
+    limits: &RepairLimits,
+    source_text: &str,
+    source_index: &LineIndex,
 ) {
     candidate.grammar = CandidateGrammar::OpenAiToolCall;
     candidate.command_name = call.get("name").and_then(Value::as_str).map(str::to_string);
@@ -962,11 +1121,15 @@ fn apply_openai_call(
         candidate.argument_name = Some("arguments".into());
         candidate.value = Some(arguments.clone());
         if let Some(arguments_str) = arguments.as_str() {
-            if let Ok(parsed) = parse_nested_jsonish_value(arguments_str) {
-                candidate.value = Some(parsed);
-                candidate
-                    .normalizations
-                    .push(stringified_normalization.into());
+            if let Ok(parsed) = parse_nested_jsonish_value_with_limits(arguments_str, limits) {
+                adopt_nested_jsonish_parse(
+                    candidate,
+                    parsed,
+                    stringified_normalization,
+                    arguments_str,
+                    source_text,
+                    source_index,
+                );
             }
         }
     }
@@ -976,6 +1139,7 @@ fn expand_compound_json_candidates(
     candidates: Vec<ModelOutputCandidate>,
     source_text: &str,
     index: &LineIndex,
+    limits: &RepairLimits,
 ) -> Vec<ModelOutputCandidate> {
     let mut expanded = Vec::new();
     for candidate in candidates {
@@ -1036,7 +1200,14 @@ fn expand_compound_json_candidates(
                 }
                 CandidateGrammar::OpenAiToolCall => {
                     let function = call.get("function").unwrap_or(call);
-                    apply_openai_call(&mut item, function, "parsed_stringified_arguments");
+                    apply_openai_call(
+                        &mut item,
+                        function,
+                        "parsed_stringified_arguments",
+                        limits,
+                        source_text,
+                        index,
+                    );
                     item.normalizations
                         .push("extracted_openai_tool_call".into());
                 }
@@ -1146,39 +1317,55 @@ fn compound_json_calls(value: &Value) -> Vec<(CandidateGrammar, &Value)> {
         .unwrap_or_default()
 }
 
-fn parse_nested_jsonish_value(text: &str) -> Result<Value, serde_json::Error> {
-    let mut value = parse_jsonish_value(text)?;
+fn parse_nested_jsonish_value_with_limits(
+    text: &str,
+    limits: &RepairLimits,
+) -> Result<JsonishParse, JsonishParseFailure> {
+    let mut parsed = parse_jsonish_value_with_limits(text, limits)?;
     for _ in 0..8 {
-        let Value::String(nested) = &value else {
+        let Value::String(nested) = &parsed.value else {
             break;
         };
         let trimmed = nested.trim();
         if !(trimmed.starts_with('{') || trimmed.starts_with('[') || trimmed.starts_with('"')) {
             break;
         }
-        value = parse_jsonish_value(trimmed)?;
+        parsed = parse_jsonish_value_with_limits(trimmed, limits)?;
     }
-    Ok(value)
+    Ok(parsed)
 }
 
-fn unwrap_stringified_json(candidate: &mut ModelOutputCandidate) {
+fn unwrap_stringified_json(
+    candidate: &mut ModelOutputCandidate,
+    limits: &RepairLimits,
+    source_text: &str,
+    source_index: &LineIndex,
+) {
     let Some(Value::String(text)) = candidate.value.as_ref() else {
         return;
     };
-    let Ok(value) = parse_nested_jsonish_value(text) else {
+    let nested_text = text.clone();
+    let Ok(parsed) = parse_nested_jsonish_value_with_limits(&nested_text, limits) else {
         return;
     };
-    if matches!(value, Value::String(_)) {
+    if matches!(parsed.value, Value::String(_)) {
         return;
     }
-    candidate.value = Some(value);
-    candidate
-        .normalizations
-        .push("parsed_stringified_json".into());
-    candidate.status = CandidateStatus::Recovered;
-    classify_json_tool_shape(candidate);
+    adopt_nested_jsonish_parse(
+        candidate,
+        parsed,
+        "parsed_stringified_json",
+        &nested_text,
+        source_text,
+        source_index,
+    );
+    classify_json_tool_shape(candidate, limits, source_text, source_index);
 }
-fn parse_command_arg(call: &str, arg_name: &str) -> Result<(Value, String, Vec<String>), String> {
+fn parse_command_arg(
+    call: &str,
+    arg_name: &str,
+    limits: &RepairLimits,
+) -> Result<(JsonishParse, String, Vec<String>, usize), String> {
     let Some(start) = find_argument_value_start(call, arg_name) else {
         return Err("missing arg".into());
     };
@@ -1187,13 +1374,19 @@ fn parse_command_arg(call: &str, arg_name: &str) -> Result<(Value, String, Vec<S
         return Err("missing balanced JSON argument".into());
     };
     let object = &after[object_start..object_end];
-    let parsed = parse_jsonish_value_with_repairs(object).map_err(|err| err.to_string())?;
-    let mut normalizations = vec!["parsed_python_style_command".into()];
-    normalizations.extend(parsed.normalizations);
-    Ok((parsed.value, arg_name.to_string(), normalizations))
+    let parsed = parse_jsonish_value_with_limits(object, limits).map_err(|err| err.to_string())?;
+    Ok((
+        parsed,
+        arg_name.to_string(),
+        vec!["parsed_python_style_command".into()],
+        start + object_start,
+    ))
 }
 
-fn parse_positional_command_arg(call: &str) -> Result<(Value, String, Vec<String>), String> {
+fn parse_positional_command_arg(
+    call: &str,
+    limits: &RepairLimits,
+) -> Result<(JsonishParse, String, Vec<String>, usize), String> {
     let Some(open) = call.find('(') else {
         return Err("missing open paren".into());
     };
@@ -1207,11 +1400,14 @@ fn parse_positional_command_arg(call: &str) -> Result<(Value, String, Vec<String
     let Some((object_start, object_end)) = first_balanced_json_value(args) else {
         return Err("missing balanced positional JSON argument".into());
     };
-    let parsed = parse_jsonish_value_with_repairs(&args[object_start..object_end])
+    let parsed = parse_jsonish_value_with_limits(&args[object_start..object_end], limits)
         .map_err(|err| err.to_string())?;
-    let mut normalizations = vec!["parsed_python_style_positional_command".into()];
-    normalizations.extend(parsed.normalizations);
-    Ok((parsed.value, "positional".to_string(), normalizations))
+    Ok((
+        parsed,
+        "positional".to_string(),
+        vec!["parsed_python_style_positional_command".into()],
+        open + 1 + object_start,
+    ))
 }
 
 fn openai_chat_content(value: &Value) -> Option<&str> {
@@ -1331,6 +1527,13 @@ fn apply_aliases(candidate: &mut ModelOutputCandidate, aliases: &AliasRules) {
             .iter()
             .find(|rule| rule.from == *command)
         {
+            candidate.alias_applications.push(AliasApplication {
+                kind: AliasKind::Command,
+                from: alias.from.clone(),
+                to: alias.to.clone(),
+                original_value: Some(Value::String(command.clone())),
+                normalized_value: Some(Value::String(alias.to.clone())),
+            });
             candidate.command_name = Some(alias.to.clone());
             candidate
                 .normalizations
@@ -1343,6 +1546,13 @@ fn apply_aliases(candidate: &mut ModelOutputCandidate, aliases: &AliasRules) {
             .iter()
             .find(|rule| rule.from == *argument)
         {
+            candidate.alias_applications.push(AliasApplication {
+                kind: AliasKind::Argument,
+                from: alias.from.clone(),
+                to: alias.to.clone(),
+                original_value: Some(Value::String(argument.clone())),
+                normalized_value: Some(Value::String(alias.to.clone())),
+            });
             candidate.argument_name = Some(alias.to.clone());
             candidate
                 .normalizations
@@ -1352,7 +1562,15 @@ fn apply_aliases(candidate: &mut ModelOutputCandidate, aliases: &AliasRules) {
     if let Some(Value::Object(map)) = candidate.value.as_mut() {
         for alias in &aliases.field_aliases {
             if let Some(value) = map.remove(&alias.from) {
-                map.entry(alias.to.clone()).or_insert(value);
+                let original_value = value.clone();
+                let normalized_value = map.entry(alias.to.clone()).or_insert(value).clone();
+                candidate.alias_applications.push(AliasApplication {
+                    kind: AliasKind::Field,
+                    from: alias.from.clone(),
+                    to: alias.to.clone(),
+                    original_value: Some(original_value),
+                    normalized_value: Some(normalized_value),
+                });
                 candidate
                     .normalizations
                     .push(format!("field_alias:{}->{}", alias.from, alias.to));
@@ -1371,27 +1589,234 @@ fn base_candidate(
         grammar,
         command_name: None,
         argument_name: None,
+        original_value: None,
         value: None,
         raw_text: None,
         raw_range: range,
+        repaired_text: None,
+        repairs: Vec::new(),
+        alias_applications: Vec::new(),
+        json_error: None,
         status: CandidateStatus::Complete,
         confidence: 0.8,
         normalizations: Vec::new(),
         diagnostics: Vec::new(),
         validation: None,
+        trusted: false,
     }
 }
 
-fn json_candidate(
-    id: usize,
-    grammar: CandidateGrammar,
-    value: Value,
-    range: SourceRange,
-) -> ModelOutputCandidate {
-    let mut candidate = base_candidate(id, grammar, Some(range));
-    candidate.value = Some(value);
-    candidate.confidence = 0.9;
-    candidate
+fn adopt_jsonish_parse(
+    candidate: &mut ModelOutputCandidate,
+    parsed: JsonishParse,
+    source_start: usize,
+    source_index: &LineIndex,
+) {
+    candidate.original_value = parsed.original_value;
+    candidate.value = Some(parsed.value);
+    candidate.repaired_text = parsed.repaired_text;
+    candidate.normalizations.extend(parsed.normalizations);
+    candidate.repairs = parsed
+        .repairs
+        .into_iter()
+        .map(|mut pending| {
+            if pending.source_relative {
+                let start = source_start + pending.operation.input_byte_start;
+                let end = source_start + pending.operation.input_byte_end;
+                pending.operation.source_range = Some(SourceRange::new(start, end, source_index));
+            }
+            pending.operation
+        })
+        .collect();
+    if let Some(error) = parsed.original_error {
+        let absolute = source_start + error.byte_offset;
+        let location = source_index.line_column(absolute);
+        candidate.json_error = Some(JsonErrorPosition {
+            byte_offset: absolute,
+            line: location.line,
+            column: location.column,
+            message: error.message,
+        });
+    }
+    for repair in &candidate.repairs {
+        let mut diagnostic = Diagnostic::warning(
+            "grist.model_output.json",
+            "json.repaired",
+            format!("applied bounded JSON repair {:?}", repair.kind),
+        )
+        .partial();
+        if let Some(range) = repair.source_range.clone() {
+            diagnostic = diagnostic.with_range(range);
+        }
+        candidate.diagnostics.push(diagnostic);
+    }
+}
+
+fn adopt_nested_jsonish_parse(
+    candidate: &mut ModelOutputCandidate,
+    parsed: JsonishParse,
+    normalization: &str,
+    nested_text: &str,
+    source_text: &str,
+    source_index: &LineIndex,
+) {
+    candidate.value = Some(parsed.value);
+    if candidate.repaired_text.is_none() {
+        candidate.repaired_text = parsed.repaired_text;
+    }
+    candidate.normalizations.extend(parsed.normalizations);
+    candidate.normalizations.push(normalization.into());
+
+    let repair_start = candidate.repairs.len();
+    let mut appended_repairs = Vec::new();
+    for mut pending in parsed.repairs {
+        if pending.source_relative
+            && let (Some(start), Some(end)) = (
+                nested_literal_source_offset(
+                    candidate,
+                    source_text,
+                    nested_text,
+                    pending.operation.input_byte_start,
+                ),
+                nested_literal_source_offset(
+                    candidate,
+                    source_text,
+                    nested_text,
+                    pending.operation.input_byte_end,
+                ),
+            )
+        {
+            pending.operation.source_range = Some(SourceRange::new(start, end, source_index));
+        }
+        appended_repairs.push(pending.operation);
+    }
+    candidate.repairs.extend(appended_repairs);
+
+    if candidate.json_error.is_none()
+        && let Some(error) = parsed.original_error
+        && let Some(absolute) =
+            nested_literal_source_offset(candidate, source_text, nested_text, error.byte_offset)
+    {
+        let location = source_index.line_column(absolute);
+        candidate.json_error = Some(JsonErrorPosition {
+            byte_offset: absolute,
+            line: location.line,
+            column: location.column,
+            message: error.message,
+        });
+    }
+
+    for repair in &candidate.repairs[repair_start..] {
+        let mut diagnostic = Diagnostic::warning(
+            "grist.model_output.json",
+            "json.repaired",
+            format!("applied bounded nested JSON repair {:?}", repair.kind),
+        )
+        .partial();
+        if let Some(range) = repair.source_range.clone() {
+            diagnostic = diagnostic.with_range(range);
+        }
+        candidate.diagnostics.push(diagnostic);
+    }
+    candidate.status = CandidateStatus::Recovered;
+}
+
+fn nested_literal_source_offset(
+    candidate: &ModelOutputCandidate,
+    source_text: &str,
+    nested_text: &str,
+    decoded_offset: usize,
+) -> Option<usize> {
+    let range = candidate.raw_range.as_ref()?;
+    let raw = source_text.get(range.byte_start..range.byte_end)?;
+    let literal = serde_json::to_string(nested_text).ok()?;
+    let relative_start = raw.find(&literal)?;
+    let literal_offset = decoded_offset_to_json_literal_offset(&literal, decoded_offset)?;
+    Some(range.byte_start + relative_start + literal_offset)
+}
+
+fn decoded_offset_to_json_literal_offset(literal: &str, target: usize) -> Option<usize> {
+    let bytes = literal.as_bytes();
+    if bytes.first() != Some(&b'"') {
+        return None;
+    }
+    let mut encoded = 1usize;
+    let mut decoded = 0usize;
+    while decoded < target {
+        match bytes.get(encoded).copied()? {
+            b'\\' => {
+                let escape = bytes.get(encoded + 1).copied()?;
+                if escape == b'u' {
+                    // Mapping UTF-16 escape pairs to UTF-8 byte offsets is not
+                    // safely one-to-one. Keep the repair but omit its range.
+                    return None;
+                }
+                encoded += 2;
+                decoded += 1;
+            }
+            b'"' => return None,
+            _ => {
+                let ch = literal.get(encoded..)?.chars().next()?;
+                encoded += ch.len_utf8();
+                decoded += ch.len_utf8();
+            }
+        }
+    }
+    (decoded == target).then_some(encoded)
+}
+
+fn retain_json_failure(
+    candidate: &mut ModelOutputCandidate,
+    failure: &JsonishParseFailure,
+    source_text: &str,
+    source_start: usize,
+    source_index: &LineIndex,
+) {
+    let pending = pending_json_error(source_text, &failure.error);
+    let absolute = source_start + pending.byte_offset;
+    let location = source_index.line_column(absolute);
+    let error = JsonErrorPosition {
+        byte_offset: absolute,
+        line: location.line,
+        column: location.column,
+        message: pending.message,
+    };
+    candidate.status = if pending.incomplete {
+        CandidateStatus::Incomplete
+    } else {
+        CandidateStatus::Malformed
+    };
+    candidate.confidence = 0.4;
+    candidate.json_error = Some(error.clone());
+    let code = if failure.repair_limit_exceeded {
+        "json.repair_bounds_exceeded"
+    } else if pending.incomplete {
+        "json.incomplete"
+    } else {
+        "json.malformed"
+    };
+    let message = format!(
+        "JSON candidate is {} at byte {} (line {}, column {}): {}",
+        if pending.incomplete {
+            "incomplete"
+        } else {
+            "malformed"
+        },
+        error.byte_offset,
+        error.line,
+        error.column,
+        error.message
+    );
+    let range_end = absolute
+        .saturating_add(1)
+        .min(source_start + source_text.len());
+    let mut diagnostic = if pending.incomplete {
+        Diagnostic::warning("grist.model_output.json", code, message).partial()
+    } else {
+        Diagnostic::error("grist.model_output.json", code, message)
+    };
+    diagnostic = diagnostic.with_range(SourceRange::new(absolute, range_end, source_index));
+    candidate.diagnostics.push(diagnostic);
 }
 
 fn failures_from_candidate(
@@ -1417,6 +1842,12 @@ fn failures_from_candidate(
         0,
         if candidate.status == CandidateStatus::Malformed {
             "malformed_candidate"
+        } else if candidate
+            .validation
+            .as_ref()
+            .is_some_and(|validation| !validation.valid)
+        {
+            "schema_validation_failed"
         } else {
             "candidate_error"
         },
@@ -1451,94 +1882,354 @@ fn failure_record(
 
 struct JsonishParse {
     value: Value,
+    original_value: Option<Value>,
+    repaired_text: Option<String>,
     normalizations: Vec<String>,
+    repairs: Vec<PendingRepair>,
+    original_error: Option<PendingJsonError>,
+}
+
+struct PendingRepair {
+    operation: RepairOperation,
+    source_relative: bool,
+}
+
+struct PendingJsonError {
+    byte_offset: usize,
+    message: String,
+    incomplete: bool,
+}
+
+#[derive(Debug)]
+struct JsonishParseFailure {
+    error: serde_json::Error,
+    repair_limit_exceeded: bool,
+}
+
+impl std::fmt::Display for JsonishParseFailure {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.repair_limit_exceeded {
+            write!(formatter, "{} (repair bounds exceeded)", self.error)
+        } else {
+            self.error.fmt(formatter)
+        }
+    }
 }
 
 fn parse_jsonish_value(text: &str) -> Result<Value, serde_json::Error> {
-    parse_jsonish_value_with_repairs(text).map(|parsed| parsed.value)
+    parse_jsonish_value_with_repairs(text)
+        .map(|parsed| parsed.value)
+        .map_err(|failure| failure.error)
 }
 
-fn parse_jsonish_value_with_repairs(text: &str) -> Result<JsonishParse, serde_json::Error> {
-    match serde_json::from_str(text) {
+fn parse_jsonish_value_with_repairs(text: &str) -> Result<JsonishParse, JsonishParseFailure> {
+    parse_jsonish_value_with_limits(text, &RepairLimits::default())
+}
+
+fn parse_jsonish_value_with_limits(
+    text: &str,
+    limits: &RepairLimits,
+) -> Result<JsonishParse, JsonishParseFailure> {
+    match serde_json::from_str::<Value>(text) {
         Ok(value) => Ok(JsonishParse {
+            original_value: Some(value.clone()),
             value,
+            repaired_text: None,
             normalizations: Vec::new(),
+            repairs: Vec::new(),
+            original_error: None,
         }),
         Err(original_err) => {
-            let (fixed, normalizations) = fix_jsonish_with_normalizations(text);
-            serde_json::from_str(&fixed)
+            let original_error = pending_json_error(text, &original_err);
+            let repair = fix_jsonish_with_normalizations(text, limits);
+            if repair.limit_exceeded {
+                return Err(JsonishParseFailure {
+                    error: original_err,
+                    repair_limit_exceeded: true,
+                });
+            }
+            serde_json::from_str(&repair.text)
                 .map(|value| JsonishParse {
                     value,
-                    normalizations,
+                    original_value: None,
+                    repaired_text: Some(repair.text),
+                    normalizations: repair.normalizations,
+                    repairs: repair.repairs,
+                    original_error: Some(original_error),
                 })
-                .map_err(|_| original_err)
+                .map_err(|_| JsonishParseFailure {
+                    error: original_err,
+                    repair_limit_exceeded: false,
+                })
         }
     }
 }
 
-fn fix_jsonish_with_normalizations(input: &str) -> (String, Vec<String>) {
-    let mut normalizations = Vec::new();
-    let mut out = input.trim().to_string();
-    for (from, to, name) in [
-        ("None", "null", "replaced_python_none"),
-        ("True", "true", "replaced_python_true"),
-        ("False", "false", "replaced_python_false"),
-    ] {
-        let next = out.replace(from, to);
-        if next != out {
-            normalizations.push(name.to_string());
-            out = next;
+struct RepairAttempt {
+    text: String,
+    normalizations: Vec<String>,
+    repairs: Vec<PendingRepair>,
+    limit_exceeded: bool,
+}
+
+fn fix_jsonish_with_normalizations(input: &str, limits: &RepairLimits) -> RepairAttempt {
+    let mut attempt = RepairAttempt {
+        text: input.trim().to_string(),
+        normalizations: Vec::new(),
+        repairs: Vec::new(),
+        limit_exceeded: false,
+    };
+    let mut changed_bytes = 0usize;
+    let mut source_pristine = attempt.text == input;
+
+    let stages: &[(RepairKind, &str, fn(&str) -> String)] = &[
+        (
+            RepairKind::RemovePrematureClosingBrace,
+            "removed_premature_closing_brace",
+            remove_unambiguous_premature_closing_brace,
+        ),
+        (
+            RepairKind::ReplacePythonLiteral,
+            "replaced_python_literals",
+            replace_python_literals,
+        ),
+        (
+            RepairKind::RemoveRedundantObjectOpener,
+            "removed_redundant_object_opener",
+            remove_redundant_object_openers,
+        ),
+        (
+            RepairKind::QuoteSingleQuotedString,
+            "quoted_single_quoted_strings",
+            quote_single_quoted_strings,
+        ),
+        (
+            RepairKind::QuoteUnquotedObjectKey,
+            "quoted_unquoted_object_keys",
+            quote_unquoted_object_keys,
+        ),
+        (
+            RepairKind::PreserveBackslashCommand,
+            "preserved_backslash_command",
+            preserve_backslash_commands_in_strings,
+        ),
+        (
+            RepairKind::EscapeUnescapedStringQuote,
+            "escaped_unescaped_string_quote",
+            escape_unescaped_string_boundary_quotes,
+        ),
+        (
+            RepairKind::InsertMissingComma,
+            "inserted_missing_comma",
+            insert_missing_commas_between_members,
+        ),
+        (
+            RepairKind::RemoveTrailingComma,
+            "removed_trailing_commas",
+            remove_trailing_commas,
+        ),
+        (
+            RepairKind::CloseUnterminatedContainer,
+            "closed_unterminated_object",
+            complete_unterminated_json_containers,
+        ),
+    ];
+
+    for (kind, normalization, repair) in stages {
+        // Each stage is a fallback for still-invalid JSON. Once a bounded edit
+        // produces valid JSON, later heuristics must not rewrite valid data.
+        if serde_json::from_str::<Value>(&attempt.text).is_ok() {
+            break;
+        }
+        if !apply_repair(
+            &mut attempt,
+            &mut changed_bytes,
+            &mut source_pristine,
+            limits,
+            kind.clone(),
+            normalization,
+            *repair,
+        ) {
+            attempt.limit_exceeded = true;
+            break;
         }
     }
-    apply_repair(
-        &mut out,
-        &mut normalizations,
-        remove_redundant_object_openers,
-        "removed_redundant_object_opener",
-    );
-    apply_repair(
-        &mut out,
-        &mut normalizations,
-        quote_single_quoted_strings,
-        "quoted_single_quoted_strings",
-    );
-    apply_repair(
-        &mut out,
-        &mut normalizations,
-        quote_unquoted_object_keys,
-        "quoted_unquoted_object_keys",
-    );
-    apply_repair(
-        &mut out,
-        &mut normalizations,
-        preserve_backslash_commands_in_strings,
-        "preserved_backslash_command",
-    );
-    apply_repair(
-        &mut out,
-        &mut normalizations,
-        escape_unescaped_string_boundary_quotes,
-        "escaped_unescaped_string_quote",
-    );
-    apply_repair(
-        &mut out,
-        &mut normalizations,
-        insert_missing_commas_between_members,
-        "inserted_missing_comma",
-    );
-    apply_repair(
-        &mut out,
-        &mut normalizations,
-        remove_trailing_commas,
-        "removed_trailing_commas",
-    );
-    apply_repair(
-        &mut out,
-        &mut normalizations,
-        complete_unterminated_json_containers,
-        "closed_unterminated_object",
-    );
-    (out, normalizations)
+    attempt
+}
+
+fn pending_json_error(text: &str, error: &serde_json::Error) -> PendingJsonError {
+    let line_start = text
+        .split_inclusive('\n')
+        .take(error.line().saturating_sub(1))
+        .map(str::len)
+        .sum::<usize>();
+    let byte_offset = line_start
+        .saturating_add(error.column().saturating_sub(1))
+        .min(text.len());
+    PendingJsonError {
+        byte_offset,
+        message: error.to_string(),
+        incomplete: error.is_eof(),
+    }
+}
+
+fn replace_python_literals(input: &str) -> String {
+    let bytes = input.as_bytes();
+    let mut output = String::with_capacity(input.len());
+    let mut offset = 0usize;
+    let mut in_string = false;
+    let mut escaped = false;
+
+    while offset < bytes.len() {
+        let byte = bytes[offset];
+        if in_string {
+            output.push(byte as char);
+            if escaped {
+                escaped = false;
+            } else if byte == b'\\' {
+                escaped = true;
+            } else if byte == b'"' {
+                in_string = false;
+            }
+            offset += 1;
+            continue;
+        }
+        if byte == b'"' {
+            in_string = true;
+            output.push('"');
+            offset += 1;
+            continue;
+        }
+
+        let replacement = [("None", "null"), ("True", "true"), ("False", "false")]
+            .into_iter()
+            .find(|(token, _)| {
+                input[offset..].starts_with(token)
+                    && !bytes
+                        .get(offset.wrapping_sub(1))
+                        .is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
+                    && !bytes
+                        .get(offset + token.len())
+                        .is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_')
+            });
+        if let Some((token, replacement)) = replacement {
+            output.push_str(replacement);
+            offset += token.len();
+        } else {
+            let ch = input[offset..]
+                .chars()
+                .next()
+                .expect("offset remains on a UTF-8 boundary");
+            output.push(ch);
+            offset += ch.len_utf8();
+        }
+    }
+    output
+}
+
+/// Delete exactly one premature tool-call object closer only when that one-byte
+/// edit makes the complete candidate valid JSON. Multiple possible edits fail
+/// closed, as do ordinary objects without a recognizable tool-call shape.
+fn remove_unambiguous_premature_closing_brace(input: &str) -> String {
+    let bytes = input.as_bytes();
+    let mut stack = Vec::<(u8, usize)>::new();
+    let mut in_string = false;
+    let mut escaped = false;
+    let mut successful = Vec::new();
+
+    for (offset, byte) in bytes.iter().copied().enumerate() {
+        if in_string {
+            if escaped {
+                escaped = false;
+            } else if byte == b'\\' {
+                escaped = true;
+            } else if byte == b'"' {
+                in_string = false;
+            }
+            continue;
+        }
+        match byte {
+            b'"' => in_string = true,
+            b'{' | b'[' => stack.push((byte, offset)),
+            b'}' => {
+                if let Some((b'{', object_start)) = stack.last().copied()
+                    && follows_comma_and_quoted_member(bytes, offset + 1)
+                    && looks_like_tool_call_prefix(&input[object_start..offset])
+                {
+                    let mut repaired = String::with_capacity(input.len() - 1);
+                    repaired.push_str(&input[..offset]);
+                    repaired.push_str(&input[offset + 1..]);
+                    if serde_json::from_str::<Value>(&repaired).is_ok() {
+                        successful.push(repaired);
+                    }
+                }
+                if stack.last().is_some_and(|(open, _)| *open == b'{') {
+                    stack.pop();
+                }
+            }
+            b']' => {
+                if stack.last().is_some_and(|(open, _)| *open == b'[') {
+                    stack.pop();
+                }
+            }
+            _ => {}
+        }
+    }
+    match successful.as_slice() {
+        [repaired] => repaired.clone(),
+        _ => input.to_string(),
+    }
+}
+
+fn follows_comma_and_quoted_member(bytes: &[u8], mut offset: usize) -> bool {
+    while bytes.get(offset).is_some_and(u8::is_ascii_whitespace) {
+        offset += 1;
+    }
+    if bytes.get(offset) != Some(&b',') {
+        return false;
+    }
+    offset += 1;
+    while bytes.get(offset).is_some_and(u8::is_ascii_whitespace) {
+        offset += 1;
+    }
+    if bytes.get(offset) != Some(&b'"') {
+        return false;
+    }
+    offset += 1;
+    let mut escaped = false;
+    while let Some(byte) = bytes.get(offset).copied() {
+        if escaped {
+            escaped = false;
+        } else if byte == b'\\' {
+            escaped = true;
+        } else if byte == b'"' {
+            offset += 1;
+            break;
+        }
+        offset += 1;
+    }
+    while bytes.get(offset).is_some_and(u8::is_ascii_whitespace) {
+        offset += 1;
+    }
+    bytes.get(offset) == Some(&b':')
+}
+
+fn looks_like_tool_call_prefix(prefix: &str) -> bool {
+    let mut closed = String::with_capacity(prefix.len() + 1);
+    closed.push_str(prefix);
+    closed.push('}');
+    let Ok(Value::Object(object)) = serde_json::from_str::<Value>(&closed) else {
+        return false;
+    };
+    let direct_call = object.contains_key("name") && object.contains_key("arguments");
+    let direct_rpc = object.contains_key("method") && object.contains_key("params");
+    let wrapped_call = object
+        .get("function")
+        .and_then(Value::as_object)
+        .is_some_and(|function| {
+            function.contains_key("name") && function.contains_key("arguments")
+        });
+    direct_call || direct_rpc || wrapped_call
 }
 
 /// Turns model-emitted command text such as `\lambda`, `\Delta`, and `\frac`
@@ -1650,16 +2341,70 @@ fn remove_redundant_object_openers(input: &str) -> String {
 }
 
 fn apply_repair(
-    out: &mut String,
-    normalizations: &mut Vec<String>,
+    attempt: &mut RepairAttempt,
+    changed_bytes: &mut usize,
+    source_pristine: &mut bool,
+    limits: &RepairLimits,
+    kind: RepairKind,
+    normalization: &str,
     repair: fn(&str) -> String,
-    name: &str,
-) {
-    let next = repair(out);
-    if next != *out {
-        normalizations.push(name.to_string());
-        *out = next;
+) -> bool {
+    let next = repair(&attempt.text);
+    if next == attempt.text {
+        return true;
     }
+    let (start, end, replacement_end) = changed_span(&attempt.text, &next);
+    let original_text = attempt.text[start..end].to_string();
+    let replacement_text = next[start..replacement_end].to_string();
+    let operation_bytes = original_text.len().max(replacement_text.len());
+    if attempt.repairs.len() >= limits.max_operations
+        || changed_bytes.saturating_add(operation_bytes) > limits.max_changed_bytes
+    {
+        return false;
+    }
+    attempt.normalizations.push(normalization.to_string());
+    attempt.repairs.push(PendingRepair {
+        operation: RepairOperation {
+            kind,
+            input_byte_start: start,
+            input_byte_end: end,
+            original_text,
+            replacement_text,
+            source_range: None,
+        },
+        source_relative: *source_pristine,
+    });
+    *changed_bytes += operation_bytes;
+    *source_pristine = false;
+    attempt.text = next;
+    true
+}
+
+fn changed_span(before: &str, after: &str) -> (usize, usize, usize) {
+    let mut prefix = 0usize;
+    for ((before_offset, before_char), (after_offset, after_char)) in
+        before.char_indices().zip(after.char_indices())
+    {
+        if before_char != after_char {
+            break;
+        }
+        prefix = (before_offset + before_char.len_utf8()).min(after_offset + after_char.len_utf8());
+    }
+
+    let before_tail = &before[prefix..];
+    let after_tail = &after[prefix..];
+    let mut suffix = 0usize;
+    for (before_char, after_char) in before_tail.chars().rev().zip(after_tail.chars().rev()) {
+        if before_char != after_char {
+            break;
+        }
+        suffix += before_char.len_utf8();
+    }
+    (
+        prefix,
+        before.len().saturating_sub(suffix),
+        after.len().saturating_sub(suffix),
+    )
 }
 
 fn quote_single_quoted_strings(input: &str) -> String {

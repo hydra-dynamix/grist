@@ -106,6 +106,35 @@
       ],
       "type": "object"
     },
+    "AliasApplication": {
+      "properties": {
+        "from": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/AliasKind"
+        },
+        "normalized_value": true,
+        "original_value": true,
+        "to": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "from",
+        "kind",
+        "to"
+      ],
+      "type": "object"
+    },
+    "AliasKind": {
+      "enum": [
+        "field",
+        "command",
+        "argument"
+      ],
+      "type": "string"
+    },
     "BoundingBox": {
       "description": "A rectangle in a declared coordinate system.",
       "properties": {
@@ -673,6 +702,37 @@
       ],
       "type": "object"
     },
+    "JsonErrorPosition": {
+      "properties": {
+        "byte_offset": {
+          "description": "Zero-based byte offset in the original complete model-output source.",
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "column": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "line": {
+          "description": "One-based line and column reported by the JSON parser.",
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "byte_offset",
+        "column",
+        "line",
+        "message"
+      ],
+      "type": "object"
+    },
     "LocationComponent": {
       "description": "One location inside its immediately preceding parent component.",
       "oneOf": [
@@ -1158,6 +1218,13 @@
     },
     "ModelOutputCandidate": {
       "properties": {
+        "alias_applications": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/AliasApplication"
+          },
+          "type": "array"
+        },
         "argument_name": {
           "type": [
             "string",
@@ -1186,11 +1253,24 @@
         "id": {
           "type": "string"
         },
+        "json_error": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/JsonErrorPosition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "normalizations": {
           "items": {
             "type": "string"
           },
           "type": "array"
+        },
+        "original_value": {
+          "description": "The value before repair projection and runtime alias normalization."
         },
         "raw_range": {
           "anyOf": [
@@ -1208,8 +1288,26 @@
             "null"
           ]
         },
+        "repaired_text": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "repairs": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/RepairOperation"
+          },
+          "type": "array"
+        },
         "status": {
           "$ref": "#/definitions/CandidateStatus"
+        },
+        "trusted": {
+          "default": false,
+          "description": "Grist parses and validates structure but never establishes downstream trust.",
+          "type": "boolean"
         },
         "validation": {
           "anyOf": [
@@ -1221,7 +1319,9 @@
             }
           ]
         },
-        "value": true
+        "value": {
+          "description": "The repaired and alias-normalized value. Parsing does not make it trusted."
+        }
       },
       "required": [
         "confidence",
@@ -1293,6 +1393,66 @@
         "report_parser_defect"
       ],
       "type": "string"
+    },
+    "RepairKind": {
+      "enum": [
+        "remove_premature_closing_brace",
+        "replace_python_literal",
+        "remove_redundant_object_opener",
+        "quote_single_quoted_string",
+        "quote_unquoted_object_key",
+        "preserve_backslash_command",
+        "escape_unescaped_string_quote",
+        "insert_missing_comma",
+        "remove_trailing_comma",
+        "close_unterminated_container"
+      ],
+      "type": "string"
+    },
+    "RepairOperation": {
+      "properties": {
+        "input_byte_end": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "input_byte_start": {
+          "description": "Byte range in the input to this operation (half-open and zero-based).",
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "kind": {
+          "$ref": "#/definitions/RepairKind"
+        },
+        "original_text": {
+          "description": "Exact bytes replaced by this operation.",
+          "type": "string"
+        },
+        "replacement_text": {
+          "description": "Exact replacement bytes; empty for a bounded deletion.",
+          "type": "string"
+        },
+        "source_range": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Exact source range when the operation applies directly to original candidate bytes."
+        }
+      },
+      "required": [
+        "input_byte_end",
+        "input_byte_start",
+        "kind",
+        "original_text",
+        "replacement_text"
+      ],
+      "type": "object"
     },
     "SchemaValidationResult": {
       "properties": {

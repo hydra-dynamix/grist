@@ -830,22 +830,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                         .payload
                         .as_ref()
                         .ok_or("model-output operation produced no payload")?;
-                    let selected = payload
-                        .get("selected_candidate_id")
-                        .and_then(serde_json::Value::as_str)
-                        .ok_or("no selected model-output JSON value")?;
-                    let value = payload
-                        .get("candidates")
-                        .and_then(serde_json::Value::as_array)
-                        .and_then(|candidates| {
-                            candidates.iter().find(|candidate| {
-                                candidate.get("id").and_then(serde_json::Value::as_str)
-                                    == Some(selected)
-                            })
-                        })
-                        .and_then(|candidate| candidate.get("value"))
-                        .ok_or("no selected model-output JSON value")?;
-                    print_json(value)?;
+                    print_json(selected_model_output_json_value(payload)?)?;
                 } else {
                     print_json(&report)?;
                 }
@@ -1855,6 +1840,72 @@ fn load_json_value_optional(
     path: Option<&PathBuf>,
 ) -> Result<Option<serde_json::Value>, Box<dyn std::error::Error>> {
     path.map(load_json_value).transpose()
+}
+
+#[cfg(feature = "cli")]
+fn selected_model_output_json_value(
+    payload: &serde_json::Value,
+) -> Result<&serde_json::Value, String> {
+    let candidates = payload
+        .get("candidates")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| "model-output payload has no candidate list".to_string())?;
+    let selected = match payload
+        .get("selected_candidate_id")
+        .and_then(serde_json::Value::as_str)
+    {
+        Some(selected) => selected,
+        None if candidates.is_empty() => {
+            return Err("no model-output candidate was detected".to_string());
+        }
+        None if payload.get("status").and_then(serde_json::Value::as_str) == Some("ambiguous") => {
+            return Err(format!(
+                "ambiguous model-output candidates: {} candidates were retained and none was selected",
+                candidates.len()
+            ));
+        }
+        None => return Err("no model-output candidate was selected".to_string()),
+    };
+    let candidate = candidates
+        .iter()
+        .find(|candidate| candidate.get("id").and_then(serde_json::Value::as_str) == Some(selected))
+        .ok_or_else(|| format!("selected model-output candidate {selected} was not retained"))?;
+    let status = candidate
+        .get("status")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("unknown");
+    if matches!(status, "incomplete" | "malformed") {
+        let position = candidate.get("json_error");
+        let suffix = position
+            .map(|position| {
+                format!(
+                    " at byte {} (line {}, column {}): {}",
+                    position
+                        .get("byte_offset")
+                        .and_then(serde_json::Value::as_u64)
+                        .unwrap_or_default(),
+                    position
+                        .get("line")
+                        .and_then(serde_json::Value::as_u64)
+                        .unwrap_or_default(),
+                    position
+                        .get("column")
+                        .and_then(serde_json::Value::as_u64)
+                        .unwrap_or_default(),
+                    position
+                        .get("message")
+                        .and_then(serde_json::Value::as_str)
+                        .unwrap_or("JSON parse failed")
+                )
+            })
+            .unwrap_or_default();
+        return Err(format!(
+            "selected model-output candidate {selected} is {status}{suffix}"
+        ));
+    }
+    candidate
+        .get("value")
+        .ok_or_else(|| format!("selected model-output candidate {selected} has no JSON value"))
 }
 
 #[cfg(feature = "cli")]

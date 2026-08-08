@@ -44,6 +44,24 @@
         "field_aliases"
       ],
       "type": "object"
+    },
+    "RepairLimits": {
+      "additionalProperties": false,
+      "properties": {
+        "max_changed_bytes": {
+          "default": 65536,
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "max_operations": {
+          "default": 32,
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
     }
   },
   "properties": {
@@ -77,6 +95,17 @@
       "default": false,
       "description": "Enable legacy Python-style command calls such as `Namespace.Command(arg={...})`.\n\nJSON-oriented output is the default primary model-output path. Callers that still need Python-style command parsing can opt in with this flag and, preferably, explicit accepted command/argument names.",
       "type": "boolean"
+    },
+    "repair_limits": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/RepairLimits"
+        }
+      ],
+      "default": {
+        "max_changed_bytes": 65536,
+        "max_operations": 32
+      }
     },
     "schema": {
       "default": null
