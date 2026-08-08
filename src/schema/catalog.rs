@@ -1845,6 +1845,42 @@ fn registrations() -> Vec<Registration> {
         );
     }
 
+    add!(
+        "code",
+        "code",
+        SchemaVersion::CODE_V1,
+        SchemaKind::Payload,
+        "grist.code.v1.schema.json",
+        true,
+        crate::code::CodeFile
+    );
+    add!(
+        "code-envelope",
+        "envelope",
+        SchemaVersion::ENVELOPE_V2,
+        SchemaKind::Envelope,
+        "grist.code-envelope.v2.schema.json",
+        true,
+        crate::core::Envelope<crate::code::CodeFile>
+    );
+    add!(
+        "code-options",
+        "code-options",
+        crate::code::CODE_OPTIONS_SCHEMA_V1,
+        SchemaKind::Options,
+        "grist.code-options.v1.schema.json",
+        false,
+        crate::code::CodeIngestOptions
+    );
+    add!(
+        "tree-sitter-language-adapter",
+        "code",
+        crate::code::TREE_SITTER_ADAPTER_SCHEMA_V1,
+        SchemaKind::Contract,
+        "grist.tree-sitter-language-adapter.v1.schema.json",
+        false,
+        crate::code::TreeSitterAdapterMetadata
+    );
     #[cfg(feature = "rust")]
     {
         add!(

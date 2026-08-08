@@ -1,19 +1,8 @@
 use super::Signal;
-#[cfg(any(
-    feature = "rust",
-    feature = "python",
-    feature = "javascript",
-    feature = "typescript"
-))]
 use crate::core::DetectionEvidenceKind;
+use crate::registry::ParserRegistry;
 
-#[cfg(any(
-    feature = "rust",
-    feature = "python",
-    feature = "javascript",
-    feature = "typescript"
-))]
-pub(super) fn signals(text: &str) -> Vec<Signal> {
+pub(super) fn signals(text: &str, registry: &ParserRegistry) -> Vec<Signal> {
     let mut signals = Vec::new();
     #[cfg(feature = "rust")]
     if rust_markers(text) {
@@ -51,25 +40,19 @@ pub(super) fn signals(text: &str) -> Vec<Signal> {
             signals.push(signal);
         }
     }
+    for probe in registry.grammar_probes(text) {
+        if let Some(signal) = probe_signal(
+            &probe.format,
+            probe.media_type.as_deref().unwrap_or("text/plain"),
+            &probe.parser_id,
+            probe.has_error,
+            probe.named_children,
+        ) {
+            signals.push(signal);
+        }
+    }
     signals
 }
-
-#[cfg(not(any(
-    feature = "rust",
-    feature = "python",
-    feature = "javascript",
-    feature = "typescript"
-)))]
-pub(super) fn signals(_text: &str) -> Vec<Signal> {
-    Vec::new()
-}
-
-#[cfg(any(
-    feature = "rust",
-    feature = "python",
-    feature = "javascript",
-    feature = "typescript"
-))]
 fn probe_signal(
     format: &str,
     media: &str,

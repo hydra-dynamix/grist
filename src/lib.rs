@@ -7,6 +7,7 @@ pub mod calendar_contact;
 pub mod capabilities;
 #[cfg(feature = "cli")]
 pub mod cli;
+pub mod code;
 #[cfg(feature = "columnar")]
 pub mod columnar;
 #[cfg(all(feature = "model-output", feature = "rust"))]

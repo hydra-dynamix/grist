@@ -129,6 +129,7 @@ impl SchemaVersion {
     pub const PYTHON_CODE_V1: &'static str = "grist/python-code/v1";
     pub const JAVASCRIPT_CODE_V1: &'static str = "grist/javascript-code/v1";
     pub const TYPESCRIPT_CODE_V1: &'static str = "grist/typescript-code/v1";
+    pub const CODE_V1: &'static str = "grist/code/v1";
     pub const LATEX_V1: &'static str = "grist/latex/v1";
     pub const BIBLIOGRAPHY_V1: &'static str = "grist/bibliography/v1";
     pub const BIBLIOGRAPHY_CITATION_RESOLUTION_V1: &'static str =
@@ -209,6 +210,7 @@ pub enum ArtifactKind {
     JavaScriptCode,
     #[serde(rename = "typescript_code")]
     TypeScriptCode,
+    Code,
     Latex,
     Bibliography,
     Serialization,

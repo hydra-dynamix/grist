@@ -21,8 +21,21 @@ pub struct ParserContext<'a> {
 
 pub type ParserError = Box<Diagnostic>;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GrammarProbe {
+    pub format: String,
+    pub media_type: Option<String>,
+    pub parser_id: String,
+    pub has_error: bool,
+    pub named_children: usize,
+}
+
 pub trait Parser: Send + Sync + 'static {
     fn parse(&self, context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserError>;
+
+    fn grammar_probe(&self, _text: &str) -> Option<GrammarProbe> {
+        None
+    }
 }
 
 impl<'a> ParserContext<'a> {

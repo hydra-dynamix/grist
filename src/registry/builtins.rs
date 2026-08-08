@@ -79,6 +79,7 @@ fn descriptor(
             | ArtifactKind::PythonCode
             | ArtifactKind::JavaScriptCode
             | ArtifactKind::TypeScriptCode
+            | ArtifactKind::Code
     ) {
         capabilities.insert(Capability::DocumentGraphProjection);
     }
@@ -202,6 +203,7 @@ fn register_feature_parsers(registry: &mut ParserRegistry) -> Result<(), ParserR
     register_python(registry)?;
     register_javascript(registry)?;
     register_typescript(registry)?;
+    register_secondary_code(registry)?;
     register_serialization(registry)?;
     register_columnar(registry)?;
     register_sqlite(registry)?;
@@ -1570,6 +1572,34 @@ fn register_typescript(registry: &mut ParserRegistry) -> Result<(), ParserRegist
     Ok(())
 }
 
+#[cfg(feature = "secondary-code")]
+fn register_secondary_code(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    let adapters = crate::code::enabled_builtin_adapters()
+        .map_err(|error| ParserRegistryError::Invalid(error.to_string()))?;
+    let mut enabled = adapters
+        .into_iter()
+        .map(|adapter| (adapter.config().enabled_feature.clone(), adapter))
+        .collect::<std::collections::BTreeMap<_, _>>();
+    for config in crate::code::builtin_language_configs() {
+        if let Some(adapter) = enabled.remove(&config.enabled_feature) {
+            let descriptor = adapter.builtin_descriptor();
+            registry.register_builtin(descriptor, Arc::new(adapter))?;
+        } else {
+            let feature = config.enabled_feature.clone();
+            register_disabled(registry, config.descriptor(ParserOrigin::BuiltIn), &feature)?;
+        }
+    }
+    Ok(())
+}
+
+#[cfg(not(feature = "secondary-code"))]
+fn register_secondary_code(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    for config in crate::code::builtin_language_configs() {
+        let feature = config.enabled_feature.clone();
+        register_disabled(registry, config.descriptor(ParserOrigin::BuiltIn), &feature)?;
+    }
+    Ok(())
+}
 #[cfg(feature = "columnar")]
 fn register_columnar(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
     for (id, format, extensions, media, parser) in [
@@ -2330,18 +2360,6 @@ fn unimplemented_formats() -> &'static [(&'static str, &'static str, &'static st
         ("ost", "ost", "email-message"),
         ("tnef", "dat", "email-message"),
         ("smime", "p7m", "email-message"),
-        ("go", "go", "code"),
-        ("java", "java", "code"),
-        ("kotlin", "kt", "code"),
-        ("c", "c", "code"),
-        ("cpp", "cpp", "code"),
-        ("csharp", "cs", "code"),
-        ("ruby", "rb", "code"),
-        ("php", "php", "code"),
-        ("swift", "swift", "code"),
-        ("bash", "sh", "code"),
-        ("sql", "sql", "code"),
-        ("css", "css", "code"),
         ("zip", "zip", "archives"),
         ("tar", "tar", "archives"),
         ("gzip", "gz", "archives"),

@@ -48,7 +48,18 @@ pub enum ContentKind {
     TypeScript,
     Tsx,
     Jsx,
+    Go,
+    Java,
+    Kotlin,
+    C,
+    Cpp,
+    Csharp,
+    Ruby,
+    Php,
+    Swift,
     Shell,
+    Sql,
+    Css,
     Latex,
     Bibliography,
     Csv,
@@ -391,7 +402,7 @@ pub fn detect_with_registry(
         &mut diagnostics,
     ));
     if let Some(sample) = text::sample(bytes, options.max_probe_bytes) {
-        signals.extend(grammar::signals(&sample.text));
+        signals.extend(grammar::signals(&sample.text, registry));
     }
     #[cfg(feature = "structured-binary")]
     #[cfg(feature = "columnar")]
@@ -840,6 +851,18 @@ fn add_special_filename_signal(signals: &mut Vec<Signal>, filename: &str) {
 }
 
 fn add_extension_signal(signals: &mut Vec<Signal>, extension: &str) {
+    if extension == "h" {
+        for (format, media_type) in [("c", "text/x-c"), ("cpp", "text/x-c++src")] {
+            signals.push(Signal::new(
+                format,
+                Some(media_type),
+                0.55,
+                DetectionEvidenceKind::Extension,
+                ".h extension shared by C and C++",
+            ));
+        }
+        return;
+    }
     let Some((format, media_type)) = extension_identity(extension) else {
         return;
     };
@@ -921,7 +944,18 @@ fn extension_identity(extension: &str) -> Option<(&'static str, &'static str)> {
         "ts" | "mts" | "cts" => ("typescript", "text/typescript"),
         "tsx" => ("tsx", "text/tsx"),
         "jsx" => ("jsx", "text/jsx"),
+        "go" => ("go", "text/x-go"),
+        "java" => ("java", "text/x-java"),
+        "kt" | "kts" => ("kotlin", "text/x-kotlin"),
+        "c" => ("c", "text/x-c"),
+        "cc" | "cpp" | "cxx" | "hpp" | "hh" | "hxx" => ("cpp", "text/x-c++src"),
+        "cs" => ("csharp", "text/x-csharp"),
+        "rb" | "rake" => ("ruby", "text/x-ruby"),
+        "php" | "phtml" => ("php", "text/x-php"),
+        "swift" => ("swift", "text/x-swift"),
         "sh" | "bash" => ("shell", "text/x-shellscript"),
+        "sql" => ("sql", "application/sql"),
+        "css" => ("css", "text/css"),
         "md" | "markdown" => ("markdown", "text/markdown"),
         "rmd" => ("r_markdown", "text/x-r-markdown"),
         "qmd" => ("quarto", "text/x-quarto"),
@@ -1128,7 +1162,18 @@ fn format_for_kind(kind: &ContentKind) -> Option<&'static str> {
         ContentKind::TypeScript => "typescript",
         ContentKind::Tsx => "tsx",
         ContentKind::Jsx => "jsx",
+        ContentKind::Go => "go",
+        ContentKind::Java => "java",
+        ContentKind::Kotlin => "kotlin",
+        ContentKind::C => "c",
+        ContentKind::Cpp => "cpp",
+        ContentKind::Csharp => "csharp",
+        ContentKind::Ruby => "ruby",
+        ContentKind::Php => "php",
+        ContentKind::Swift => "swift",
         ContentKind::Shell => "shell",
+        ContentKind::Sql => "sql",
+        ContentKind::Css => "css",
         ContentKind::Latex => "latex",
         ContentKind::Bibliography => "bibtex",
         ContentKind::Csv => "csv",
@@ -1192,7 +1237,18 @@ fn content_kind_for_format(format: &str) -> ContentKind {
         "typescript" | "ts" => ContentKind::TypeScript,
         "tsx" => ContentKind::Tsx,
         "jsx" => ContentKind::Jsx,
+        "go" => ContentKind::Go,
+        "java" => ContentKind::Java,
+        "kotlin" => ContentKind::Kotlin,
+        "c" => ContentKind::C,
+        "cpp" | "c++" | "cplusplus" => ContentKind::Cpp,
+        "csharp" | "c#" | "cs" => ContentKind::Csharp,
+        "ruby" => ContentKind::Ruby,
+        "php" => ContentKind::Php,
+        "swift" => ContentKind::Swift,
         "shell" | "bash" => ContentKind::Shell,
+        "sql" => ContentKind::Sql,
+        "css" => ContentKind::Css,
         "latex" | "tex" => ContentKind::Latex,
         "bibtex" | "biblatex" | "bibliography" | "bib" => ContentKind::Bibliography,
         "csv" | "tsv" => ContentKind::Csv,
@@ -1252,7 +1308,18 @@ fn language_for_format(format: &str) -> Option<String> {
             "html" => "html",
             "xml" => "xml",
             "latex" => "latex",
-            "shell" => "shell",
+            "go" => "go",
+            "java" => "java",
+            "kotlin" => "kotlin",
+            "c" => "c",
+            "cpp" => "cpp",
+            "csharp" => "csharp",
+            "ruby" => "ruby",
+            "php" => "php",
+            "swift" => "swift",
+            "shell" | "bash" => "bash",
+            "sql" => "sql",
+            "css" => "css",
             _ => return None,
         }
         .to_string(),
@@ -1308,6 +1375,26 @@ fn classify_file_kind(filename: &str, extension: &str, path: &Path) -> FileKind 
             | "jsx"
             | "sh"
             | "bash"
+            | "go"
+            | "java"
+            | "kt"
+            | "kts"
+            | "c"
+            | "h"
+            | "cc"
+            | "cpp"
+            | "cxx"
+            | "hpp"
+            | "hh"
+            | "hxx"
+            | "cs"
+            | "rb"
+            | "rake"
+            | "php"
+            | "phtml"
+            | "swift"
+            | "sql"
+            | "css"
     ) {
         return FileKind::Source;
     }

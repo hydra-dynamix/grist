@@ -9,6 +9,7 @@ pub mod asciidoc;
 pub mod bibliography;
 #[cfg(feature = "email-message")]
 pub mod calendar_contact;
+pub mod code;
 #[cfg(feature = "columnar")]
 pub mod columnar;
 #[cfg(feature = "csv")]

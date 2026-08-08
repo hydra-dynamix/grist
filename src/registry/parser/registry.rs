@@ -201,6 +201,13 @@ impl ParserRegistry {
         }
     }
 
+    pub fn grammar_probes(&self, text: &str) -> Vec<super::GrammarProbe> {
+        self.entries
+            .values()
+            .filter_map(|entry| entry.parser.grammar_probe(text))
+            .collect()
+    }
+
     pub fn parsers(&self) -> Vec<ParserDescriptor> {
         self.entries
             .values()

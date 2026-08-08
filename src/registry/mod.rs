@@ -16,8 +16,8 @@ pub use metadata::{
     UnavailableParser, UnavailableReason,
 };
 pub use parser::{
-    Parser, ParserContext, ParserDispatchError, ParserError, ParserOutput, ParserRegistry,
-    ParserRegistryError, ParserSelection,
+    GrammarProbe, Parser, ParserContext, ParserDispatchError, ParserError, ParserOutput,
+    ParserRegistry, ParserRegistryError, ParserSelection,
 };
 pub use provider::{
     IsolatedBackendRegistry, ProviderRegistry, ProviderRegistryError, ProviderSelection,
