@@ -660,6 +660,7 @@
             "code",
             "python",
             "rust",
+            "java_script",
             "type_script",
             "ldgr_projection"
           ],

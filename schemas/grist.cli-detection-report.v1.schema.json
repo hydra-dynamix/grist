@@ -304,6 +304,7 @@
         "msg",
         "i_calendar",
         "v_card",
+        "jupyter_notebook",
         "sqlite",
         "png",
         "jpeg",

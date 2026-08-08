@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "additionalProperties": false,
   "definitions": {
-    "TypeScriptDetailMode": {
+    "JavaScriptDetailMode": {
       "enum": [
         "semantic",
         "semantic_with_syntax",
@@ -10,11 +10,9 @@
       ],
       "type": "string"
     },
-    "TypeScriptDialect": {
+    "JavaScriptDialect": {
       "enum": [
-        "typescript",
         "java_script",
-        "tsx",
         "jsx"
       ],
       "type": "string"
@@ -24,7 +22,7 @@
     "detail": {
       "allOf": [
         {
-          "$ref": "#/definitions/TypeScriptDetailMode"
+          "$ref": "#/definitions/JavaScriptDetailMode"
         }
       ],
       "default": "semantic"
@@ -32,12 +30,12 @@
     "dialect": {
       "allOf": [
         {
-          "$ref": "#/definitions/TypeScriptDialect"
+          "$ref": "#/definitions/JavaScriptDialect"
         }
       ],
-      "default": "typescript"
+      "default": "java_script"
     }
   },
-  "title": "TypeScriptIngestOptions",
+  "title": "JavaScriptIngestOptions",
   "type": "object"
 }

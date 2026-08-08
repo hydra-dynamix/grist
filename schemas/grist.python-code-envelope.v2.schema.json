@@ -125,6 +125,7 @@
         "csv",
         "rust_code",
         "python_code",
+        "javascript_code",
         "typescript_code",
         "latex",
         "bibliography",
@@ -1504,6 +1505,47 @@
       ],
       "type": "object"
     },
+    "PythonComment": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "range",
+        "text"
+      ],
+      "type": "object"
+    },
+    "PythonExport": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        }
+      },
+      "required": [
+        "id",
+        "names",
+        "range"
+      ],
+      "type": "object"
+    },
     "PythonFile": {
       "properties": {
         "assignments": {
@@ -1524,6 +1566,13 @@
           },
           "type": "array"
         },
+        "comments": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/PythonComment"
+          },
+          "type": "array"
+        },
         "detail": {
           "anyOf": [
             {
@@ -1533,6 +1582,13 @@
               "type": "null"
             }
           ]
+        },
+        "exports": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/PythonExport"
+          },
+          "type": "array"
         },
         "imports": {
           "items": {
@@ -1558,6 +1614,20 @@
         "symbols": {
           "items": {
             "$ref": "#/definitions/PythonSymbol"
+          },
+          "type": "array"
+        },
+        "syntax_nodes": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/PythonSyntaxNode"
+          },
+          "type": "array"
+        },
+        "tests": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/PythonTest"
           },
           "type": "array"
         }
@@ -1615,11 +1685,19 @@
     },
     "PythonParseError": {
       "properties": {
+        "missing": {
+          "default": false,
+          "type": "boolean"
+        },
         "node_kind": {
           "type": "string"
         },
         "range": {
           "$ref": "#/definitions/SourceRange"
+        },
+        "raw": {
+          "default": "",
+          "type": "string"
         }
       },
       "required": [
@@ -1764,6 +1842,47 @@
       ],
       "type": "object"
     },
+    "PythonSyntaxNode": {
+      "properties": {
+        "error": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "missing": {
+          "type": "boolean"
+        },
+        "named": {
+          "type": "boolean"
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "raw": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "id",
+        "kind",
+        "missing",
+        "named",
+        "range",
+        "raw"
+      ],
+      "type": "object"
+    },
     "PythonSyntaxSummary": {
       "properties": {
         "named_child_count": {
@@ -1778,6 +1897,33 @@
       "required": [
         "named_child_count",
         "node_kind"
+      ],
+      "type": "object"
+    },
+    "PythonTest": {
+      "properties": {
+        "framework": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "symbol_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "framework",
+        "id",
+        "name",
+        "range",
+        "symbol_id"
       ],
       "type": "object"
     },

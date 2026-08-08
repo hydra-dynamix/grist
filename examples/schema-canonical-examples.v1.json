@@ -129,6 +129,23 @@
         "schema_version": "grist/backend-output-manifest/v1"
       }
     },
+    "basin-code-graph": {
+      "schema_name": "basin-code-graph",
+      "schema_version": "grist/basin-code-graph/v1",
+      "canonical_sha256": "sha256:d8248000b7ccfa7ab697db673abcd29dcfdf708d3ee174c04e9237c9d1e6c8f1",
+      "value": {
+        "edges": [],
+        "module": "",
+        "nodes": [],
+        "roots": []
+      }
+    },
+    "basin-walk-options": {
+      "schema_name": "basin-walk-options",
+      "schema_version": "grist/basin-walk-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
     "batch-result": {
       "schema_name": "batch-result",
       "schema_version": "grist/batch-result/v1",
@@ -421,6 +438,58 @@
       "schema_version": "grist/citation-verification-options/v1",
       "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
       "value": {}
+    },
+    "cli-detection-report": {
+      "schema_name": "cli-detection-report",
+      "schema_version": "grist/cli-detection-report/v1",
+      "canonical_sha256": "sha256:95acde5df6b8f4acad721ad3d600e09a6456d04951f1c139789ab02f2e250c92",
+      "value": {
+        "detection": {
+          "confidence": 0.0,
+          "content_kind": "markdown",
+          "diagnostics": [],
+          "file_kind": "source",
+          "reasons": []
+        },
+        "identity": {},
+        "request_id": "",
+        "schema_version": "grist/cli-detection-report/v1",
+        "source": {
+          "display_name": ""
+        }
+      }
+    },
+    "cli-text-output-manifest": {
+      "schema_name": "cli-text-output-manifest",
+      "schema_version": "grist/cli-text-output-manifest/v1",
+      "canonical_sha256": "sha256:8d31207976d9c07617d38fe6105aea6d32d91944ff5c4e249046b243f602e09e",
+      "value": {
+        "byte_length": 0,
+        "destination": {
+          "kind": "stdout"
+        },
+        "fidelity": {
+          "losses": [],
+          "mode": "strict",
+          "reconstruction_claim": "normalized_not_byte_round_trip"
+        },
+        "format": "markdown",
+        "media_type": "",
+        "operation": "parse",
+        "options_digest": "",
+        "renderer": "",
+        "renderer_digest": "",
+        "renderer_version": "",
+        "request_id": "",
+        "schema_version": "grist/cli-text-output-manifest/v1",
+        "sha256": "",
+        "source_map": {
+          "entries": [],
+          "generated_length": 0,
+          "generated_unit": "",
+          "schema_version": ""
+        }
+      }
     },
     "columnar": {
       "schema_name": "columnar",
@@ -1465,6 +1534,52 @@
         },
         "output_schema_version": ""
       }
+    },
+    "javascript-code": {
+      "schema_name": "javascript-code",
+      "schema_version": "grist/javascript-code/v1",
+      "canonical_sha256": "sha256:c20abc9424ce3c44cba33ee52de06df70ad0c8297df1e1cece312a21691240f2",
+      "value": {
+        "assignments": [],
+        "branches": [],
+        "calls": [],
+        "dialect": "java_script",
+        "exports": [],
+        "imports": [],
+        "parse_errors": [],
+        "returns": [],
+        "schema_version": "grist/javascript-code/v1",
+        "symbols": []
+      }
+    },
+    "javascript-code-envelope": {
+      "schema_name": "javascript-code-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "value": {
+        "diagnostics": [],
+        "kind": "markdown",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "javascript-code-options": {
+      "schema_name": "javascript-code-options",
+      "schema_version": "grist/javascript-code-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
     },
     "latex": {
       "schema_name": "latex",
@@ -2623,6 +2738,188 @@
     "python-code-options": {
       "schema_name": "python-code-options",
       "schema_version": "grist/python-code-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "quarto": {
+      "schema_name": "quarto",
+      "schema_version": "grist/markdown/v2",
+      "canonical_sha256": "sha256:85b771d9327f4bf512eed7c9816246b13964e48800d014dc0f8142154f9507a1",
+      "value": {
+        "decoded_range": {
+          "byte_end": 0,
+          "byte_start": 0,
+          "end_column": 0,
+          "end_line": 0,
+          "start_column": 0,
+          "start_line": 0
+        },
+        "decoded_text": "",
+        "decoding": {
+          "declarations": [],
+          "decoded_identity": {
+            "byte_length": 0,
+            "encoding": "",
+            "lossy": false,
+            "sha256": ""
+          },
+          "diagnostics": [],
+          "encoding": {
+            "kind": "utf8"
+          },
+          "issues": [],
+          "newlines": {
+            "cr_count": 0,
+            "crlf_count": 0,
+            "final_line_terminated": false,
+            "lf_count": 0,
+            "sequences": []
+          },
+          "raw_identity": {
+            "byte_length": 0,
+            "sha256": ""
+          },
+          "schema_version": ""
+        },
+        "encoding": {
+          "kind": "utf8"
+        },
+        "locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        },
+        "nodes": [],
+        "raw_bytes": [],
+        "raw_range": {
+          "end": 0,
+          "start": 0
+        },
+        "schema_version": "grist/markdown/v2"
+      }
+    },
+    "quarto-envelope": {
+      "schema_name": "quarto-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "value": {
+        "diagnostics": [],
+        "kind": "markdown",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "quarto-options": {
+      "schema_name": "quarto-options",
+      "schema_version": "grist/quarto-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "r_markdown": {
+      "schema_name": "r_markdown",
+      "schema_version": "grist/markdown/v2",
+      "canonical_sha256": "sha256:85b771d9327f4bf512eed7c9816246b13964e48800d014dc0f8142154f9507a1",
+      "value": {
+        "decoded_range": {
+          "byte_end": 0,
+          "byte_start": 0,
+          "end_column": 0,
+          "end_line": 0,
+          "start_column": 0,
+          "start_line": 0
+        },
+        "decoded_text": "",
+        "decoding": {
+          "declarations": [],
+          "decoded_identity": {
+            "byte_length": 0,
+            "encoding": "",
+            "lossy": false,
+            "sha256": ""
+          },
+          "diagnostics": [],
+          "encoding": {
+            "kind": "utf8"
+          },
+          "issues": [],
+          "newlines": {
+            "cr_count": 0,
+            "crlf_count": 0,
+            "final_line_terminated": false,
+            "lf_count": 0,
+            "sequences": []
+          },
+          "raw_identity": {
+            "byte_length": 0,
+            "sha256": ""
+          },
+          "schema_version": ""
+        },
+        "encoding": {
+          "kind": "utf8"
+        },
+        "locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        },
+        "nodes": [],
+        "raw_bytes": [],
+        "raw_range": {
+          "end": 0,
+          "start": 0
+        },
+        "schema_version": "grist/markdown/v2"
+      }
+    },
+    "r_markdown-envelope": {
+      "schema_name": "r_markdown-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:3430300e01aef938973c7bc06d397d532d906257934801a12168e62aa844ad1a",
+      "value": {
+        "diagnostics": [],
+        "kind": "markdown",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "r_markdown-options": {
+      "schema_name": "r_markdown-options",
+      "schema_version": "grist/r-markdown-options/v1",
       "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
       "value": {}
     },

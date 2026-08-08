@@ -144,9 +144,33 @@
       ],
       "type": "object"
     },
+    "TypeScriptComment": {
+      "properties": {
+        "doc": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "doc",
+        "id",
+        "range",
+        "text"
+      ],
+      "type": "object"
+    },
     "TypeScriptDialect": {
       "enum": [
         "typescript",
+        "java_script",
         "tsx",
         "jsx"
       ],
@@ -220,11 +244,19 @@
     },
     "TypeScriptParseError": {
       "properties": {
+        "missing": {
+          "default": false,
+          "type": "boolean"
+        },
         "node_kind": {
           "type": "string"
         },
         "range": {
           "$ref": "#/definitions/SourceRange"
+        },
+        "raw": {
+          "default": "",
+          "type": "string"
         }
       },
       "required": [
@@ -274,8 +306,22 @@
             "null"
           ]
         },
+        "extends": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "id": {
           "type": "string"
+        },
+        "implements": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "kind": {
           "$ref": "#/definitions/TypeScriptSymbolKind"
@@ -376,6 +422,47 @@
       ],
       "type": "object"
     },
+    "TypeScriptSyntaxNode": {
+      "properties": {
+        "error": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "missing": {
+          "type": "boolean"
+        },
+        "named": {
+          "type": "boolean"
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "raw": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "id",
+        "kind",
+        "missing",
+        "named",
+        "range",
+        "raw"
+      ],
+      "type": "object"
+    },
     "TypeScriptSyntaxSummary": {
       "properties": {
         "named_child_count": {
@@ -390,6 +477,35 @@
       "required": [
         "named_child_count",
         "node_kind"
+      ],
+      "type": "object"
+    },
+    "TypeScriptTest": {
+      "properties": {
+        "framework": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        }
+      },
+      "required": [
+        "framework",
+        "id",
+        "name",
+        "range"
       ],
       "type": "object"
     },
@@ -419,6 +535,13 @@
     "calls": {
       "items": {
         "$ref": "#/definitions/TypeScriptCall"
+      },
+      "type": "array"
+    },
+    "comments": {
+      "default": [],
+      "items": {
+        "$ref": "#/definitions/TypeScriptComment"
       },
       "type": "array"
     },
@@ -465,6 +588,20 @@
     "symbols": {
       "items": {
         "$ref": "#/definitions/TypeScriptSymbol"
+      },
+      "type": "array"
+    },
+    "syntax_nodes": {
+      "default": [],
+      "items": {
+        "$ref": "#/definitions/TypeScriptSyntaxNode"
+      },
+      "type": "array"
+    },
+    "tests": {
+      "default": [],
+      "items": {
+        "$ref": "#/definitions/TypeScriptTest"
       },
       "type": "array"
     }

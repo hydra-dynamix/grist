@@ -125,6 +125,7 @@
         "csv",
         "rust_code",
         "python_code",
+        "javascript_code",
         "typescript_code",
         "latex",
         "bibliography",
@@ -1456,8 +1457,186 @@
       ],
       "type": "string"
     },
+    "RustAssignment": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "lhs": {
+          "type": "string"
+        },
+        "operator": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "rhs": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "lhs",
+        "range"
+      ],
+      "type": "object"
+    },
+    "RustBranch": {
+      "properties": {
+        "condition": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "range"
+      ],
+      "type": "object"
+    },
+    "RustCall": {
+      "properties": {
+        "arguments": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "target": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "arguments",
+        "id",
+        "range",
+        "target"
+      ],
+      "type": "object"
+    },
+    "RustComment": {
+      "properties": {
+        "block": {
+          "type": "boolean"
+        },
+        "doc": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "block",
+        "doc",
+        "id",
+        "range",
+        "text"
+      ],
+      "type": "object"
+    },
+    "RustExport": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/RustSymbolKind"
+        },
+        "name": {
+          "type": "string"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "name",
+        "range"
+      ],
+      "type": "object"
+    },
     "RustFile": {
       "properties": {
+        "assignments": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/RustAssignment"
+          },
+          "type": "array"
+        },
+        "branches": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/RustBranch"
+          },
+          "type": "array"
+        },
+        "calls": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/RustCall"
+          },
+          "type": "array"
+        },
+        "comments": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/RustComment"
+          },
+          "type": "array"
+        },
         "detail": {
           "anyOf": [
             {
@@ -1468,9 +1647,23 @@
             }
           ]
         },
+        "exports": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/RustExport"
+          },
+          "type": "array"
+        },
         "imports": {
           "items": {
             "$ref": "#/definitions/RustImport"
+          },
+          "type": "array"
+        },
+        "inheritances": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/RustInheritance"
           },
           "type": "array"
         },
@@ -1480,12 +1673,33 @@
           },
           "type": "array"
         },
+        "returns": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/RustReturn"
+          },
+          "type": "array"
+        },
         "schema_version": {
           "type": "string"
         },
         "symbols": {
           "items": {
             "$ref": "#/definitions/RustSymbol"
+          },
+          "type": "array"
+        },
+        "syntax_nodes": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/RustSyntaxNode"
+          },
+          "type": "array"
+        },
+        "tests": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/RustTest"
           },
           "type": "array"
         }
@@ -1527,17 +1741,81 @@
       ],
       "type": "object"
     },
+    "RustInheritance": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "implementation": {
+          "type": "string"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "target": {
+          "type": "string"
+        },
+        "trait_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "implementation",
+        "range",
+        "target"
+      ],
+      "type": "object"
+    },
     "RustParseError": {
       "properties": {
+        "missing": {
+          "default": false,
+          "type": "boolean"
+        },
         "node_kind": {
           "type": "string"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "raw": {
+          "default": "",
+          "type": "string"
+        }
+      },
+      "required": [
+        "node_kind",
+        "range"
+      ],
+      "type": "object"
+    },
+    "RustReturn": {
+      "properties": {
+        "expression": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "range": {
           "$ref": "#/definitions/SourceRange"
         }
       },
       "required": [
-        "node_kind",
+        "id",
         "range"
       ],
       "type": "object"
@@ -1650,6 +1928,47 @@
       ],
       "type": "object"
     },
+    "RustSyntaxNode": {
+      "properties": {
+        "error": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "missing": {
+          "type": "boolean"
+        },
+        "named": {
+          "type": "boolean"
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "raw": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "id",
+        "kind",
+        "missing",
+        "named",
+        "range",
+        "raw"
+      ],
+      "type": "object"
+    },
     "RustSyntaxSummary": {
       "properties": {
         "named_child_count": {
@@ -1664,6 +1983,36 @@
       "required": [
         "named_child_count",
         "node_kind"
+      ],
+      "type": "object"
+    },
+    "RustTest": {
+      "properties": {
+        "attributes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "symbol_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "attributes",
+        "id",
+        "name",
+        "range",
+        "symbol_id"
       ],
       "type": "object"
     },

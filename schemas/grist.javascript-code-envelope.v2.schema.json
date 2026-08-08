@@ -106,137 +106,6 @@
       ],
       "type": "object"
     },
-    "ArtifactContent": {
-      "description": "Storage representation is deliberately outside the stable artifact identity.",
-      "oneOf": [
-        {
-          "description": "Inline representation with its caller-selected threshold made explicit.",
-          "properties": {
-            "bytes": {
-              "items": {
-                "format": "uint8",
-                "minimum": 0.0,
-                "type": "integer"
-              },
-              "type": "array"
-            },
-            "inline_threshold_bytes": {
-              "format": "uint64",
-              "minimum": 0.0,
-              "type": "integer"
-            },
-            "storage": {
-              "enum": [
-                "inline"
-              ],
-              "type": "string"
-            }
-          },
-          "required": [
-            "bytes",
-            "inline_threshold_bytes",
-            "storage"
-          ],
-          "type": "object"
-        },
-        {
-          "properties": {
-            "inline_threshold_bytes": {
-              "format": "uint64",
-              "minimum": 0.0,
-              "type": "integer"
-            },
-            "reference": {
-              "$ref": "#/definitions/ContentAddressedArtifactReference"
-            },
-            "storage": {
-              "enum": [
-                "content_addressed"
-              ],
-              "type": "string"
-            }
-          },
-          "required": [
-            "inline_threshold_bytes",
-            "reference",
-            "storage"
-          ],
-          "type": "object"
-        }
-      ]
-    },
-    "ArtifactDisposition": {
-      "description": "Content-disposition semantics, independent of storage or safety policy.",
-      "enum": [
-        "attachment",
-        "inline",
-        "related",
-        "alternative",
-        "package_part",
-        "unspecified"
-      ],
-      "type": "string"
-    },
-    "ArtifactExtraction": {
-      "description": "Machine-readable extraction result for one child.",
-      "properties": {
-        "diagnostic_codes": {
-          "default": [],
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "message": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "status": {
-          "$ref": "#/definitions/ArtifactExtractionStatus"
-        },
-        "status_code": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "status",
-        "status_code"
-      ],
-      "type": "object"
-    },
-    "ArtifactExtractionStatus": {
-      "description": "Terminal extraction states retained even when no child bytes are available.",
-      "enum": [
-        "extracted",
-        "quarantined",
-        "inventory_only",
-        "skipped",
-        "encrypted",
-        "unsupported",
-        "rejected",
-        "budget_limited",
-        "failed"
-      ],
-      "type": "string"
-    },
-    "ArtifactIdentity": {
-      "description": "Stable child identity. It excludes filename, disposition, status, and storage mode.",
-      "properties": {
-        "artifact_id": {
-          "type": "string"
-        },
-        "content": {
-          "$ref": "#/definitions/ContentIdentity"
-        }
-      },
-      "required": [
-        "artifact_id",
-        "content"
-      ],
-      "type": "object"
-    },
     "ArtifactKind": {
       "enum": [
         "markdown",
@@ -287,87 +156,6 @@
         "unsupported"
       ],
       "type": "string"
-    },
-    "ArtifactParent": {
-      "description": "The parent is retained structurally rather than flattened into a path.",
-      "properties": {
-        "identity": {
-          "$ref": "#/definitions/ContentIdentity"
-        },
-        "relationship": {
-          "$ref": "#/definitions/ArtifactRelationship"
-        }
-      },
-      "required": [
-        "identity",
-        "relationship"
-      ],
-      "type": "object"
-    },
-    "ArtifactRelationship": {
-      "description": "How the source relates the child to its immediate parent.",
-      "enum": [
-        "attachment_of",
-        "embedded_in",
-        "inline_resource_of",
-        "alternative_representation_of",
-        "package_part_of",
-        "unknown"
-      ],
-      "type": "string"
-    },
-    "ArtifactSafety": {
-      "description": "Auditable, deterministic safety result. Classifiers only inspect supplied metadata and bytes.",
-      "properties": {
-        "classification": {
-          "$ref": "#/definitions/ArtifactSafetyClassification"
-        },
-        "evidence": {
-          "default": [],
-          "items": {
-            "$ref": "#/definitions/ArtifactSafetyEvidence"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "classification"
-      ],
-      "type": "object"
-    },
-    "ArtifactSafetyClassification": {
-      "description": "Security classification used to decide whether materialization is allowed.",
-      "enum": [
-        "passive",
-        "encrypted",
-        "active_content",
-        "script",
-        "macro",
-        "executable",
-        "suspicious",
-        "unknown"
-      ],
-      "type": "string"
-    },
-    "ArtifactSafetyEvidence": {
-      "description": "Why a safety class was selected.",
-      "properties": {
-        "classification": {
-          "$ref": "#/definitions/ArtifactSafetyClassification"
-        },
-        "source": {
-          "type": "string"
-        },
-        "value": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "classification",
-        "source",
-        "value"
-      ],
-      "type": "object"
     },
     "BoundingBox": {
       "description": "A rectangle in a declared coordinate system.",
@@ -459,28 +247,6 @@
         "base",
         "column",
         "row"
-      ],
-      "type": "object"
-    },
-    "ContentAddressedArtifactReference": {
-      "description": "Digest-keyed external reference. Grist does not prescribe persistence policy.",
-      "properties": {
-        "algorithm": {
-          "type": "string"
-        },
-        "byte_length": {
-          "format": "uint64",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "digest": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "algorithm",
-        "byte_length",
-        "digest"
       ],
       "type": "object"
     },
@@ -865,502 +631,6 @@
       ],
       "type": "string"
     },
-    "EmailAddress": {
-      "properties": {
-        "address": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "comments": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "display_name": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "group": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "raw": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "comments",
-        "raw"
-      ],
-      "type": "object"
-    },
-    "EmailAddressField": {
-      "properties": {
-        "addresses": {
-          "items": {
-            "$ref": "#/definitions/EmailAddress"
-          },
-          "type": "array"
-        },
-        "decoded": {
-          "type": "string"
-        },
-        "header_name": {
-          "type": "string"
-        },
-        "locator": {
-          "$ref": "#/definitions/SourceLocator"
-        },
-        "raw": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "addresses",
-        "decoded",
-        "header_name",
-        "locator",
-        "raw"
-      ],
-      "type": "object"
-    },
-    "EmailAttachment": {
-      "properties": {
-        "artifact": {
-          "$ref": "#/definitions/EmbeddedArtifact"
-        },
-        "disposition": {
-          "type": "string"
-        },
-        "filename": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "inline_resource": {
-          "type": "boolean"
-        },
-        "nested": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/NestedEmailParse"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "required": [
-        "artifact",
-        "disposition",
-        "inline_resource"
-      ],
-      "type": "object"
-    },
-    "EmailAuthenticationEvidence": {
-      "properties": {
-        "decoded": {
-          "type": "string"
-        },
-        "kind": {
-          "type": "string"
-        },
-        "locator": {
-          "$ref": "#/definitions/SourceLocator"
-        },
-        "raw": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "decoded",
-        "kind",
-        "locator",
-        "raw"
-      ],
-      "type": "object"
-    },
-    "EmailDateField": {
-      "properties": {
-        "decoded": {
-          "type": "string"
-        },
-        "header_name": {
-          "type": "string"
-        },
-        "locator": {
-          "$ref": "#/definitions/SourceLocator"
-        },
-        "raw": {
-          "type": "string"
-        },
-        "timezone_offset_minutes": {
-          "format": "int32",
-          "type": [
-            "integer",
-            "null"
-          ]
-        },
-        "timezone_text": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "required": [
-        "decoded",
-        "header_name",
-        "locator",
-        "raw"
-      ],
-      "type": "object"
-    },
-    "EmailDocument": {
-      "properties": {
-        "address_fields": {
-          "items": {
-            "$ref": "#/definitions/EmailAddressField"
-          },
-          "type": "array"
-        },
-        "authentication": {
-          "items": {
-            "$ref": "#/definitions/EmailAuthenticationEvidence"
-          },
-          "type": "array"
-        },
-        "complete": {
-          "type": "boolean"
-        },
-        "date_fields": {
-          "items": {
-            "$ref": "#/definitions/EmailDateField"
-          },
-          "type": "array"
-        },
-        "diagnostics": {
-          "items": {
-            "$ref": "#/definitions/Diagnostic"
-          },
-          "type": "array"
-        },
-        "encrypted_parts": {
-          "items": {
-            "items": {
-              "format": "uint",
-              "minimum": 0.0,
-              "type": "integer"
-            },
-            "type": "array"
-          },
-          "type": "array"
-        },
-        "external_references": {
-          "items": {
-            "$ref": "#/definitions/EmailExternalReference"
-          },
-          "type": "array"
-        },
-        "headers": {
-          "items": {
-            "$ref": "#/definitions/EmailHeader"
-          },
-          "type": "array"
-        },
-        "mime": {
-          "$ref": "#/definitions/MimePart"
-        },
-        "schema_version": {
-          "type": "string"
-        },
-        "signed_parts": {
-          "items": {
-            "items": {
-              "format": "uint",
-              "minimum": 0.0,
-              "type": "integer"
-            },
-            "type": "array"
-          },
-          "type": "array"
-        },
-        "subject": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/EmailTextFact"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "thread": {
-          "$ref": "#/definitions/EmailThreadEvidence"
-        }
-      },
-      "required": [
-        "address_fields",
-        "authentication",
-        "complete",
-        "date_fields",
-        "diagnostics",
-        "encrypted_parts",
-        "external_references",
-        "headers",
-        "mime",
-        "schema_version",
-        "signed_parts",
-        "thread"
-      ],
-      "type": "object"
-    },
-    "EmailExternalReference": {
-      "properties": {
-        "locator": {
-          "$ref": "#/definitions/SourceLocator"
-        },
-        "mime_path": {
-          "items": {
-            "format": "uint",
-            "minimum": 0.0,
-            "type": "integer"
-          },
-          "type": "array"
-        },
-        "resolved": {
-          "type": "boolean"
-        },
-        "source": {
-          "type": "string"
-        },
-        "uri": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "locator",
-        "mime_path",
-        "resolved",
-        "source",
-        "uri"
-      ],
-      "type": "object"
-    },
-    "EmailHeader": {
-      "properties": {
-        "decoded_value": {
-          "type": "string"
-        },
-        "locator": {
-          "$ref": "#/definitions/SourceLocator"
-        },
-        "name": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "normalized_name": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "ordinal": {
-          "format": "uint",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "raw": {
-          "type": "string"
-        },
-        "raw_value": {
-          "type": "string"
-        },
-        "unfolded_value": {
-          "type": "string"
-        },
-        "valid": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "decoded_value",
-        "locator",
-        "ordinal",
-        "raw",
-        "raw_value",
-        "unfolded_value",
-        "valid"
-      ],
-      "type": "object"
-    },
-    "EmailMessageId": {
-      "properties": {
-        "locator": {
-          "$ref": "#/definitions/SourceLocator"
-        },
-        "value": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "locator",
-        "value"
-      ],
-      "type": "object"
-    },
-    "EmailTextFact": {
-      "properties": {
-        "decoded": {
-          "type": "string"
-        },
-        "locator": {
-          "$ref": "#/definitions/SourceLocator"
-        },
-        "raw": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "decoded",
-        "locator",
-        "raw"
-      ],
-      "type": "object"
-    },
-    "EmailThreadEvidence": {
-      "properties": {
-        "in_reply_to": {
-          "items": {
-            "$ref": "#/definitions/EmailMessageId"
-          },
-          "type": "array"
-        },
-        "message_id": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/EmailTextFact"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "normalized_subject_hint": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "received": {
-          "items": {
-            "$ref": "#/definitions/EmailTextFact"
-          },
-          "type": "array"
-        },
-        "references": {
-          "items": {
-            "$ref": "#/definitions/EmailMessageId"
-          },
-          "type": "array"
-        },
-        "thread_index": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/EmailTextFact"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "thread_topic": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/EmailTextFact"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "required": [
-        "in_reply_to",
-        "received",
-        "references"
-      ],
-      "type": "object"
-    },
-    "EmbeddedArtifact": {
-      "description": "Complete artifact inventory record.",
-      "properties": {
-        "content": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/ArtifactContent"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "declared_filename": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "disposition": {
-          "$ref": "#/definitions/ArtifactDisposition"
-        },
-        "extraction": {
-          "$ref": "#/definitions/ArtifactExtraction"
-        },
-        "identity": {
-          "$ref": "#/definitions/ArtifactIdentity"
-        },
-        "locator": {
-          "$ref": "#/definitions/SourceLocator"
-        },
-        "media_type": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "parent": {
-          "$ref": "#/definitions/ArtifactParent"
-        },
-        "safety": {
-          "$ref": "#/definitions/ArtifactSafety"
-        },
-        "schema_version": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "disposition",
-        "extraction",
-        "identity",
-        "locator",
-        "parent",
-        "safety",
-        "schema_version"
-      ],
-      "type": "object"
-    },
     "FormatIdentity": {
       "description": "Detected parser-format name paired with an Internet media type when known.",
       "properties": {
@@ -1451,6 +721,576 @@
         "start"
       ],
       "type": "object"
+    },
+    "JavaScriptAssignment": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "lhs": {
+          "type": "string"
+        },
+        "operator": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "rhs": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "lhs",
+        "range"
+      ],
+      "type": "object"
+    },
+    "JavaScriptBranch": {
+      "properties": {
+        "condition": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "range"
+      ],
+      "type": "object"
+    },
+    "JavaScriptCall": {
+      "properties": {
+        "args": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "target": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "args",
+        "id",
+        "range",
+        "target"
+      ],
+      "type": "object"
+    },
+    "JavaScriptComment": {
+      "properties": {
+        "doc": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "doc",
+        "id",
+        "range",
+        "text"
+      ],
+      "type": "object"
+    },
+    "JavaScriptDialect": {
+      "enum": [
+        "java_script",
+        "jsx"
+      ],
+      "type": "string"
+    },
+    "JavaScriptExport": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "source": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "names",
+        "range"
+      ],
+      "type": "object"
+    },
+    "JavaScriptFile": {
+      "properties": {
+        "assignments": {
+          "items": {
+            "$ref": "#/definitions/JavaScriptAssignment"
+          },
+          "type": "array"
+        },
+        "branches": {
+          "items": {
+            "$ref": "#/definitions/JavaScriptBranch"
+          },
+          "type": "array"
+        },
+        "calls": {
+          "items": {
+            "$ref": "#/definitions/JavaScriptCall"
+          },
+          "type": "array"
+        },
+        "comments": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/JavaScriptComment"
+          },
+          "type": "array"
+        },
+        "detail": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/JavaScriptSyntaxDetail"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dialect": {
+          "$ref": "#/definitions/JavaScriptDialect"
+        },
+        "exports": {
+          "items": {
+            "$ref": "#/definitions/JavaScriptExport"
+          },
+          "type": "array"
+        },
+        "imports": {
+          "items": {
+            "$ref": "#/definitions/JavaScriptImport"
+          },
+          "type": "array"
+        },
+        "parse_errors": {
+          "items": {
+            "$ref": "#/definitions/JavaScriptParseError"
+          },
+          "type": "array"
+        },
+        "returns": {
+          "items": {
+            "$ref": "#/definitions/JavaScriptReturn"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "symbols": {
+          "items": {
+            "$ref": "#/definitions/JavaScriptSymbol"
+          },
+          "type": "array"
+        },
+        "syntax_nodes": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/JavaScriptSyntaxNode"
+          },
+          "type": "array"
+        },
+        "tests": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/JavaScriptTest"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "assignments",
+        "branches",
+        "calls",
+        "dialect",
+        "exports",
+        "imports",
+        "parse_errors",
+        "returns",
+        "schema_version",
+        "symbols"
+      ],
+      "type": "object"
+    },
+    "JavaScriptImport": {
+      "properties": {
+        "default": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "module": {
+          "type": "string"
+        },
+        "names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "namespace": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        }
+      },
+      "required": [
+        "id",
+        "module",
+        "names",
+        "range"
+      ],
+      "type": "object"
+    },
+    "JavaScriptParseError": {
+      "properties": {
+        "missing": {
+          "type": "boolean"
+        },
+        "node_kind": {
+          "type": "string"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "raw": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "missing",
+        "node_kind",
+        "range",
+        "raw"
+      ],
+      "type": "object"
+    },
+    "JavaScriptReturn": {
+      "properties": {
+        "expression": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        }
+      },
+      "required": [
+        "id",
+        "range"
+      ],
+      "type": "object"
+    },
+    "JavaScriptSymbol": {
+      "properties": {
+        "decorators": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "doc": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "extends": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "implements": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "$ref": "#/definitions/JavaScriptSymbolKind"
+        },
+        "language": {
+          "type": "string"
+        },
+        "modifiers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "qualified_name": {
+          "type": "string"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "syntax": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/JavaScriptSyntaxSummary"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "visibility": {
+          "$ref": "#/definitions/JavaScriptVisibility"
+        }
+      },
+      "required": [
+        "decorators",
+        "id",
+        "kind",
+        "language",
+        "modifiers",
+        "name",
+        "qualified_name",
+        "range",
+        "visibility"
+      ],
+      "type": "object"
+    },
+    "JavaScriptSymbolKind": {
+      "enum": [
+        "class",
+        "function",
+        "method",
+        "constructor",
+        "variable",
+        "field",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "JavaScriptSyntaxDetail": {
+      "properties": {
+        "node_count": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "root_kind": {
+          "type": "string"
+        },
+        "root_named_child_count": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "node_count",
+        "root_kind",
+        "root_named_child_count"
+      ],
+      "type": "object"
+    },
+    "JavaScriptSyntaxNode": {
+      "properties": {
+        "error": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "missing": {
+          "type": "boolean"
+        },
+        "named": {
+          "type": "boolean"
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "raw": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "id",
+        "kind",
+        "missing",
+        "named",
+        "range",
+        "raw"
+      ],
+      "type": "object"
+    },
+    "JavaScriptSyntaxSummary": {
+      "properties": {
+        "named_child_count": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "node_kind": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "named_child_count",
+        "node_kind"
+      ],
+      "type": "object"
+    },
+    "JavaScriptTest": {
+      "properties": {
+        "framework": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        }
+      },
+      "required": [
+        "framework",
+        "id",
+        "name",
+        "range"
+      ],
+      "type": "object"
+    },
+    "JavaScriptVisibility": {
+      "enum": [
+        "public",
+        "protected",
+        "private",
+        "unknown"
+      ],
+      "type": "string"
     },
     "LocationComponent": {
       "description": "One location inside its immediately preceding parent component.",
@@ -1934,593 +1774,6 @@
       "maximum": 1.0,
       "minimum": 0.0,
       "type": "number"
-    },
-    "MboxAggregateThreadEvidence": {
-      "properties": {
-        "links": {
-          "items": {
-            "$ref": "#/definitions/MboxThreadLink"
-          },
-          "type": "array"
-        },
-        "message_ids": {
-          "items": {
-            "$ref": "#/definitions/MboxMessageIdEvidence"
-          },
-          "type": "array"
-        },
-        "subject_groups": {
-          "items": {
-            "$ref": "#/definitions/MboxSubjectGroup"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "links",
-        "message_ids",
-        "subject_groups"
-      ],
-      "type": "object"
-    },
-    "MboxContentLengthEvidence": {
-      "properties": {
-        "declared_body_bytes": {
-          "format": "uint",
-          "minimum": 0.0,
-          "type": [
-            "integer",
-            "null"
-          ]
-        },
-        "exact_boundary": {
-          "type": "boolean"
-        },
-        "honored": {
-          "type": "boolean"
-        },
-        "locator": {
-          "$ref": "#/definitions/SourceLocator"
-        },
-        "observed_body_bytes": {
-          "format": "uint",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "raw": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "exact_boundary",
-        "honored",
-        "locator",
-        "observed_body_bytes",
-        "raw"
-      ],
-      "type": "object"
-    },
-    "MboxDocument": {
-      "properties": {
-        "complete": {
-          "type": "boolean"
-        },
-        "diagnostics": {
-          "items": {
-            "$ref": "#/definitions/Diagnostic"
-          },
-          "type": "array"
-        },
-        "messages": {
-          "items": {
-            "$ref": "#/definitions/MboxMessage"
-          },
-          "type": "array"
-        },
-        "schema_version": {
-          "type": "string"
-        },
-        "thread_evidence": {
-          "$ref": "#/definitions/MboxAggregateThreadEvidence"
-        },
-        "variant": {
-          "$ref": "#/definitions/MboxVariant"
-        }
-      },
-      "required": [
-        "complete",
-        "diagnostics",
-        "messages",
-        "schema_version",
-        "thread_evidence",
-        "variant"
-      ],
-      "type": "object"
-    },
-    "MboxEscapedFromLine": {
-      "properties": {
-        "decoded_offset": {
-          "format": "uint",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "locator": {
-          "$ref": "#/definitions/SourceLocator"
-        },
-        "raw_prefix_length": {
-          "format": "uint",
-          "minimum": 0.0,
-          "type": "integer"
-        }
-      },
-      "required": [
-        "decoded_offset",
-        "locator",
-        "raw_prefix_length"
-      ],
-      "type": "object"
-    },
-    "MboxLineEnding": {
-      "enum": [
-        "cr_lf",
-        "lf",
-        "cr",
-        "none"
-      ],
-      "type": "string"
-    },
-    "MboxMessage": {
-      "properties": {
-        "content_length": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/MboxContentLengthEvidence"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "decoded_bytes": {
-          "format": "uint",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "decoded_sha256": {
-          "type": "string"
-        },
-        "diagnostics": {
-          "items": {
-            "$ref": "#/definitions/Diagnostic"
-          },
-          "type": "array"
-        },
-        "duplicate_occurrence": {
-          "format": "uint",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "email": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/EmailDocument"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "escaped_from_lines": {
-          "items": {
-            "$ref": "#/definitions/MboxEscapedFromLine"
-          },
-          "type": "array"
-        },
-        "locator": {
-          "$ref": "#/definitions/SourceLocator"
-        },
-        "ordinal": {
-          "description": "Human-facing, one-based source order.",
-          "format": "uint",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "raw_bytes": {
-          "format": "uint",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "raw_sha256": {
-          "type": "string"
-        },
-        "separator": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/MboxSeparator"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "stable_id": {
-          "description": "Stable for the same decoded message bytes; exact duplicates add an occurrence suffix.",
-          "type": "string"
-        },
-        "status": {
-          "$ref": "#/definitions/OperationStatus"
-        }
-      },
-      "required": [
-        "decoded_bytes",
-        "decoded_sha256",
-        "diagnostics",
-        "duplicate_occurrence",
-        "escaped_from_lines",
-        "locator",
-        "ordinal",
-        "raw_bytes",
-        "raw_sha256",
-        "stable_id",
-        "status"
-      ],
-      "type": "object"
-    },
-    "MboxMessageIdEvidence": {
-      "properties": {
-        "message_id": {
-          "type": "string"
-        },
-        "stable_id": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "message_id",
-        "stable_id"
-      ],
-      "type": "object"
-    },
-    "MboxSeparator": {
-      "properties": {
-        "date": {
-          "type": "string"
-        },
-        "line_ending": {
-          "$ref": "#/definitions/MboxLineEnding"
-        },
-        "locator": {
-          "$ref": "#/definitions/SourceLocator"
-        },
-        "raw": {
-          "type": "string"
-        },
-        "sender": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "date",
-        "line_ending",
-        "locator",
-        "raw",
-        "sender"
-      ],
-      "type": "object"
-    },
-    "MboxSubjectGroup": {
-      "properties": {
-        "message_stable_ids": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "normalized_subject": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "message_stable_ids",
-        "normalized_subject"
-      ],
-      "type": "object"
-    },
-    "MboxThreadLink": {
-      "properties": {
-        "referenced_message_id": {
-          "type": "string"
-        },
-        "relation": {
-          "$ref": "#/definitions/MboxThreadRelation"
-        },
-        "resolved": {
-          "type": "boolean"
-        },
-        "source_stable_id": {
-          "type": "string"
-        },
-        "target_stable_id": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "required": [
-        "referenced_message_id",
-        "relation",
-        "resolved",
-        "source_stable_id"
-      ],
-      "type": "object"
-    },
-    "MboxThreadRelation": {
-      "enum": [
-        "in_reply_to",
-        "reference"
-      ],
-      "type": "string"
-    },
-    "MboxVariant": {
-      "enum": [
-        "mboxo",
-        "mboxrd",
-        "mboxcl",
-        "mboxcl2",
-        "mixed",
-        "unknown"
-      ],
-      "type": "string"
-    },
-    "MimeParameter": {
-      "properties": {
-        "charset": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "extended": {
-          "type": "boolean"
-        },
-        "language": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "name": {
-          "type": "string"
-        },
-        "raw_name": {
-          "type": "string"
-        },
-        "raw_value": {
-          "type": "string"
-        },
-        "segments": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "value": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "extended",
-        "name",
-        "raw_name",
-        "raw_value",
-        "segments",
-        "value"
-      ],
-      "type": "object"
-    },
-    "MimePart": {
-      "properties": {
-        "attachment": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/EmailAttachment"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "body_locator": {
-          "$ref": "#/definitions/SourceLocator"
-        },
-        "children": {
-          "items": {
-            "$ref": "#/definitions/MimePart"
-          },
-          "type": "array"
-        },
-        "content_disposition": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/MimeValue"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "content_id": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "content_location": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "content_type": {
-          "$ref": "#/definitions/MimeValue"
-        },
-        "decoded_body_bytes": {
-          "format": "uint",
-          "minimum": 0.0,
-          "type": [
-            "integer",
-            "null"
-          ]
-        },
-        "decoded_body_sha256": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "encoded_body_bytes": {
-          "format": "uint",
-          "minimum": 0.0,
-          "type": "integer"
-        },
-        "encoded_body_sha256": {
-          "type": "string"
-        },
-        "encrypted": {
-          "type": "boolean"
-        },
-        "epilogue": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "headers": {
-          "items": {
-            "$ref": "#/definitions/EmailHeader"
-          },
-          "type": "array"
-        },
-        "locator": {
-          "$ref": "#/definitions/SourceLocator"
-        },
-        "path": {
-          "description": "Human-facing one-based MIME path. The root entity has an empty path.",
-          "items": {
-            "format": "uint",
-            "minimum": 0.0,
-            "type": "integer"
-          },
-          "type": "array"
-        },
-        "preamble": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "signed": {
-          "type": "boolean"
-        },
-        "text": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/MimeTextBody"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "transfer_encoding": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "body_locator",
-        "children",
-        "content_type",
-        "encoded_body_bytes",
-        "encoded_body_sha256",
-        "encrypted",
-        "headers",
-        "locator",
-        "path",
-        "signed",
-        "transfer_encoding"
-      ],
-      "type": "object"
-    },
-    "MimeTextBody": {
-      "properties": {
-        "charset": {
-          "type": "string"
-        },
-        "delsp": {
-          "type": "boolean"
-        },
-        "format_flowed": {
-          "type": "boolean"
-        },
-        "locator": {
-          "$ref": "#/definitions/SourceLocator"
-        },
-        "lossy": {
-          "type": "boolean"
-        },
-        "text": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "charset",
-        "delsp",
-        "format_flowed",
-        "locator",
-        "lossy",
-        "text"
-      ],
-      "type": "object"
-    },
-    "MimeValue": {
-      "properties": {
-        "essence": {
-          "type": "string"
-        },
-        "parameters": {
-          "items": {
-            "$ref": "#/definitions/MimeParameter"
-          },
-          "type": "array"
-        },
-        "raw": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "essence",
-        "parameters",
-        "raw"
-      ],
-      "type": "object"
-    },
-    "NestedEmailParse": {
-      "properties": {
-        "envelope": true,
-        "format": {
-          "type": "string"
-        },
-        "status": {
-          "$ref": "#/definitions/OperationStatus"
-        }
-      },
-      "required": [
-        "envelope",
-        "format",
-        "status"
-      ],
-      "type": "object"
     },
     "OperationKind": {
       "description": "The public operation that produced an envelope.",
@@ -3027,7 +2280,7 @@
     "payload": {
       "anyOf": [
         {
-          "$ref": "#/definitions/MboxDocument"
+          "$ref": "#/definitions/JavaScriptFile"
         },
         {
           "type": "null"
@@ -3072,6 +2325,6 @@
     "source",
     "status"
   ],
-  "title": "Envelope_for_MboxDocument",
+  "title": "Envelope_for_JavaScriptFile",
   "type": "object"
 }
