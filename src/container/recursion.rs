@@ -155,6 +155,12 @@ pub struct ArchiveMemberMetadata {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub modified_time: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub original_filename: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub comment: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub external_attributes: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub link_target: Option<String>,
     pub encrypted: bool,
     pub zip64: bool,

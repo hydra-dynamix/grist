@@ -364,8 +364,10 @@ fn decode_compression_stream(
     format: &str,
 ) -> Result<Vec<ContainerMember>, ContainerDecodeFailure> {
     let input = context.bytes();
+    if format == "gzip" {
+        return decode_gzip_members(context);
+    }
     let signature_valid = match format {
-        "gzip" => is_gzip(input),
         "bzip2" => is_bzip2(input),
         "xz" => is_xz(input),
         "zstandard" => is_zstandard(input),
@@ -378,7 +380,6 @@ fn decode_compression_stream(
     context.check_archive_preflight(1, input.len() as u64, 0)?;
     let reader: Box<dyn Read + '_> =
         match format {
-            "gzip" => Box::new(flate2::read::MultiGzDecoder::new(input)),
             "bzip2" => Box::new(bzip2::read::MultiBzDecoder::new(input)),
             "xz" => Box::new(xz2::read::XzDecoder::new_multi_decoder(input)),
             "zstandard" => Box::new(zstd::stream::read::Decoder::new(input).map_err(|error| {
@@ -407,6 +408,9 @@ fn decode_compression_stream(
             uid: None,
             gid: None,
             modified_time: None,
+            original_filename: None,
+            comment: None,
+            external_attributes: None,
             link_target: None,
             encrypted: false,
             zip64: false,
@@ -452,6 +456,206 @@ fn read_controlled(
     Ok(output)
 }
 
+fn drain_controlled(
+    context: &ContainerDecodeContext<'_>,
+    mut reader: impl Read,
+    compressed: u64,
+    expanded_before: u64,
+    label: &str,
+) -> Result<u64, ContainerDecodeFailure> {
+    let mut expanded = 0_u64;
+    let mut chunk = [0_u8; 32 * 1024];
+    loop {
+        context.checkpoint()?;
+        let count = reader
+            .read(&mut chunk)
+            .map_err(|error| malformed(format!("cannot decode {label} stream: {error}")))?;
+        if count == 0 {
+            break;
+        }
+        expanded = expanded.saturating_add(count as u64);
+        context.check_archive_preflight(1, compressed, expanded_before.saturating_add(expanded))?;
+    }
+    Ok(expanded)
+}
+
+#[derive(Clone)]
+struct GzipEntryInfo {
+    index: usize,
+    offset: usize,
+    compressed_size: usize,
+    path: String,
+    metadata: ArchiveMemberMetadata,
+    rejected: Option<(&'static str, String)>,
+}
+
+fn decode_gzip_members(
+    context: &ContainerDecodeContext<'_>,
+) -> Result<Vec<ContainerMember>, ContainerDecodeFailure> {
+    let input = context.bytes();
+    if !is_gzip(input) {
+        return Err(malformed("invalid gzip stream signature"));
+    }
+    let mut entries = Vec::new();
+    let mut collision_groups = BTreeMap::<String, Vec<usize>>::new();
+    let mut offset = 0_usize;
+    let mut expanded_total = 0_u64;
+    while offset < input.len() {
+        let index = entries.len();
+        context.check_archive_member_count((index as u64).saturating_add(1))?;
+        if !is_gzip(&input[offset..]) {
+            return Err(malformed(format!(
+                "gzip member {index} is followed by non-gzip trailing data"
+            )));
+        }
+        let mut decoder = flate2::bufread::GzDecoder::new(Cursor::new(&input[offset..]));
+        let header = decoder
+            .header()
+            .cloned()
+            .ok_or_else(|| malformed(format!("gzip member {index} has a malformed header")))?;
+        let original_filename = header
+            .filename()
+            .map(|value| String::from_utf8_lossy(value).replace('\\', "/"));
+        let path = original_filename
+            .clone()
+            .filter(|value| !value.is_empty())
+            .unwrap_or_else(|| gzip_fallback_member_name(context.source(), index));
+        let comment = header
+            .comment()
+            .map(|value| String::from_utf8_lossy(value).into_owned());
+        let expanded = drain_controlled(
+            context,
+            &mut decoder,
+            input.len() as u64,
+            expanded_total,
+            "gzip member",
+        )?;
+        let consumed = decoder.into_inner().position() as usize;
+        if consumed == 0 || offset.saturating_add(consumed) > input.len() {
+            return Err(malformed(format!(
+                "gzip member {index} did not consume a valid frame"
+            )));
+        }
+        let end = offset + consumed;
+        let crc32 = consumed
+            .checked_sub(8)
+            .and_then(|trailer| little_u32(&input[offset..end], trailer));
+        let validation =
+            context
+                .archive_security_policy()
+                .validate_member(&ArchiveMemberDescriptor {
+                    path: &path,
+                    kind: ArchiveEntryKind::RegularFile,
+                    link_target: None,
+                });
+        let rejected = validation
+            .as_ref()
+            .err()
+            .map(|error| (error.code, error.message.clone()));
+        if let Ok(key) = validation {
+            collision_groups.entry(key).or_default().push(index);
+        }
+        entries.push(GzipEntryInfo {
+            index,
+            offset,
+            compressed_size: consumed,
+            path,
+            metadata: ArchiveMemberMetadata {
+                entry_kind: ArchiveEntryKind::RegularFile,
+                compression_method: "gzip".into(),
+                compressed_size: consumed as u64,
+                uncompressed_size: expanded,
+                crc32,
+                mode: None,
+                uid: None,
+                gid: None,
+                modified_time: (header.mtime() != 0).then_some(u64::from(header.mtime())),
+                original_filename,
+                comment,
+                external_attributes: None,
+                link_target: None,
+                encrypted: false,
+                zip64: false,
+            },
+            rejected,
+        });
+        expanded_total = expanded_total.saturating_add(expanded);
+        offset = end;
+    }
+    context.check_archive_preflight(entries.len() as u64, input.len() as u64, expanded_total)?;
+    for indexes in collision_groups
+        .values()
+        .filter(|indexes| indexes.len() > 1)
+    {
+        for index in indexes {
+            entries[*index].rejected = Some((
+                "grist.security.archive.duplicate_path",
+                "archive path is ambiguous after cross-platform normalization".into(),
+            ));
+        }
+    }
+
+    let mut members = Vec::with_capacity(entries.len());
+    for entry in entries {
+        let locator = member_locator(entry.index, &entry.path)?;
+        let mut member = if let Some((code, message)) = &entry.rejected {
+            ContainerMember::unavailable(
+                entry.index as u64,
+                locator,
+                ContainerUnavailable::new(ContainerUnavailableKind::Rejected, *code)
+                    .with_message(message),
+            )
+        } else {
+            let end = entry.offset + entry.compressed_size;
+            let decoder = flate2::bufread::GzDecoder::new(Cursor::new(&input[entry.offset..end]));
+            let bytes = read_controlled(
+                context,
+                decoder,
+                entry.compressed_size as u64,
+                "gzip member",
+            )?;
+            if bytes.len() as u64 != entry.metadata.uncompressed_size {
+                return Err(malformed(format!(
+                    "gzip member {} expanded length changed between inventory and materialization",
+                    entry.path
+                )));
+            }
+            let nested = nested_archive_format(&bytes);
+            let mut value = ContainerMember::available(entry.index as u64, locator, bytes);
+            if let Some(format) = nested {
+                value = value.with_nested_container_format(format);
+            }
+            value
+        };
+        member = member
+            .with_declared_filename(entry.path.clone())
+            .with_compressed_bytes(entry.metadata.compressed_size)
+            .with_archive_metadata(entry.metadata.clone());
+        if let Some(hint) = member_hint(&entry.path) {
+            member = member.with_format_hint(hint);
+        }
+        members.push(member);
+    }
+    Ok(members)
+}
+
+fn gzip_fallback_member_name(source: &SourceInfo, index: usize) -> String {
+    let base = compression_member_name(source, "gzip");
+    if index == 0 {
+        base
+    } else {
+        format!("{base}.member-{index}")
+    }
+}
+
+#[derive(Clone)]
+struct SevenZipEntryInfo {
+    path: String,
+    metadata: ArchiveMemberMetadata,
+    anti_item: bool,
+    rejected: Option<(&'static str, String)>,
+}
+
 fn decode_seven_zip(
     context: &ContainerDecodeContext<'_>,
 ) -> Result<Vec<ContainerMember>, ContainerDecodeFailure> {
@@ -465,61 +669,149 @@ fn decode_seven_zip(
         sevenz_rust::Password::empty(),
     )
     .map_err(seven_zip_failure)?;
-    let inventory = reader.archive().files.clone();
-    let expanded = inventory
+    let raw_inventory = reader.archive().files.clone();
+    let expanded = raw_inventory
         .iter()
         .fold(0_u64, |total, entry| total.saturating_add(entry.size));
-    context.check_archive_preflight(inventory.len() as u64, input_len, expanded)?;
+    context.check_archive_preflight(raw_inventory.len() as u64, input_len, expanded)?;
+    let mut inventory = Vec::with_capacity(raw_inventory.len());
+    let mut collision_groups = BTreeMap::<String, Vec<usize>>::new();
+    for (index, entry) in raw_inventory.into_iter().enumerate() {
+        context.checkpoint()?;
+        let path = entry.name.replace('\\', "/");
+        let mode = entry
+            .has_windows_attributes
+            .then_some(entry.windows_attributes >> 16)
+            .filter(|value| *value != 0);
+        let kind = zip_entry_kind(entry.is_directory, false, mode);
+        let validation =
+            context
+                .archive_security_policy()
+                .validate_member(&ArchiveMemberDescriptor {
+                    path: &path,
+                    kind,
+                    link_target: None,
+                });
+        let rejected = validation
+            .as_ref()
+            .err()
+            .map(|error| (error.code, error.message.clone()));
+        if let Ok(key) = validation {
+            collision_groups.entry(key).or_default().push(index);
+        }
+        inventory.push(SevenZipEntryInfo {
+            path,
+            metadata: ArchiveMemberMetadata {
+                entry_kind: kind,
+                compression_method: "7z".into(),
+                compressed_size: entry.compressed_size,
+                uncompressed_size: entry.size,
+                crc32: entry.has_crc.then_some(entry.crc as u32),
+                mode,
+                uid: None,
+                gid: None,
+                modified_time: entry
+                    .has_last_modified_date
+                    .then(|| seven_zip_unix_seconds(entry.last_modified_date.to_raw()))
+                    .flatten(),
+                original_filename: Some(entry.name),
+                comment: None,
+                external_attributes: entry
+                    .has_windows_attributes
+                    .then_some(entry.windows_attributes),
+                link_target: None,
+                encrypted: false,
+                zip64: false,
+            },
+            anti_item: entry.is_anti_item,
+            rejected,
+        });
+    }
+    for indexes in collision_groups
+        .values()
+        .filter(|indexes| indexes.len() > 1)
+    {
+        for index in indexes {
+            inventory[*index].rejected = Some((
+                "grist.security.archive.duplicate_path",
+                "archive path is ambiguous after cross-platform normalization".into(),
+            ));
+        }
+    }
 
+    let archive_entries_base = reader.archive().files.as_ptr() as usize;
+    let archive_entry_size = std::mem::size_of::<sevenz_rust::SevenZArchiveEntry>();
     let mut members = Vec::with_capacity(inventory.len());
+    let mut seen = vec![false; inventory.len()];
     let mut bounded_failure = None;
     let result = reader.for_each_entries(|entry, source| {
-        let index = members.len();
-        let path = entry.name.replace('\\', "/");
-        let locator = match member_locator(index, &path) {
+        let address = entry as *const sevenz_rust::SevenZArchiveEntry as usize;
+        let Some(distance) = address.checked_sub(archive_entries_base) else {
+            bounded_failure = Some(malformed(
+                "7z decoder returned an entry outside its inventory",
+            ));
+            return Err(sevenz_rust::Error::other("bounded 7z inventory failure"));
+        };
+        if archive_entry_size == 0 || distance % archive_entry_size != 0 {
+            bounded_failure = Some(malformed(
+                "7z decoder returned an unaligned inventory entry",
+            ));
+            return Err(sevenz_rust::Error::other("bounded 7z inventory failure"));
+        }
+        let index = distance / archive_entry_size;
+        let Some(info) = inventory.get(index) else {
+            bounded_failure = Some(malformed("7z decoder returned an unknown inventory entry"));
+            return Err(sevenz_rust::Error::other("bounded 7z inventory failure"));
+        };
+        seen[index] = true;
+        let locator = match member_locator(index, &info.path) {
             Ok(locator) => locator,
             Err(error) => {
                 bounded_failure = Some(error);
                 return Err(sevenz_rust::Error::other("bounded 7z locator failure"));
             }
         };
-        let kind = if entry.is_directory {
-            ArchiveEntryKind::Directory
-        } else {
-            ArchiveEntryKind::RegularFile
-        };
-        let metadata = ArchiveMemberMetadata {
-            entry_kind: kind,
-            compression_method: "7z".into(),
-            compressed_size: entry.compressed_size,
-            uncompressed_size: entry.size,
-            crc32: entry.has_crc.then_some(entry.crc as u32),
-            mode: None,
-            uid: None,
-            gid: None,
-            modified_time: None,
-            link_target: None,
-            encrypted: false,
-            zip64: false,
-        };
-        let mut member = if entry.is_anti_item {
-            ContainerMember::unavailable(
-                index as u64,
-                locator,
+        let unavailable = if let Some((code, message)) = &info.rejected {
+            Some(
+                ContainerUnavailable::new(ContainerUnavailableKind::Rejected, *code)
+                    .with_message(message),
+            )
+        } else if info.anti_item {
+            Some(
                 ContainerUnavailable::new(
                     ContainerUnavailableKind::Unsupported,
                     "grist.archive.7z_anti_item",
                 )
                 .with_message("7z anti-items are inventoried but not materialized"),
             )
-        } else if kind == ArchiveEntryKind::Directory {
+        } else {
+            None
+        };
+        let mut member = if let Some(unavailable) = unavailable {
+            let drained = match drain_controlled(context, source, input_len, 0, "7z member") {
+                Ok(value) => value,
+                Err(error) => {
+                    bounded_failure = Some(error);
+                    return Err(sevenz_rust::Error::other("bounded 7z discard failure"));
+                }
+            };
+            if drained != info.metadata.uncompressed_size {
+                bounded_failure = Some(malformed(format!(
+                    "7z member {} expanded length disagrees with its header",
+                    info.path
+                )));
+                return Err(sevenz_rust::Error::other("bounded 7z length failure"));
+            }
+            ContainerMember::unavailable(index as u64, locator, unavailable)
+        } else if info.metadata.entry_kind == ArchiveEntryKind::Directory {
             ContainerMember::available(index as u64, locator, Vec::new())
         } else {
             match read_controlled(context, source, input_len, "7z member") {
                 Ok(bytes) => {
-                    if bytes.len() as u64 != entry.size {
+                    if bytes.len() as u64 != info.metadata.uncompressed_size {
                         bounded_failure = Some(malformed(format!(
-                            "7z member {path} expanded length disagrees with its header"
+                            "7z member {} expanded length disagrees with its header",
+                            info.path
                         )));
                         return Err(sevenz_rust::Error::other("bounded 7z length failure"));
                     }
@@ -537,11 +829,11 @@ fn decode_seven_zip(
             }
         };
         member = member
-            .with_declared_filename(path.clone())
-            .with_compressed_bytes(entry.compressed_size)
-            .with_entry_kind(kind)
-            .with_archive_metadata(metadata);
-        if let Some(hint) = member_hint(&path) {
+            .with_declared_filename(info.path.clone())
+            .with_compressed_bytes(info.metadata.compressed_size)
+            .with_entry_kind(info.metadata.entry_kind)
+            .with_archive_metadata(info.metadata.clone());
+        if let Some(hint) = member_hint(&info.path) {
             member = member.with_format_hint(hint);
         }
         members.push(member);
@@ -551,7 +843,18 @@ fn decode_seven_zip(
         return Err(error);
     }
     result.map_err(seven_zip_failure)?;
+    if seen.iter().any(|value| !value) {
+        return Err(malformed(
+            "7z decoder did not visit every inventoried entry",
+        ));
+    }
     Ok(members)
+}
+
+fn seven_zip_unix_seconds(raw: u64) -> Option<u64> {
+    const WINDOWS_TO_UNIX_EPOCH_100NS: u64 = 116_444_736_000_000_000;
+    raw.checked_sub(WINDOWS_TO_UNIX_EPOCH_100NS)
+        .map(|value| value / 10_000_000)
 }
 
 fn seven_zip_failure(error: sevenz_rust::Error) -> ContainerDecodeFailure {
@@ -747,6 +1050,9 @@ fn zip_central_directory(
                 uid: None,
                 gid: None,
                 modified_time: None,
+                original_filename: None,
+                comment: None,
+                external_attributes: Some(external),
                 link_target: None,
                 encrypted: flags & 1 != 0 || method == 99,
                 zip64: has_zip64 || needs_compressed || needs_uncompressed,
@@ -1079,6 +1385,9 @@ fn decode_tar(
                 uid: header.uid().ok(),
                 gid: header.gid().ok(),
                 modified_time: header.mtime().ok(),
+                original_filename: None,
+                comment: None,
+                external_attributes: None,
                 link_target,
                 encrypted: false,
                 zip64: false,
