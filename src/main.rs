@@ -1324,143 +1324,14 @@ fn render_serialization_summary(
 fn parse_input_to_document_graph(
     input: &str,
 ) -> Result<grist::document_graph::DocumentGraph, Box<dyn std::error::Error>> {
-    let extension = if input == "-" {
-        String::new()
-    } else {
-        PathBuf::from(input)
-            .extension()
-            .and_then(|ext| ext.to_str())
-            .unwrap_or_default()
-            .to_ascii_lowercase()
-    };
     let normalized_input = input.replace('\\', "/").to_ascii_lowercase();
     let graph_filename = normalized_input.ends_with(".graph.json")
         || normalized_input.ends_with(".graph.yaml")
         || normalized_input.ends_with(".graph.yml");
-    let (format, options) = if graph_filename {
-        ("graph", None)
-    } else {
-        match extension.as_str() {
-        "txt" | "text" => ("text", None),
-        "md" | "markdown" => ("markdown", None),
-        "tex" | "latex" => (
-            "latex",
-            Some(serde_json::to_value(grist::latex::LatexOptions::default())?),
-        ),
-        "bib" => (
-            "bibtex",
-            Some(serde_json::to_value(
-                grist::bibliography::BibliographyOptions::default(),
-            )?),
-        ),
-        "pdf" => (
-            "pdf",
-            Some(serde_json::to_value(grist::pdf::PdfOptions::default())?),
-        ),
-        "png" | "jpg" | "jpeg" | "gif" | "tif" | "tiff" | "webp" | "bmp" | "heif"
-        | "heic" | "avif" | "svg" => (
-            match extension.as_str() {
-                "jpg" => "jpeg",
-                "tif" => "tiff",
-                "heic" | "avif" => "heif",
-                value => value,
-            },
-            Some(serde_json::to_value(
-                grist::image::ImageOptions::default(),
-            )?),
-        ),
-        "zip" | "tar" | "gz" | "gzip" | "bz2" | "bzip2" | "xz" | "zst" | "zstd"
-        | "7z" => (
-            match extension.as_str() {
-                "gz" => "gzip",
-                "bz2" => "bzip2",
-                "zst" => "zstd",
-                value => value,
-            },
-            Some(serde_json::to_value(
-                grist::archive::ArchiveOptions::default(),
-            )?),
-        ),
-        "odt" | "ott" => (
-            extension.as_str(),
-            Some(serde_json::to_value(
-                grist::odf_word::OdfWordOptions::default(),
-            )?),
-        ),
-            "csv" | "tsv" => (
-                "csv",
-            Some(serde_json::to_value(grist::csv::CsvOptions {
-                delimiter: if extension == "tsv" {
-                    grist::csv::CsvDelimiter::Tab
-                } else {
-                    grist::csv::CsvDelimiter::Auto
-                },
-                ..Default::default()
-                })?),
-            ),
-            "json" | "yaml" | "yml" => ("auto", None),
-            "odp" | "otp" => (
-            extension.as_str(),
-            Some(serde_json::to_value(
-                grist::presentation_odf::OdfPresentationOptions::default(),
-            )?),
-        ),
-        "py" | "pyi" => (
-            "python",
-            Some(serde_json::to_value(
-                grist::python::PythonIngestOptions::default(),
-            )?),
-        ),
-        "xlsx" | "xlsm" => (
-            extension.as_str(),
-            Some(serde_json::to_value(
-                grist::spreadsheet_ooxml::SpreadsheetOoxmlOptions::default(),
-            )?),
-        ),
-        "ods" | "ots" => (
-            extension.as_str(),
-            Some(serde_json::to_value(
-                grist::spreadsheet_odf::SpreadsheetOdfOptions::default(),
-            )?),
-        ),
-        "rs" => (
-            "rust",
-            Some(serde_json::to_value(
-                grist::rust::RustIngestOptions::default(),
-            )?),
-        ),
-        "js" | "mjs" | "cjs" | "jsx" => (
-            if extension == "jsx" { "jsx" } else { "javascript" },
-            Some(serde_json::to_value(
-                grist::javascript::JavaScriptIngestOptions {
-                    dialect: if extension == "jsx" {
-                        grist::javascript::JavaScriptDialect::Jsx
-                    } else {
-                        grist::javascript::JavaScriptDialect::JavaScript
-                    },
-                    ..Default::default()
-                },
-            )?),
-        ),
-        "ts" | "mts" | "cts" | "tsx" => (
-            if extension == "tsx" { "tsx" } else { "typescript" },
-            Some(serde_json::to_value(
-                grist::typescript::TypeScriptIngestOptions {
-                    dialect: match extension.as_str() {
-                        "tsx" => grist::typescript::TypeScriptDialect::Tsx,
-                        _ => grist::typescript::TypeScriptDialect::TypeScript,
-                    },
-                    ..Default::default()
-                },
-            )?),
-        ),
-            _ => return Err(format!(
-                "cannot infer transform source kind for `{input}`; use a supported text, graph, office, code, image, archive, or compression extension"
-            )
-            .into()),
-        }
-    };
-    let envelope = parse_registry(input, format, options)?;
+    if graph_filename {
+        return Ok(grist::cli::graph_input(input, &grist::cli::InputHints::default())?.0);
+    }
+    let envelope = parse_registry(input, "auto", None)?;
     grist::cli::project_envelope_to_graph(&envelope, format!("graph:{input}"))
 }
 

@@ -117,6 +117,8 @@ The `cli` feature enables the `grist` binary and pulls in the parser features ne
 - `docs/spec.md` describes the public interpretation contract.
 - `docs/cli.md` describes the CLI command menu, parse/ingest/schema/render/validate/transform commands, and examples.
 - `docs/cross-format-integration.md` is the retained 92-selector registry, schema, graph, segmentation, citation, and feature-behavior matrix.
+- `docs/complete-parser-contract.md` is the final Sections 1–19 retained-spec audit, explicit exclusion record, universal acceptance gate, and release checklist.
+- `docs/code.md`, `docs/media.md`, and `docs/model-output.md` document the code/repository, media, and model-response family contracts.
 - `docs/ldgr-projection-module-spec.md` describes the LDGR Markdown Projection parser/renderer contract.
 - `docs/markdown.md` describes the CommonMark/GFM v2 payload, extensions, diagnostics, projections, and security behavior.
 - `docs/rmarkdown-quarto.md` describes inert R Markdown/Quarto executable metadata, citations, figures, stored outputs, and bounded references.

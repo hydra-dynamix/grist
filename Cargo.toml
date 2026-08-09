@@ -178,3 +178,8 @@ zstd = { version = "0.13.3", optional = true }
 name = "grist"
 path = "src/main.rs"
 required-features = ["cli"]
+
+[[bench]]
+name = "representative_parsers"
+harness = false
+required-features = ["full"]
