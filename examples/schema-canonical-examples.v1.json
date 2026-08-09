@@ -1331,6 +1331,112 @@
         "schema_version": "grist/format-reconstruction-result/v1"
       }
     },
+    "graph": {
+      "schema_name": "graph",
+      "schema_version": "grist/graph-document/v1",
+      "canonical_sha256": "sha256:c6dcce93c2683b3680fbd9ba3b5dbf50dc05e65d863b394dc09554d97edc1f38",
+      "value": {
+        "directed": false,
+        "edges": [],
+        "nodes": [],
+        "schema_version": "grist/graph-document/v1"
+      }
+    },
+    "graph-envelope": {
+      "schema_name": "graph-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "graph-options": {
+      "schema_name": "graph-options",
+      "schema_version": "grist/graph-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "graph-parse-result": {
+      "schema_name": "graph-parse-result",
+      "schema_version": "grist/graph-parse-result/v1",
+      "canonical_sha256": "sha256:bc2561b9780a7b7b71af86e0761f09be5fb952e79012e2dd20778d012cd0eccc",
+      "value": {
+        "envelope": {
+          "diagnostics": [],
+          "kind": "archive",
+          "operation": "parse",
+          "options_digest": "",
+          "parser": {
+            "name": "",
+            "version": ""
+          },
+          "payload_schema_version": "",
+          "provenance": [],
+          "providers": [],
+          "schema_version": "",
+          "source": {
+            "display_name": ""
+          },
+          "status": "complete"
+        },
+        "source_map": {}
+      }
+    },
+    "graph-source-map": {
+      "schema_name": "graph-source-map",
+      "schema_version": "grist/graph-source-map/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "graph-stream-event": {
+      "schema_name": "graph-stream-event",
+      "schema_version": "grist/graph-stream-event/v1",
+      "canonical_sha256": "sha256:c1b613d59423ffec8098b26b2ac35750ae5287f498e880185da26d3d0f8bbb7f",
+      "value": {
+        "event": "item",
+        "item": {
+          "identity": {},
+          "payload": {
+            "envelope": {
+              "diagnostics": [],
+              "kind": "archive",
+              "operation": "parse",
+              "options_digest": "",
+              "parser": {
+                "name": "",
+                "version": ""
+              },
+              "payload_schema_version": "",
+              "provenance": [],
+              "providers": [],
+              "schema_version": "",
+              "source": {
+                "display_name": ""
+              },
+              "status": "complete"
+            },
+            "source_map": {}
+          },
+          "request_id": "",
+          "sequence": 0
+        }
+      }
+    },
     "graph-transform-envelope": {
       "schema_name": "graph-transform-envelope",
       "schema_version": "grist/envelope/v2",

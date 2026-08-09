@@ -460,6 +460,63 @@ fn registrations() -> Vec<Registration> {
         true,
         crate::core::Envelope<crate::document_graph::DocumentGraph>
     );
+    #[cfg(feature = "graph")]
+    {
+        add!(
+            "graph",
+            "graph-document",
+            SchemaVersion::GRAPH_DOCUMENT_V1,
+            SchemaKind::Graph,
+            "grist.graph-document.v1.schema.json",
+            false,
+            crate::graph::GraphDocument
+        );
+        add!(
+            "graph-envelope",
+            "envelope",
+            SchemaVersion::ENVELOPE_V2,
+            SchemaKind::Envelope,
+            "grist.graph-envelope.v2.schema.json",
+            false,
+            crate::graph::GraphEnvelope
+        );
+        add!(
+            "graph-options",
+            "graph-options",
+            "grist/graph-options/v1",
+            SchemaKind::Options,
+            "grist.graph-options.v1.schema.json",
+            false,
+            crate::graph::GraphOptions
+        );
+        add!(
+            "graph-parse-result",
+            "graph-parse-result",
+            "grist/graph-parse-result/v1",
+            SchemaKind::Payload,
+            "grist.graph-parse-result.v1.schema.json",
+            false,
+            crate::graph::GraphParseResult
+        );
+        add!(
+            "graph-source-map",
+            "graph-source-map",
+            "grist/graph-source-map/v1",
+            SchemaKind::Contract,
+            "grist.graph-source-map.v1.schema.json",
+            false,
+            crate::graph::GraphSourceMap
+        );
+        add!(
+            "graph-stream-event",
+            "graph-stream-event",
+            "grist/graph-stream-event/v1",
+            SchemaKind::Event,
+            "grist.graph-stream-event.v1.schema.json",
+            false,
+            crate::core::StreamEvent<crate::graph::GraphParseResult>
+        );
+    }
     add!(
         "graph-transform-result",
         "graph-transform-result",

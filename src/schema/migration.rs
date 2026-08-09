@@ -249,6 +249,11 @@ pub fn builtin_migration_registry() -> MigrationRegistry {
             registry.register_version(family, version);
         }
     }
+    #[cfg(feature = "graph")]
+    registry.register_version(
+        "graph-document",
+        crate::graph::GraphDocument::SCHEMA_VERSION,
+    );
     registry
         .register_migration(
             "envelope",

@@ -1,0 +1,104 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "GraphEdge": {
+      "additionalProperties": false,
+      "description": "One edge occurrence. Distinct IDs preserve parallel edge occurrences.",
+      "properties": {
+        "attrs": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "directed": {
+          "description": "Effective direction after the input document default is materialized.",
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "directed",
+        "id",
+        "source",
+        "target"
+      ],
+      "type": "object"
+    },
+    "GraphNode": {
+      "additionalProperties": false,
+      "description": "One source node declaration.",
+      "properties": {
+        "attrs": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "id": {
+          "type": "string"
+        },
+        "labels": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "type": "object"
+    }
+  },
+  "description": "An input-side generic graph, preserving source declaration order.",
+  "properties": {
+    "attrs": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "directed": {
+      "type": "boolean"
+    },
+    "edges": {
+      "items": {
+        "$ref": "#/definitions/GraphEdge"
+      },
+      "type": "array"
+    },
+    "id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "nodes": {
+      "items": {
+        "$ref": "#/definitions/GraphNode"
+      },
+      "type": "array"
+    },
+    "schema_version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "directed",
+    "edges",
+    "nodes",
+    "schema_version"
+  ],
+  "title": "GraphDocument",
+  "type": "object"
+}

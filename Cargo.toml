@@ -85,7 +85,7 @@ media = ["dep:quick-xml", "dep:flate2"]
 # Compatibility and individual-parser gates retained for downstream crates.
 basin = ["python", "document-graph"]
 document-graph = []
-graph = []
+graph = ["dep:serde_yaml"]
 latex = []
 bibliography = []
 ldgr-projection = ["markdown", "serialization", "schemas"]

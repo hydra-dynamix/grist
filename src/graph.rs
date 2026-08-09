@@ -5,6 +5,20 @@
 //! [`crate::document_graph::DocumentGraph`], Grist's normalized cross-format
 //! projection.
 
+mod analysis;
+mod parse;
+
+pub use analysis::{
+    GraphAnalysis, GraphAnalysisError, GraphAnalysisOptions, GraphCycleWitness, GraphIndexes,
+    GraphValidationOptions, GraphValidationResult, analyze_graph,
+    analyze_graph_with_operation_control, validate_graph, validate_graph_with_operation_control,
+};
+
+pub use parse::{
+    parse_graph, parse_graph_json, parse_graph_request, parse_graph_with_operation_control,
+    parse_graph_yaml, parser_info,
+};
+
 use crate::core::{
     Diagnostic, Envelope, FormatOptions, ParseRequest, ResolvedParseRequest, SchemaVersion,
     SourceLocator,
@@ -215,4 +229,11 @@ pub mod diagnostic_codes {
     pub const FIELD_UNKNOWN: &str = "grist.graph.field.unknown";
     pub const YAML_FEATURE_UNSUPPORTED: &str = "grist.graph.yaml.feature.unsupported";
     pub const CONSTRUCT_UNSUPPORTED: &str = "grist.graph.construct.unsupported";
+    pub const ID_EMPTY: &str = "grist.graph.id.empty";
+    pub const SELF_LOOP_FORBIDDEN: &str = "grist.graph.edge.self_loop.forbidden";
+    pub const PARALLEL_EDGE_FORBIDDEN: &str = "grist.graph.edge.parallel.forbidden";
+    pub const UNDIRECTED_EDGE_FORBIDDEN: &str = "grist.graph.edge.undirected.forbidden";
+    pub const ATTRIBUTE_DEPTH_EXCEEDED: &str = "grist.graph.attribute.depth.exceeded";
+    pub const SOURCE_MAP_MISMATCH: &str = "grist.graph.source_map.mismatch";
+    pub const CYCLE: &str = "grist.graph.cycle";
 }

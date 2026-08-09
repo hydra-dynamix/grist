@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "GraphInputEncoding": {
+      "description": "The encoding selected for a generic graph input.",
+      "enum": [
+        "json",
+        "yaml"
+      ],
+      "type": "string"
+    }
+  },
+  "description": "Format-specific graph input options.\n\nResource limits, cancellation, recovery, security, and providers remain on the shared [`ParseRequest`] boundary. `None` leaves encoding selection to the request's shared format hint and the downstream graph parser.",
+  "properties": {
+    "encoding": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/GraphInputEncoding"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "title": "GraphOptions",
+  "type": "object"
+}
