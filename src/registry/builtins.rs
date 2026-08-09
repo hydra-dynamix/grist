@@ -85,6 +85,7 @@ fn descriptor(
             | ArtifactKind::TypeScriptCode
             | ArtifactKind::Code
             | ArtifactKind::Manifest
+            | ArtifactKind::GraphDocument
     ) {
         capabilities.insert(Capability::DocumentGraphProjection);
     }
@@ -227,7 +228,63 @@ fn register_feature_parsers(registry: &mut ParserRegistry) -> Result<(), ParserR
     register_structured_binary(registry)?;
     register_model_output(registry)?;
     register_ldgr_projection(registry)?;
+    register_graph(registry)?;
     Ok(())
+}
+
+#[cfg(feature = "graph")]
+fn register_graph(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    let format = FormatMetadata::new("graph", ArtifactKind::GraphDocument)
+        .with_aliases(["graph_json", "graph_yaml"])
+        .with_media_types([
+            "application/vnd.grist.graph+json",
+            "application/vnd.grist.graph+yaml",
+        ])
+        .with_extensions(["graph"]);
+    register(
+        registry,
+        descriptor(
+            "grist.graph",
+            format,
+            crate::graph::parser_info(),
+            crate::graph::GraphDocument::SCHEMA_VERSION,
+            Some("graph"),
+            serde_json::to_value(crate::graph::GraphOptions::default()).unwrap_or_default(),
+        ),
+        parse_graph,
+    )
+}
+
+#[cfg(feature = "graph")]
+fn parse_graph(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserError> {
+    let options = decode_options::<crate::graph::GraphOptions>(context)?;
+    let result = crate::graph::parse_graph_resolved_with_operation_control(
+        context.bytes(),
+        context.source().clone(),
+        &options,
+        context.control(),
+    );
+    output(result.envelope)
+}
+
+#[cfg(not(feature = "graph"))]
+fn register_graph(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    let format = FormatMetadata::new("graph", ArtifactKind::GraphDocument)
+        .with_aliases(["graph_json", "graph_yaml"])
+        .with_media_types([
+            "application/vnd.grist.graph+json",
+            "application/vnd.grist.graph+yaml",
+        ])
+        .with_extensions(["graph"]);
+    let metadata = descriptor(
+        "grist.graph",
+        format,
+        ParserInfo::new("grist.graph").with_feature("graph"),
+        crate::core::SchemaVersion::GRAPH_DOCUMENT_V1,
+        Some("graph"),
+        serde_json::json!({}),
+    );
+    register_disabled(registry, metadata, "graph")
 }
 
 #[allow(dead_code)]

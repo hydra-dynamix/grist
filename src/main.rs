@@ -1333,7 +1333,14 @@ fn parse_input_to_document_graph(
             .unwrap_or_default()
             .to_ascii_lowercase()
     };
-    let (format, options) = match extension.as_str() {
+    let normalized_input = input.replace('\\', "/").to_ascii_lowercase();
+    let graph_filename = normalized_input.ends_with(".graph.json")
+        || normalized_input.ends_with(".graph.yaml")
+        || normalized_input.ends_with(".graph.yml");
+    let (format, options) = if graph_filename {
+        ("graph", None)
+    } else {
+        match extension.as_str() {
         "txt" | "text" => ("text", None),
         "md" | "markdown" => ("markdown", None),
         "tex" | "latex" => (
@@ -1380,8 +1387,8 @@ fn parse_input_to_document_graph(
                 grist::odf_word::OdfWordOptions::default(),
             )?),
         ),
-        "csv" | "tsv" => (
-            "csv",
+            "csv" | "tsv" => (
+                "csv",
             Some(serde_json::to_value(grist::csv::CsvOptions {
                 delimiter: if extension == "tsv" {
                     grist::csv::CsvDelimiter::Tab
@@ -1389,9 +1396,10 @@ fn parse_input_to_document_graph(
                     grist::csv::CsvDelimiter::Auto
                 },
                 ..Default::default()
-            })?),
-        ),
-        "odp" | "otp" => (
+                })?),
+            ),
+            "json" | "yaml" | "yml" => ("auto", None),
+            "odp" | "otp" => (
             extension.as_str(),
             Some(serde_json::to_value(
                 grist::presentation_odf::OdfPresentationOptions::default(),
@@ -1446,10 +1454,11 @@ fn parse_input_to_document_graph(
                 },
             )?),
         ),
-        _ => return Err(format!(
-            "cannot infer transform source kind for `{input}`; use a supported text, office, code, image, archive, or compression extension"
-        )
-        .into()),
+            _ => return Err(format!(
+                "cannot infer transform source kind for `{input}`; use a supported text, graph, office, code, image, archive, or compression extension"
+            )
+            .into()),
+        }
     };
     let envelope = parse_registry(input, format, options)?;
     grist::cli::project_envelope_to_graph(&envelope, format!("graph:{input}"))

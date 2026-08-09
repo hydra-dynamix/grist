@@ -58,6 +58,18 @@ pub fn parse_graph_with_operation_control(
     parse_controlled(bytes, source, options, encoding, control, false, false)
 }
 
+/// Registry bridge for input that the shared dispatcher already resolved and
+/// charged to the operation budget.
+pub(crate) fn parse_graph_resolved_with_operation_control(
+    bytes: &[u8],
+    source: SourceInfo,
+    options: &GraphOptions,
+    control: &OperationControl,
+) -> GraphParseResult {
+    let encoding = select_encoding(bytes, &source, options);
+    parse_controlled(bytes, source, options, encoding, control, true, false)
+}
+
 /// Resolve and parse the shared graph request without charging resolved input twice.
 pub fn parse_graph_request(request: GraphParseRequest) -> GraphParseResult {
     let input = request.input;

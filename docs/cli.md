@@ -66,6 +66,8 @@ grist parse icalendar invite.ics --options icalendar-options.json
 grist parse vcard contacts.vcf --options vcard-options.json
 grist parse model-output response.txt --json-value
 grist parse ldgr-projection ticket.md --strict
+grist parse graph network.graph.json
+grist parse graph - --filename network.graph.yaml
 ```
 
 All parser commands accept `-` for stdin. Use `parse auto - --filename NAME`

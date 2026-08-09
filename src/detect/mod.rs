@@ -65,6 +65,7 @@ pub enum ContentKind {
     Css,
     Latex,
     Bibliography,
+    Graph,
     Csv,
     Json,
     Jsonl,
@@ -430,6 +431,24 @@ pub fn detect_with_registry(
             .decisive(),
         );
     }
+    if bytes.len() <= options.max_probe_bytes
+        && let Some(encoding) = graph_structure_encoding(bytes)
+    {
+        signals.push(
+            Signal::new(
+                "graph",
+                Some(if encoding == "json" {
+                    "application/vnd.grist.graph+json"
+                } else {
+                    "application/vnd.grist.graph+yaml"
+                }),
+                0.98,
+                DetectionEvidenceKind::Structure,
+                format!("canonical graph-document v1 {encoding} structure"),
+            )
+            .decisive(),
+        );
+    }
     signals.extend(text::signals(
         bytes,
         options.max_probe_bytes,
@@ -620,6 +639,45 @@ pub fn detect_with_registry(
 
 fn round_confidence(value: f32) -> f32 {
     (value * 10_000.0).round() / 10_000.0
+}
+
+fn graph_structure_encoding(bytes: &[u8]) -> Option<&'static str> {
+    if serde_json::from_slice::<Value>(bytes)
+        .ok()
+        .as_ref()
+        .is_some_and(is_graph_document_value)
+    {
+        return Some("json");
+    }
+    let text = std::str::from_utf8(bytes).ok()?;
+    #[cfg(feature = "graph")]
+    if serde_yaml::from_str::<serde_yaml::Value>(text)
+        .ok()
+        .and_then(|value| serde_json::to_value(value).ok())
+        .as_ref()
+        .is_some_and(is_graph_document_value)
+    {
+        return Some("yaml");
+    }
+    #[cfg(not(feature = "graph"))]
+    if text.lines().any(|line| {
+        line.trim() == "schema_version: grist/graph-document/v1"
+            || line.trim() == "schema_version: \"grist/graph-document/v1\""
+    }) && text.lines().any(|line| line.trim() == "nodes:")
+        && text.lines().any(|line| line.trim() == "edges:")
+    {
+        return Some("yaml");
+    }
+    None
+}
+
+fn is_graph_document_value(value: &Value) -> bool {
+    value.as_object().is_some_and(|object| {
+        object.get("schema_version").and_then(Value::as_str)
+            == Some(crate::core::SchemaVersion::GRAPH_DOCUMENT_V1)
+            && object.get("nodes").is_some_and(Value::is_array)
+            && object.get("edges").is_some_and(Value::is_array)
+    })
 }
 
 fn enrich_availability(candidate: &mut DetectionCandidate, registry: &ParserRegistry) {
@@ -878,6 +936,25 @@ fn registry_descriptors(registry: &ParserRegistry) -> Vec<crate::registry::Parse
 }
 
 fn add_special_filename_signal(signals: &mut Vec<Signal>, filename: &str) {
+    if filename.ends_with(".graph.json")
+        || filename.ends_with(".graph.yaml")
+        || filename.ends_with(".graph.yml")
+    {
+        signals.push(
+            Signal::new(
+                "graph",
+                Some(if filename.ends_with(".json") {
+                    "application/vnd.grist.graph+json"
+                } else {
+                    "application/vnd.grist.graph+yaml"
+                }),
+                0.94,
+                DetectionEvidenceKind::Filename,
+                "compound graph document filename",
+            )
+            .decisive(),
+        );
+    }
     if matches!(filename, "tsconfig.json" | "composer.json") {
         signals.push(Signal::new(
             "json",
@@ -1170,6 +1247,8 @@ fn extension_identity(extension: &str) -> Option<(&'static str, &'static str)> {
 
 fn media_type_identity(media_type: &str) -> Option<(&'static str, &'static str)> {
     Some(match media_type {
+        "application/vnd.grist.graph+json" => ("graph", "application/vnd.grist.graph+json"),
+        "application/vnd.grist.graph+yaml" => ("graph", "application/vnd.grist.graph+yaml"),
         "text/plain" => ("text", "text/plain"),
         "text/markdown" => ("markdown", "text/markdown"),
         "text/x-rst" | "text/restructuredtext" => ("restructured-text", "text/x-rst"),
@@ -1313,6 +1392,7 @@ fn format_for_kind(kind: &ContentKind) -> Option<&'static str> {
         ContentKind::Css => "css",
         ContentKind::Latex => "latex",
         ContentKind::Bibliography => "bibtex",
+        ContentKind::Graph => "graph",
         ContentKind::Csv => "csv",
         ContentKind::Json => "json",
         ContentKind::Jsonl => "jsonl",
@@ -1401,6 +1481,7 @@ fn content_kind_for_format(format: &str) -> ContentKind {
         "css" => ContentKind::Css,
         "latex" | "tex" => ContentKind::Latex,
         "bibtex" | "biblatex" | "bibliography" | "bib" => ContentKind::Bibliography,
+        "graph" | "graph_json" | "graph_yaml" => ContentKind::Graph,
         "csv" | "tsv" => ContentKind::Csv,
         "json" => ContentKind::Json,
         "jsonl" | "ndjson" => ContentKind::Jsonl,

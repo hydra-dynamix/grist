@@ -86,6 +86,7 @@
         "css",
         "latex",
         "bibliography",
+        "graph",
         "csv",
         "json",
         "jsonl",

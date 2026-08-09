@@ -302,6 +302,10 @@ pub fn project_envelope_to_graph(
             let document: crate::code::CodeFile = serde_json::from_value(payload)?;
             Ok(document.to_document_graph(context)?)
         }
+        crate::core::ArtifactKind::GraphDocument => {
+            let document: crate::graph::GraphDocument = serde_json::from_value(payload)?;
+            Ok(document.to_document_graph(context)?)
+        }
         _ => Err(format!(
             "parser payload kind {:?} has no enabled DocumentGraph projection",
             envelope.kind

@@ -1,8 +1,10 @@
 # Generic graph-input contract fixtures
 
-These review fixtures pin the proposed non-normative
+These conformance fixtures pin the implemented non-normative
 `grist/graph-document/v1` input dialect. They are not `DocumentGraph` fixtures
-and are not LDGR scheduler inputs.
+and are not LDGR scheduler inputs. Encoding/closed-shape failures terminate
+parsing; duplicate IDs and endpoint failures are decoded first and then
+reported by the explicit semantic validator.
 
 ## Outcome table
 

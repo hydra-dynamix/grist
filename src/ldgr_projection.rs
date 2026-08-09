@@ -4,7 +4,7 @@ use crate::core::{
 use crate::markdown::{MarkdownNodeKind, parse_markdown};
 use serde::{Deserialize, Deserializer, Serialize, de::Error as _};
 use serde_json::{Map, Value};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashSet};
 
 #[cfg(feature = "schemas")]
 use schemars::JsonSchema;
@@ -318,6 +318,132 @@ pub struct LdgrGraphEdge {
     pub dependency: String,
     pub dependent: String,
     pub kind: Option<String>,
+}
+
+#[derive(Debug, Clone, thiserror::Error, PartialEq, Eq)]
+pub enum LdgrGraphConversionError {
+    #[error("graph schema version is not supported: {0}")]
+    UnsupportedSchemaVersion(String),
+    #[error("LDGR dependency graphs cannot represent undirected edge {0}")]
+    UndirectedEdge(String),
+    #[error("node {node_id} attribute {field} is not a valid LDGR reference: {message}")]
+    InvalidReference {
+        node_id: String,
+        field: String,
+        message: String,
+    },
+}
+
+impl From<&LdgrGraphDocument> for crate::graph::GraphDocument {
+    fn from(document: &LdgrGraphDocument) -> Self {
+        let mut graph = crate::graph::GraphDocument::new(true);
+        graph.nodes = document
+            .nodes
+            .iter()
+            .map(|node| {
+                let mut converted = crate::graph::GraphNode::new(&node.id);
+                converted.labels.push("ldgr".into());
+                if let Some(artifact) = &node.artifact {
+                    converted
+                        .attrs
+                        .insert("artifact".into(), Value::String(artifact.as_string()));
+                }
+                if let Some(work_item) = &node.work_item {
+                    converted
+                        .attrs
+                        .insert("work_item".into(), Value::String(work_item.as_string()));
+                }
+                converted
+            })
+            .collect();
+        let mut occurrences = BTreeMap::<(String, String, Option<String>), usize>::new();
+        graph.edges = document
+            .edges
+            .iter()
+            .map(|edge| {
+                let key = (
+                    edge.dependency.clone(),
+                    edge.dependent.clone(),
+                    edge.kind.clone(),
+                );
+                let occurrence = occurrences.entry(key).or_default();
+                let id = format!(
+                    "ldgr:{}:{}:{}:{}",
+                    edge.dependency,
+                    edge.dependent,
+                    edge.kind.as_deref().unwrap_or("dependency"),
+                    *occurrence
+                );
+                *occurrence += 1;
+                let mut converted =
+                    crate::graph::GraphEdge::new(id, &edge.dependency, &edge.dependent, true);
+                converted.label = edge.kind.clone().or_else(|| Some("dependency".into()));
+                converted
+            })
+            .collect();
+        graph
+    }
+}
+
+impl TryFrom<&crate::graph::GraphDocument> for LdgrGraphDocument {
+    type Error = LdgrGraphConversionError;
+
+    fn try_from(document: &crate::graph::GraphDocument) -> Result<Self, Self::Error> {
+        if document.schema_version != crate::graph::GraphDocument::SCHEMA_VERSION {
+            return Err(LdgrGraphConversionError::UnsupportedSchemaVersion(
+                document.schema_version.clone(),
+            ));
+        }
+        let nodes = document
+            .nodes
+            .iter()
+            .map(|node| {
+                Ok(LdgrGraphNode {
+                    id: node.id.clone(),
+                    artifact: graph_reference(node, "artifact")?,
+                    work_item: graph_reference(node, "work_item")?,
+                })
+            })
+            .collect::<Result<Vec<_>, LdgrGraphConversionError>>()?;
+        let edges = document
+            .edges
+            .iter()
+            .map(|edge| {
+                if !edge.directed {
+                    return Err(LdgrGraphConversionError::UndirectedEdge(edge.id.clone()));
+                }
+                Ok(LdgrGraphEdge {
+                    dependency: edge.source.clone(),
+                    dependent: edge.target.clone(),
+                    kind: edge.label.clone().filter(|label| label != "dependency"),
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(Self { nodes, edges })
+    }
+}
+
+fn graph_reference(
+    node: &crate::graph::GraphNode,
+    field: &str,
+) -> Result<Option<LdgrRef>, LdgrGraphConversionError> {
+    let Some(value) = node.attrs.get(field) else {
+        return Ok(None);
+    };
+    let raw = value
+        .as_str()
+        .ok_or_else(|| LdgrGraphConversionError::InvalidReference {
+            node_id: node.id.clone(),
+            field: field.into(),
+            message: "value must be a string".into(),
+        })?;
+    LdgrRef::parse(raw)
+        .map(Some)
+        .map_err(|message| LdgrGraphConversionError::InvalidReference {
+            node_id: node.id.clone(),
+            field: field.into(),
+            message,
+        })
 }
 
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
@@ -884,35 +1010,57 @@ fn validate_ticket_index(doc: &LdgrTicketIndexDocument, diagnostics: &mut Vec<Di
 }
 
 fn validate_graph(doc: &LdgrGraphDocument, diagnostics: &mut Vec<Diagnostic>) {
-    check_unique(
-        doc.nodes.iter().map(|node| node.id.as_str()),
-        "graph.node_id.duplicate",
-        diagnostics,
-    );
-    let node_ids: HashSet<&str> = doc.nodes.iter().map(|node| node.id.as_str()).collect();
-    let mut adjacency: HashMap<&str, Vec<&str>> = HashMap::new();
-    for edge in &doc.edges {
-        if edge.dependency == edge.dependent {
-            diagnostics.push(error("graph.edge.self", "graph self-edges are not allowed"));
+    let graph = crate::graph::GraphDocument::from(doc);
+    let validation = crate::graph::validate_graph(
+        &graph,
+        &crate::graph::GraphSourceMap::default(),
+        &crate::graph::GraphValidationOptions {
+            allow_self_loops: false,
+            allow_parallel_edges: true,
+            allow_undirected_edges: false,
+            require_dag: false,
+            max_attribute_depth: None,
+        },
+    )
+    .expect("trusted LDGR graph validation cannot exhaust its budget");
+    for finding in validation.diagnostics {
+        match finding.code.as_str() {
+            crate::graph::diagnostic_codes::NODE_ID_DUPLICATE => {
+                diagnostics.push(error("graph.node_id.duplicate", finding.message))
+            }
+            crate::graph::diagnostic_codes::ID_EMPTY => {
+                diagnostics.push(error("graph.node_id.empty", finding.message))
+            }
+            crate::graph::diagnostic_codes::SELF_LOOP_FORBIDDEN => {
+                diagnostics.push(error("graph.edge.self", "graph self-edges are not allowed"))
+            }
+            crate::graph::diagnostic_codes::EDGE_ENDPOINT_UNKNOWN => {
+                let endpoint = finding.affected_ids.get(1).cloned().unwrap_or_default();
+                let edge_id = finding.affected_ids.first().cloned().unwrap_or_default();
+                if let Some(edge) = graph.edges.iter().find(|edge| edge.id == edge_id) {
+                    let (code, role) = if edge.source == endpoint {
+                        ("graph.edge.dependency_missing", "dependency")
+                    } else {
+                        ("graph.edge.dependent_missing", "dependent")
+                    };
+                    diagnostics.push(error(
+                        code,
+                        format!("edge {role} `{endpoint}` is not a node"),
+                    ));
+                }
+            }
+            _ => {}
         }
-        if !node_ids.contains(edge.dependency.as_str()) {
-            diagnostics.push(error(
-                "graph.edge.dependency_missing",
-                format!("edge dependency `{}` is not a node", edge.dependency),
-            ));
-        }
-        if !node_ids.contains(edge.dependent.as_str()) {
-            diagnostics.push(error(
-                "graph.edge.dependent_missing",
-                format!("edge dependent `{}` is not a node", edge.dependent),
-            ));
-        }
-        adjacency
-            .entry(edge.dependency.as_str())
-            .or_default()
-            .push(edge.dependent.as_str());
     }
-    if has_cycle(&adjacency) {
+    let cyclic = crate::graph::analyze_graph(
+        &graph,
+        &crate::graph::GraphSourceMap::default(),
+        &crate::graph::GraphAnalysisOptions {
+            require_directed: true,
+        },
+    )
+    .is_ok_and(|analysis| !analysis.cycle_witnesses.is_empty());
+    if cyclic {
         diagnostics.push(error("graph.cycle", "graph contains a dependency cycle"));
     }
 }
@@ -1255,37 +1403,6 @@ fn check_unique<'a>(
             diagnostics.push(error(code, format!("duplicate id `{value}`")));
         }
     }
-}
-
-fn has_cycle<'a>(adjacency: &HashMap<&'a str, Vec<&'a str>>) -> bool {
-    fn visit<'a>(
-        node: &'a str,
-        adjacency: &HashMap<&'a str, Vec<&'a str>>,
-        visiting: &mut HashSet<&'a str>,
-        visited: &mut HashSet<&'a str>,
-    ) -> bool {
-        if visited.contains(node) {
-            return false;
-        }
-        if !visiting.insert(node) {
-            return true;
-        }
-        if let Some(nexts) = adjacency.get(node) {
-            for next in nexts {
-                if visit(next, adjacency, visiting, visited) {
-                    return true;
-                }
-            }
-        }
-        visiting.remove(node);
-        visited.insert(node);
-        false
-    }
-    let mut visiting = HashSet::new();
-    let mut visited = HashSet::new();
-    adjacency
-        .keys()
-        .any(|node| visit(node, adjacency, &mut visiting, &mut visited))
 }
 
 fn error(code: impl Into<String>, message: impl Into<String>) -> Diagnostic {

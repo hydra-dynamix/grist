@@ -7,7 +7,7 @@ Grist is a Rust library and optional JSON-only CLI for interpretation tasks shar
 - Typed Rust output models with `serde` support.
 - Versioned JSON envelopes for CLI and cross-project integrations.
 - Checked-in JSON Schemas for public output contracts.
-- Parsers for Markdown, R Markdown, Quarto, LaTeX, BibTeX/BibLaTeX, HTML fragments/documents, XML/JATS, CSV, EML/RFC 5322 and MIME, MBOX mailboxes, Outlook MSG, iCalendar, vCard, Rust, Python, TypeScript/TSX/JSX, JSON/JSONL/YAML/TOML, model outputs, plain text, and LDGR Markdown Projection documents.
+- Parsers for Markdown, R Markdown, Quarto, LaTeX, BibTeX/BibLaTeX, HTML fragments/documents, XML/JATS, CSV, EML/RFC 5322 and MIME, MBOX mailboxes, Outlook MSG, iCalendar, vCard, Rust, Python, TypeScript/TSX/JSX, JSON/JSONL/YAML/TOML, generic graph JSON/YAML, model outputs, plain text, and LDGR Markdown Projection documents.
 - A normalized `DocumentGraph` projection for cross-format transforms, code graph consumers, and semantic obligation extraction.
 - Safe file and repository ingestion that honors ignore rules by default.
 
@@ -48,6 +48,7 @@ grist parse bibtex references.bib
 grist parse json config.toml --format toml
 grist parse model-output response.txt --json-value
 grist parse ldgr-projection ticket.md --strict
+grist parse graph network.graph.json
 grist render json-summary data.json
 grist render json-summary data.json --profile dynamic-event-dataset
 grist validate json dataset.json --schema schemas/dynamic-event-explorer.dataset.v1.schema.json
@@ -90,6 +91,12 @@ The `pdf` feature enables bounded inert PDF object/xref, catalog, page-tree, lab
 
 The `media` feature enables bounded native PNG, JPEG, TIFF, WebP, GIF, BMP, HEIF/HEIC, and inert SVG parsing, including animation frames, camera metadata, active-content inventory, exact locators, and graph projection. It is included in `full` and `cli`.
 
+The `graph` feature enables the closed `grist/graph-document/v1` JSON/YAML
+adapter, semantic validation and occurrence indexes, iterative SCC/DAG
+analysis, normalized `DocumentGraph` projection, ranked detection, registry
+dispatch, and generated schemas. It is included in `full`, `cli`, and
+`ldgr-projection`. See [docs/graph-input-contract.md](docs/graph-input-contract.md).
+
 The `word-ooxml` feature enables bounded inert DOCX, DOCM, DOTX, and DOTM package parsing, including content types, relationships, properties, quarantined macro inventory, and embedded child artifacts. It is included in `word-processing`, `full`, and `cli`.
 
 The `presentation-ooxml` feature enables bounded inert PPTX, PPTM, POTX, and PPSX package parsing, including slide order, masters/layouts/themes, properties, action inventory, macro quarantine, and embedded child artifacts. It is included in `presentations`, `full`, and `cli`.
@@ -119,6 +126,7 @@ The `cli` feature enables the `grist` binary and pulls in the parser features ne
 - `docs/odf-word.md` describes ODT/OTT package traversal, semantic and structural views, revisions, rich objects, child artifacts, and exact locators.
 - `docs/rtf.md` describes RTF group recovery, decoding, retained controls, semantic projections, embedded artifacts, and security behavior.
 - `docs/document-graph.md` describes the normalized graph IR, transforms, LaTeX support, basin integration, and semantic obligation policy.
+- `docs/graph-input-contract.md` describes the optional generic graph JSON/YAML payload, validation, DAG analysis, detection, LDGR conversion, and normalized projection boundary.
 - `schemas/` contains checked-in JSON Schema files for public envelopes and payloads.
 - `fixtures/` contains the licensed/synthetic corpus registry, deterministic builders,
   provider recordings, downstream regression intake policy, and canonical golden rules.

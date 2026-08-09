@@ -2,17 +2,17 @@
 
 ## Status and scope
 
-This document defines a **non-normative extension contract** for a possible
-input-side `grist::graph` adapter. It gives downstream implementation tickets a
-stable review target, but it does not claim that the adapter, module, feature,
-schema, CLI surface, or format-specific adapters exist.
+This document defines the implemented **non-normative extension contract** for
+the input-side `grist::graph` adapter. The `graph` feature, public Rust module,
+registry entry, CLI selector, generated schemas, and normalized projection are
+available. DOT, Mermaid, and GraphML remain future format-specific adapters and
+are not accepted by this parser.
 
 The [complete parser contract](complete-parser-contract.md) remains the
 normative parser target. Nothing here changes its clauses, ownership matrix,
 status, diagnostics, identity, resource-budget, security, schema, or promotion
-requirements. In particular, this document does not define a Rust API,
-implementation architecture, generated JSON Schema, feature wiring, CLI flag,
-or `DocumentGraph` projection algorithm.
+requirements. The implementation described here remains optional and does not
+change the normative complete-parser contract.
 
 The extension is useful only if it preserves this boundary:
 
@@ -25,14 +25,54 @@ The extension is useful only if it preserves this boundary:
   vocabularies, graph identity algorithm, canonical ordering, evidence model,
   and rendering behavior do not become the input syntax of `GraphDocument`.
 - Projection from a successfully parsed `GraphDocument` to `DocumentGraph` is
-  possible downstream, but is not specified here. A `GraphDocument` is not a
+  explicit and records an authoritative-payload boundary. A `GraphDocument` is not a
   valid `grist/document-graph/v1` or `grist/document-graph/v2` value merely
   because both values contain nodes and edges.
 
-The proposed adapter is layered over the shared parse envelope, source and
+The adapter is layered over the shared parse envelope, source and
 content identities, diagnostics, provenance, operation status, resource
 budget, cancellation, and canonical JSON contracts. It does not introduce
 graph-specific replacements for those shared contracts.
+
+## Available surfaces
+
+Enable the library adapter directly with `--features graph`; `full`, `cli`, and
+`ldgr-projection` also enable it. JSON and YAML use one format selector because
+`GraphOptions::encoding` or deterministic source detection selects the
+encoding.
+
+```sh
+grist parse graph network.graph.json
+grist parse graph network.graph.yaml
+grist parse auto - --filename network.graph.json
+grist ingest file network.graph.yaml
+grist transform network.graph.json --to graph
+grist schema emit graph
+grist schema emit graph-envelope
+```
+
+The registry format is `graph`, with `graph_json` and `graph_yaml` aliases and
+media types `application/vnd.grist.graph+json` and
+`application/vnd.grist.graph+yaml`. Automatic detection requires the exact v1
+`schema_version` plus node and edge arrays; an ordinary JSON/YAML object keeps
+using the serialization parser. Compound `.graph.json`, `.graph.yaml`, and
+`.graph.yml` filenames are additional evidence, not permission to accept an
+invalid payload. When the feature is disabled, detection reports the graph
+format as recognized but unavailable.
+
+The core Rust entry points are `parse_graph`, `parse_graph_json`,
+`parse_graph_yaml`, `validate_graph`, `analyze_graph`, and their caller-owned
+operation-control variants. `GraphParseResult` retains `GraphSourceMap`
+evidence separately from its authoritative `GraphDocument` envelope. Both
+`GraphDocument` and `GraphParseResult` implement `ToDocumentGraph`; the latter
+is preferred when source locators must survive projection.
+
+Validation policy controls self-loops, parallel edges, undirected edges,
+attribute depth, and optional DAG enforcement. Incoming/outgoing indexes are
+deterministic occurrence indexes. Analysis uses iterative SCC traversal and
+provides stable cycle witnesses, topological order, and execution layers;
+cyclic graphs remain valid generic graph payloads unless DAG behavior is
+explicitly requested.
 
 ## Contract layers
 
@@ -42,8 +82,8 @@ There are three deliberately separate layers:
    evidence.
 2. **GraphDocument.** The adapter parses the v1 node-edge dialect below and
    retains its generic graph semantics and declaration evidence.
-3. **DocumentGraph.** A later, separately versioned projection may map generic
-   nodes and edges into Grist's normalized vocabulary.
+3. **DocumentGraph.** The explicit, separately versioned projection maps known
+   vocabulary conservatively and retains unknown vocabulary as raw extensions.
 
 Success at one layer does not imply conformance at another. For example, a
 cyclic graph can be a valid `GraphDocument` but an invalid LDGR scheduler graph,
@@ -64,7 +104,7 @@ The top-level value is one mapping with these fields:
 | --- | --- | --- |
 | `schema_version` | yes | Exact string `grist/graph-document/v1`. |
 | `id` | no | Non-empty opaque string identifying the source graph within its producer's scope. |
-| `directed` | yes | Boolean default direction for edges without an override. |
+| `directed` | yes | Boolean default direction, materialized onto every parsed edge. |
 | `nodes` | yes | Array of node declarations. Empty is valid. |
 | `edges` | yes | Array of edge declarations. Empty is valid. |
 | `attrs` | no | JSON object of graph-level application attributes; omitted is equivalent to `{}`. |
@@ -89,7 +129,7 @@ An edge declaration has:
 | `id` | yes | Non-empty opaque string, unique among edges by exact Unicode scalar sequence. |
 | `source` | yes | Exact ID of an existing node. |
 | `target` | yes | Exact ID of an existing node. |
-| `directed` | no | Boolean override; when absent, the document-level value applies. |
+| `directed` | no | Boolean source override; the canonical parsed edge always carries the effective value. |
 | `label` | no | Non-empty application relation string. Absence means unlabeled, not `unknown`. |
 | `attrs` | no | JSON object of edge attributes; omitted is equivalent to `{}`. |
 
@@ -224,6 +264,11 @@ codes below are stable review names for the downstream implementation ticket:
 | Closed structural field is unknown | `grist.graph.field.unknown` |
 | YAML uses a forbidden feature | `grist.graph.yaml.feature.unsupported` |
 | Native graph construct cannot be retained losslessly | `grist.graph.construct.unsupported` |
+| Validation policy rejects a self-loop | `grist.graph.edge.self_loop.forbidden` |
+| Validation policy rejects a parallel edge | `grist.graph.edge.parallel.forbidden` |
+| Validation/DAG policy rejects an undirected edge | `grist.graph.edge.undirected.forbidden` |
+| Attribute depth exceeds configured policy | `grist.graph.attribute.depth.exceeded` |
+| DAG validation finds a cycle | `grist.graph.cycle` |
 
 Syntax errors and wrong field types use `grist.input.malformed` with a more
 specific explanation key in structured details. Resource exhaustion uses the
@@ -256,7 +301,7 @@ stream/batch contract.
 GraphDocument parsing never reads or mutates an LDGR database, resolves
 `artifact:` or `work:` references, schedules work, or infers completion.
 
-An explicit LDGR adapter may map an `ldgr.graph.v1` dependency graph into a
+The explicit LDGR adapter maps an `ldgr.graph.v1` dependency graph into a
 GraphDocument as follows:
 
 - one LDGR node becomes one graph node with the same ID;
@@ -265,7 +310,7 @@ GraphDocument as follows:
   `kind` to `label`, with `directed: true`;
 - a distinct deterministic edge ID is supplied for each edge occurrence.
 
-Before claiming LDGR scheduler compatibility, that adapter also enforces the
+The LDGR adapter enforces the
 stricter LDGR rules: unique node IDs, existing endpoints, valid typed reference
 syntax, no self-edge, and no cycle. These are adapter validation rules, not
 generic GraphDocument rules. Consequently, a cyclic or self-looping
@@ -327,6 +372,5 @@ attributes, and opaque IDs. Invalid fixtures pin version, identity,
 referential-integrity, and closed-field boundaries. Their expected outcomes
 are listed in the fixture README.
 
-These fixtures are contract evidence, not a claim that an executable parser or
-schema target already exists. The downstream universal contract test is
-expected to consume them when that implementation is added.
+These fixtures are contract and conformance evidence consumed by the graph
+parser tests. They do not imply support for DOT, Mermaid, or GraphML.

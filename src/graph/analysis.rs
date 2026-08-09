@@ -94,18 +94,18 @@ pub enum GraphAnalysisError {
     #[error("graph contains an undirected edge: {edge_id}")]
     UndirectedEdge {
         edge_id: String,
-        locator: Option<SourceLocator>,
+        locator: Option<Box<SourceLocator>>,
     },
     #[error("duplicate node id: {node_id}")]
     DuplicateNodeId {
         node_id: String,
-        locator: Option<SourceLocator>,
+        locator: Option<Box<SourceLocator>>,
     },
     #[error("edge {edge_id} references unknown endpoint {node_id}")]
     UnknownEndpoint {
         edge_id: String,
         node_id: String,
-        locator: Option<SourceLocator>,
+        locator: Option<Box<SourceLocator>>,
     },
     #[error("graph is cyclic")]
     Cyclic { witnesses: Vec<GraphCycleWitness> },
@@ -147,8 +147,10 @@ pub fn validate_graph_with_operation_control(
         indexes.outgoing.entry(node.id.clone()).or_default();
     }
 
-    if source_map.nodes.len() != document.nodes.len()
-        || source_map.edges.len() != document.edges.len()
+    let has_occurrence_locators = !source_map.nodes.is_empty() || !source_map.edges.is_empty();
+    if has_occurrence_locators
+        && (source_map.nodes.len() != document.nodes.len()
+            || source_map.edges.len() != document.edges.len())
     {
         diagnostics.push(Diagnostic::error(
             PARSER,
@@ -342,7 +344,7 @@ pub fn validate_graph_with_operation_control(
                         diagnostic_codes::UNDIRECTED_EDGE_FORBIDDEN,
                         format!("undirected edge `{edge_id}` is incompatible with DAG analysis"),
                     ),
-                    locator,
+                    locator.map(|locator| *locator),
                 ))
             }
             Err(_) => {}
@@ -392,7 +394,7 @@ pub fn analyze_graph_with_operation_control(
         if adjacency.insert(node.id.clone(), BTreeSet::new()).is_some() {
             return Err(GraphAnalysisError::DuplicateNodeId {
                 node_id: node.id.clone(),
-                locator: source_map.nodes.get(position).cloned(),
+                locator: source_map.nodes.get(position).cloned().map(Box::new),
             });
         }
         reverse.insert(node.id.clone(), BTreeSet::new());
@@ -403,7 +405,7 @@ pub fn analyze_graph_with_operation_control(
         if options.require_directed && !edge.directed {
             return Err(GraphAnalysisError::UndirectedEdge {
                 edge_id: edge.id.clone(),
-                locator: source_map.edges.get(position).cloned(),
+                locator: source_map.edges.get(position).cloned().map(Box::new),
             });
         }
         for endpoint in [&edge.source, &edge.target] {
@@ -411,7 +413,7 @@ pub fn analyze_graph_with_operation_control(
                 return Err(GraphAnalysisError::UnknownEndpoint {
                     edge_id: edge.id.clone(),
                     node_id: endpoint.clone(),
-                    locator: source_map.edges.get(position).cloned(),
+                    locator: source_map.edges.get(position).cloned().map(Box::new),
                 });
             }
         }

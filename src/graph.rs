@@ -7,6 +7,7 @@
 
 mod analysis;
 mod parse;
+mod projection;
 
 pub use analysis::{
     GraphAnalysis, GraphAnalysisError, GraphAnalysisOptions, GraphCycleWitness, GraphIndexes,
@@ -14,10 +15,12 @@ pub use analysis::{
     analyze_graph_with_operation_control, validate_graph, validate_graph_with_operation_control,
 };
 
+pub(crate) use parse::parse_graph_resolved_with_operation_control;
 pub use parse::{
     parse_graph, parse_graph_json, parse_graph_request, parse_graph_with_operation_control,
     parse_graph_yaml, parser_info,
 };
+pub use projection::project_graph_to_document_graph;
 
 use crate::core::{
     Diagnostic, Envelope, FormatOptions, ParseRequest, ResolvedParseRequest, SchemaVersion,
