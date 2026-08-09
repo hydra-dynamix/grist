@@ -17,13 +17,16 @@ v1 and DocumentGraph v1 schemas remain registered while v2 is current.
 Run the following configured generator to update artifacts:
 
 ```text
-cargo run --example schema_codegen --features "ldgr-projection latex basin"
+cargo run --all-features --example schema_codegen
 ```
 
-Use `--check` in CI. It compares every catalog entry with its file under
-`schemas/` and also checks `examples/schema-canonical-examples.v1.json`.
-Canonical examples are generated deterministically, hashed with Grist canonical
-JSON v1, and validated against their named schemas in the compatibility tests.
+Write mode requires `full` so a partial build cannot erase contracts owned by
+disabled features. Use `--check` in CI; it compares every compiled catalog
+entry with its file under `schemas/` and the corresponding entry in
+`examples/schema-canonical-examples.v1.json`. A full-feature check additionally
+requires exact manifest inventory equality. Canonical examples are generated
+deterministically, hashed with Grist canonical JSON v1, and validated against
+their named schemas in the compatibility tests.
 
 ## Compatibility policy
 

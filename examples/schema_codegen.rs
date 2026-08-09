@@ -1,6 +1,6 @@
 //! Regenerate or drift-check every registered public schema and canonical example.
 
-use grist::schema::{canonical_examples, schema_catalog, schema_json};
+use grist::schema::{CanonicalExampleManifest, canonical_examples, schema_catalog, schema_json};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -25,7 +25,40 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let examples = canonical_examples()?;
-    update_or_check(&example_path, &pretty_json(&examples)?, check)?;
+    if check {
+        check_canonical_examples(&example_path, &examples)?;
+    } else {
+        if !cfg!(feature = "full") {
+            return Err("canonical-example generation requires the `full` feature".into());
+        }
+        update_or_check(&example_path, &pretty_json(&examples)?, false)?;
+    }
+    Ok(())
+}
+
+fn check_canonical_examples(
+    path: &Path,
+    generated: &CanonicalExampleManifest,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let actual = fs::read_to_string(path)
+        .map_err(|error| format!("missing generated artifact {}: {error}", path.display()))?;
+    let checked_in: CanonicalExampleManifest = serde_json::from_str(&actual)
+        .map_err(|error| format!("invalid generated artifact {}: {error}", path.display()))?;
+    if generated.schema_version != checked_in.schema_version {
+        return Err(format!(
+            "generated artifact drift: {} schema version",
+            path.display()
+        )
+        .into());
+    }
+    for (name, example) in &generated.examples {
+        if checked_in.examples.get(name) != Some(example) {
+            return Err(format!("generated artifact drift: {}#{name}", path.display()).into());
+        }
+    }
+    if cfg!(feature = "full") && generated.examples.len() != checked_in.examples.len() {
+        return Err(format!("generated artifact inventory drift: {}", path.display()).into());
+    }
     Ok(())
 }
 

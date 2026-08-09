@@ -6,8 +6,8 @@ use grist::schema::{
 };
 #[cfg(feature = "schemas")]
 use grist::schema::{
-    MigrationRegistry, SchemaKind, builtin_migration_registry, canonical_examples, schema_catalog,
-    schema_json, schema_json_version, validate_schema,
+    CanonicalExampleManifest, MigrationRegistry, SchemaKind, builtin_migration_registry,
+    canonical_examples, schema_catalog, schema_json, schema_json_version, validate_schema,
 };
 use serde::Deserialize;
 use serde_json::json;
@@ -89,10 +89,26 @@ fn generated_schemas_and_canonical_examples_have_no_drift() {
             .unwrap_or_else(|error| panic!("missing {}: {error}", descriptor.file_name));
         assert_eq!(actual, expected, "schema drift for {}", descriptor.name);
     }
-    let expected = pretty_json(&canonical_examples().expect("canonical examples"));
+    let generated = canonical_examples().expect("canonical examples");
     let actual = fs::read_to_string(root.join("examples/schema-canonical-examples.v1.json"))
         .expect("checked-in canonical examples");
-    assert_eq!(actual, expected, "canonical example drift");
+    let checked_in: CanonicalExampleManifest =
+        serde_json::from_str(&actual).expect("checked-in canonical examples JSON");
+    assert_eq!(generated.schema_version, checked_in.schema_version);
+    for (name, example) in &generated.examples {
+        assert_eq!(
+            Some(example),
+            checked_in.examples.get(name),
+            "canonical example drift for {name}"
+        );
+    }
+    if cfg!(feature = "full") {
+        assert_eq!(
+            generated.examples.len(),
+            checked_in.examples.len(),
+            "all-feature canonical example inventory drift"
+        );
+    }
 }
 
 #[cfg(feature = "schemas")]

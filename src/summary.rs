@@ -596,6 +596,7 @@ impl ValueStats {
     }
 }
 
+#[cfg(feature = "serialization")]
 fn profile_name(profile: Option<&SummaryProfile>) -> Option<&'static str> {
     match profile {
         Some(SummaryProfile::DynamicEventDataset) => Some("dynamic-event-dataset"),

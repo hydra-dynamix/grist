@@ -58,11 +58,26 @@ mod tests {
     #[test]
     fn checked_in_canonical_examples_match_generated_values() {
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let expected = canonical_examples().expect("generated canonical examples");
+        let generated = canonical_examples().expect("generated canonical examples");
         let checked_in =
             fs::read_to_string(root.join("examples/schema-canonical-examples.v1.json"))
                 .expect("checked-in canonical examples");
-        let checked_in = serde_json::from_str(&checked_in).expect("canonical example JSON");
-        assert_eq!(expected, checked_in, "canonical example drift");
+        let checked_in: super::CanonicalExampleManifest =
+            serde_json::from_str(&checked_in).expect("canonical example JSON");
+        assert_eq!(generated.schema_version, checked_in.schema_version);
+        for (name, example) in &generated.examples {
+            assert_eq!(
+                Some(example),
+                checked_in.examples.get(name),
+                "canonical example drift for {name}"
+            );
+        }
+        if cfg!(feature = "full") {
+            assert_eq!(
+                generated.examples.len(),
+                checked_in.examples.len(),
+                "all-feature canonical example inventory drift"
+            );
+        }
     }
 }

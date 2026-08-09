@@ -11,8 +11,15 @@ use crate::core::{
     CitationAnchor, CitationAnchorError, CitationAnchorOptions, CitationCandidate,
     CitationSourceVersion, CitationTargetKind, ContentIdentity, DerivedNodeReference, Diagnostic,
     LocatorConfidence, LocatorPrecision, ParserInfo, SchemaVersion, SourceInfo, SourceLocator,
-    SourceRange, canonical_json_bytes, sha256_hex,
+    SourceRange,
 };
+#[cfg(any(
+    feature = "javascript",
+    feature = "python",
+    feature = "rust",
+    feature = "typescript"
+))]
+use crate::core::{canonical_json_bytes, sha256_hex};
 #[cfg(any(feature = "markdown", feature = "latex"))]
 use crate::security::sanitize_link_destination;
 #[cfg(feature = "markdown")]
@@ -24,7 +31,14 @@ use crate::security::{escape_latex_text, inert_latex_literal};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
+#[cfg(any(
+    feature = "javascript",
+    feature = "python",
+    feature = "rust",
+    feature = "typescript"
+))]
+use std::collections::BTreeSet;
 use thiserror::Error;
 
 mod identity;
@@ -4396,7 +4410,7 @@ fn insert_opt_attr(attrs: &mut AttrMap, key: &str, value: Option<Value>) {
 /// Extract explicit conditional obligations from prose nodes in-place.
 ///
 /// This deterministic pass intentionally handles only clear patterns such as
-/// "if/when/unless <condition>, <subject> must/shall/should/may <action>".
+/// "if/when/unless `condition`, `subject` must/shall/should/may `action`".
 /// Ambiguous prose is left untouched rather than guessed.
 pub fn extract_conditional_obligations(graph: &mut DocumentGraph) -> usize {
     let candidates = graph
