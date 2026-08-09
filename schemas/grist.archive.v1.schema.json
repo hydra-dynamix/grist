@@ -411,6 +411,7 @@
         "ldgr_projection",
         "detection",
         "document_graph",
+        "graph_document",
         "graph_transform_result",
         "render_result",
         "reconstruction_result",
