@@ -14,8 +14,8 @@ mod svg;
 pub use model::*;
 
 use crate::core::{
-    ArtifactKind, Diagnostic, Envelope, Hashes, OperationKind, OperationStatus, ParserInfo,
-    SchemaVersion, SourceInfo,
+    ArtifactKind, BudgetProfile, BudgetSelection, Diagnostic, Envelope, Hashes, OperationControl,
+    OperationKind, OperationStatus, ParserInfo, SchemaVersion, SourceInfo,
 };
 use crate::registry::{ParserContext, ParserError, ParserOutput};
 
@@ -39,8 +39,48 @@ pub fn parse_image_bytes(
     source: SourceInfo,
     options: &ImageOptions,
 ) -> ImageEnvelope {
+    let control = OperationControl::new(
+        &BudgetSelection::Profile(BudgetProfile::TrustedUnboundedV1),
+        Default::default(),
+    )
+    .expect("trusted budget is valid");
+    parse_image_with_operation_control(bytes, source, options, &control)
+}
+
+/// Parse an image while sharing the caller's cancellation token and resource budgets.
+pub fn parse_image_with_operation_control(
+    bytes: &[u8],
+    source: SourceInfo,
+    options: &ImageOptions,
+    control: &OperationControl,
+) -> ImageEnvelope {
     let digest = crate::core::options_digest(options).expect("image options serialize");
-    match parse::parse_document(bytes, options) {
+    let result = control
+        .budget()
+        .consume_input_bytes(bytes.len() as u64)
+        .map_err(crate::core::OperationControlError::from)
+        .and_then(|_| {
+            control
+                .budget()
+                .observe_memory_bytes(bytes.len() as u64)
+                .map_err(crate::core::OperationControlError::from)
+        })
+        .and_then(|_| control.checkpoint());
+    if let Err(error) = result {
+        return Envelope::without_payload(
+            OperationKind::Parse,
+            ArtifactKind::Image,
+            error.operation_status(0),
+            source,
+            parser_info(),
+            digest,
+            SchemaVersion::IMAGE_V1,
+        )
+        .expect("failed image envelope is valid")
+        .with_hashes(Hashes::for_bytes(bytes, None))
+        .with_diagnostics(vec![error.diagnostic(PARSER)]);
+    }
+    match parse::parse_document_controlled(bytes, options, Some(control)) {
         Ok(document) => Envelope::complete(
             OperationKind::Parse,
             ArtifactKind::Image,
@@ -53,7 +93,7 @@ pub fn parse_image_bytes(
         .with_hashes(Hashes::for_bytes(bytes, None))
         .with_canonical_payload_identity()
         .expect("image payload serializes"),
-        Err(error) => Envelope::without_payload(
+        Err(parse::ImageParseError::Malformed(message)) => Envelope::without_payload(
             OperationKind::Parse,
             ArtifactKind::Image,
             OperationStatus::Failed,
@@ -64,7 +104,19 @@ pub fn parse_image_bytes(
         )
         .expect("failed image envelope is valid")
         .with_hashes(Hashes::for_bytes(bytes, None))
-        .with_diagnostics(vec![Diagnostic::malformed(PARSER, error.to_string())]),
+        .with_diagnostics(vec![Diagnostic::malformed(PARSER, message)]),
+        Err(parse::ImageParseError::Control(error)) => Envelope::without_payload(
+            OperationKind::Parse,
+            ArtifactKind::Image,
+            error.operation_status(0),
+            source,
+            parser_info(),
+            digest,
+            SchemaVersion::IMAGE_V1,
+        )
+        .expect("failed image envelope is valid")
+        .with_hashes(Hashes::for_bytes(bytes, None))
+        .with_diagnostics(vec![error.diagnostic(PARSER)]),
     }
 }
 

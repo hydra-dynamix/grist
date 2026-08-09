@@ -117,6 +117,7 @@ impl SchemaVersion {
     pub const PDF_V1: &'static str = "grist/pdf/v1";
     pub const IMAGE_V1: &'static str = "grist/image/v1";
     pub const SUBTITLE_V1: &'static str = "grist/subtitle/v1";
+    pub const MEDIA_V1: &'static str = "grist/media/v1";
     pub const WORD_OOXML_V1: &'static str = "grist/word-ooxml/v1";
     pub const PRESENTATION_OOXML_V1: &'static str = "grist/presentation-ooxml/v1";
     pub const SPREADSHEET_OOXML_V1: &'static str = "grist/spreadsheet-ooxml/v1";
@@ -202,6 +203,7 @@ pub enum ArtifactKind {
     Pdf,
     Image,
     Subtitle,
+    Media,
     WordOoxml,
     PresentationOoxml,
     SpreadsheetOoxml,

@@ -60,6 +60,7 @@ fn descriptor(
             | ArtifactKind::Pdf
             | ArtifactKind::Image
             | ArtifactKind::Subtitle
+            | ArtifactKind::Media
             | ArtifactKind::WordOoxml
             | ArtifactKind::PresentationOoxml
             | ArtifactKind::SpreadsheetOoxml
@@ -195,6 +196,7 @@ fn register_feature_parsers(registry: &mut ParserRegistry) -> Result<(), ParserR
     register_pdf(registry)?;
     register_image(registry)?;
     register_subtitles(registry)?;
+    register_media(registry)?;
     register_word_ooxml(registry)?;
     register_presentation_ooxml(registry)?;
     register_spreadsheet_ooxml(registry)?;
@@ -791,6 +793,116 @@ fn register_subtitles(registry: &mut ParserRegistry) -> Result<(), ParserRegistr
             SchemaMetadata::new("subtitle-options", "grist/subtitle-options/v1"),
             subtitle_options_defaults(),
         );
+        register_disabled(registry, metadata, "media")?;
+    }
+    Ok(())
+}
+
+type MediaFormatDefinition = (
+    &'static str,
+    &'static [&'static str],
+    &'static [&'static str],
+    &'static [&'static str],
+);
+
+fn media_format_definitions() -> &'static [MediaFormatDefinition] {
+    &[
+        (
+            "mp3",
+            &["mpeg_audio"],
+            &["audio/mpeg", "audio/mp3"],
+            &["mp3"],
+        ),
+        (
+            "mp4",
+            &["m4a", "m4v"],
+            &["video/mp4", "audio/mp4"],
+            &["mp4", "m4a", "m4v"],
+        ),
+        ("quicktime", &["mov"], &["video/quicktime"], &["mov", "qt"]),
+        (
+            "wav",
+            &["wave"],
+            &["audio/wav", "audio/wave", "audio/x-wav"],
+            &["wav"],
+        ),
+        ("flac", &[], &["audio/flac", "audio/x-flac"], &["flac"]),
+        (
+            "matroska",
+            &["mkv", "webm"],
+            &[
+                "video/x-matroska",
+                "audio/x-matroska",
+                "video/webm",
+                "audio/webm",
+            ],
+            &["mkv", "mka", "webm"],
+        ),
+    ]
+}
+
+fn media_options_defaults() -> serde_json::Value {
+    serde_json::json!({
+        "retain_embedded_bytes": true,
+        "parse_embedded": true,
+        "max_boxes": 100_000,
+        "max_nesting_depth": 64,
+        "max_metadata_bytes": 16 * 1024 * 1024,
+        "max_attachment_bytes": 32 * 1024 * 1024,
+        "max_subtitle_bytes": 16 * 1024 * 1024,
+    })
+}
+
+#[cfg(feature = "media")]
+fn register_media(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    for (id, aliases, media_types, extensions) in media_format_definitions() {
+        let format = FormatMetadata::new(*id, ArtifactKind::Media)
+            .with_aliases(aliases.iter().copied())
+            .with_media_types(media_types.iter().copied())
+            .with_extensions(extensions.iter().copied());
+        let defaults = media_options_defaults();
+        let mut metadata = descriptor(
+            &format!("grist.{id}"),
+            format,
+            crate::media::parser_info(),
+            crate::core::SchemaVersion::MEDIA_V1,
+            Some("media"),
+            defaults.clone(),
+        );
+        metadata.payload_schema =
+            SchemaMetadata::new("media", crate::core::SchemaVersion::MEDIA_V1);
+        metadata.options = OptionsMetadata::new(
+            SchemaMetadata::new("media-options", "grist/media-options/v1"),
+            defaults,
+        );
+        metadata.capabilities.insert(Capability::EmbeddedArtifacts);
+        register(registry, metadata, crate::media::parse_registered)?;
+    }
+    Ok(())
+}
+
+#[cfg(not(feature = "media"))]
+fn register_media(registry: &mut ParserRegistry) -> Result<(), ParserRegistryError> {
+    for (id, aliases, media_types, extensions) in media_format_definitions() {
+        let format = FormatMetadata::new(*id, ArtifactKind::Media)
+            .with_aliases(aliases.iter().copied())
+            .with_media_types(media_types.iter().copied())
+            .with_extensions(extensions.iter().copied());
+        let mut metadata = descriptor(
+            &format!("grist.{id}"),
+            format,
+            ParserInfo::new("grist.media").with_feature("media"),
+            crate::core::SchemaVersion::MEDIA_V1,
+            Some("media"),
+            media_options_defaults(),
+        );
+        metadata.payload_schema =
+            SchemaMetadata::new("media", crate::core::SchemaVersion::MEDIA_V1);
+        metadata.options = OptionsMetadata::new(
+            SchemaMetadata::new("media-options", "grist/media-options/v1"),
+            media_options_defaults(),
+        );
+        metadata.capabilities.insert(Capability::EmbeddedArtifacts);
         register_disabled(registry, metadata, "media")?;
     }
     Ok(())
@@ -2787,7 +2899,20 @@ fn register_unimplemented_formats(
     for &(id, extension, feature) in unimplemented_formats() {
         if matches!(
             id,
-            "png" | "jpeg" | "tiff" | "webp" | "gif" | "bmp" | "heif" | "svg"
+            "png"
+                | "jpeg"
+                | "tiff"
+                | "webp"
+                | "gif"
+                | "bmp"
+                | "heif"
+                | "svg"
+                | "mp3"
+                | "mp4"
+                | "quicktime"
+                | "wav"
+                | "flac"
+                | "matroska"
         ) {
             continue;
         }

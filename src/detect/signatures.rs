@@ -43,7 +43,9 @@ pub(super) fn signals(bytes: &[u8], diagnostics: &mut Vec<Diagnostic>) -> Vec<Si
             0.98,
         ))
     } else {
-        image_signature(bytes).or_else(|| other_signature(bytes))
+        media_signature(bytes)
+            .or_else(|| image_signature(bytes))
+            .or_else(|| other_signature(bytes))
     };
     signal.into_iter().collect()
 }
@@ -63,6 +65,150 @@ fn truncated_pdf(diagnostics: &mut Vec<Diagnostic>) -> Option<Signal> {
         "truncated PDF header signature",
         0.88,
     ))
+}
+
+fn media_signature(bytes: &[u8]) -> Option<Signal> {
+    if bytes.starts_with(b"ID3") || bytes.get(..4).is_some_and(valid_mpeg_audio_header) {
+        Some(magic("mp3", "audio/mpeg", "ID3/MPEG audio signature", 0.97))
+    } else if bytes.len() >= 12 && bytes.starts_with(b"RIFF") && &bytes[8..12] == b"WAVE" {
+        Some(magic("wav", "audio/wav", "RIFF WAVE form signature", 0.99))
+    } else if bytes.starts_with(b"fLaC") {
+        Some(magic("flac", "audio/flac", "FLAC stream marker", 0.99))
+    } else if bytes.starts_with(&[0x1a, 0x45, 0xdf, 0xa3]) {
+        ebml_doc_type(bytes)
+            .filter(|value| matches!(*value, b"matroska" | b"webm"))
+            .map(|_| {
+                magic(
+                    "matroska",
+                    "video/x-matroska",
+                    "Matroska/WebM EBML DocType",
+                    0.99,
+                )
+            })
+    } else if bytes.len() >= 12 && &bytes[4..8] == b"ftyp" {
+        match iso_bmff_family(bytes) {
+            Some(IsoBmffFamily::QuickTime) => Some(magic(
+                "quicktime",
+                "video/quicktime",
+                "QuickTime major or compatible brand",
+                0.99,
+            )),
+            Some(IsoBmffFamily::Mp4) => Some(magic(
+                "mp4",
+                "video/mp4",
+                "MP4 major or compatible brand",
+                0.98,
+            )),
+            Some(IsoBmffFamily::Heif) | None => None,
+        }
+    } else {
+        None
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum IsoBmffFamily {
+    Heif,
+    QuickTime,
+    Mp4,
+}
+
+fn iso_bmff_family(bytes: &[u8]) -> Option<IsoBmffFamily> {
+    if bytes.len() < 16 || &bytes[4..8] != b"ftyp" {
+        return None;
+    }
+    let size = usize::try_from(u32::from_be_bytes(bytes[..4].try_into().ok()?)).ok()?;
+    if size < 16 || size > bytes.len() {
+        return None;
+    }
+    let brands = std::iter::once(&bytes[8..12]).chain(bytes[16..size].chunks_exact(4));
+    let mut family = None;
+    for brand in brands {
+        if matches!(
+            brand,
+            b"heic" | b"heix" | b"hevc" | b"hevx" | b"mif1" | b"msf1" | b"avif" | b"avis"
+        ) {
+            return Some(IsoBmffFamily::Heif);
+        }
+        if brand == b"qt  " {
+            family = Some(IsoBmffFamily::QuickTime);
+        } else if family.is_none()
+            && matches!(
+                brand,
+                b"isom"
+                    | b"iso2"
+                    | b"iso3"
+                    | b"iso4"
+                    | b"iso5"
+                    | b"iso6"
+                    | b"mp41"
+                    | b"mp42"
+                    | b"avc1"
+                    | b"dash"
+                    | b"M4A "
+                    | b"M4B "
+                    | b"M4P "
+                    | b"M4V "
+            )
+        {
+            family = Some(IsoBmffFamily::Mp4);
+        }
+    }
+    family
+}
+
+fn valid_mpeg_audio_header(bytes: &[u8]) -> bool {
+    bytes.len() >= 4
+        && bytes[0] == 0xff
+        && bytes[1] & 0xe0 == 0xe0
+        && (bytes[1] >> 3) & 3 != 1
+        && (bytes[1] >> 1) & 3 != 0
+        && !matches!(bytes[2] >> 4, 0 | 15)
+        && (bytes[2] >> 2) & 3 != 3
+}
+
+fn ebml_doc_type(bytes: &[u8]) -> Option<&[u8]> {
+    if !bytes.starts_with(&[0x1a, 0x45, 0xdf, 0xa3]) {
+        return None;
+    }
+    let (header_size, size_len) = ebml_vint(bytes, 4, false)?;
+    let header_start = 4usize.checked_add(size_len)?;
+    let header_end = header_start.checked_add(usize::try_from(header_size).ok()?)?;
+    if header_end > bytes.len() {
+        return None;
+    }
+    let mut cursor = header_start;
+    while cursor < header_end {
+        let (id, id_len) = ebml_vint(bytes, cursor, true)?;
+        let (size, value_len) = ebml_vint(bytes, cursor.checked_add(id_len)?, false)?;
+        let value_start = cursor.checked_add(id_len)?.checked_add(value_len)?;
+        let value_end = value_start.checked_add(usize::try_from(size).ok()?)?;
+        if value_end > header_end {
+            return None;
+        }
+        if id == 0x4282 {
+            return Some(&bytes[value_start..value_end]);
+        }
+        cursor = value_end;
+    }
+    None
+}
+
+fn ebml_vint(bytes: &[u8], offset: usize, preserve_marker: bool) -> Option<(u64, usize)> {
+    let first = *bytes.get(offset)?;
+    let len = first.leading_zeros() as usize + 1;
+    if len > 8 || offset.checked_add(len)? > bytes.len() {
+        return None;
+    }
+    let mut value = if preserve_marker {
+        u64::from(first)
+    } else {
+        u64::from(first & (0xff >> len))
+    };
+    for byte in &bytes[offset + 1..offset + len] {
+        value = value.checked_mul(256)?.checked_add(u64::from(*byte))?;
+    }
+    Some((value, len))
 }
 
 fn image_signature(bytes: &[u8]) -> Option<Signal> {

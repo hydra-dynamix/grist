@@ -56,10 +56,6 @@ impl From<BudgetExceeded> for ImageParseError {
 
 pub(super) type ImageResult<T> = Result<T, ImageParseError>;
 
-pub(crate) fn parse_document(bytes: &[u8], options: &ImageOptions) -> ImageResult<ImageDocument> {
-    parse_document_controlled(bytes, options, None)
-}
-
 pub(crate) fn parse_document_controlled<'a>(
     bytes: &[u8],
     options: &'a ImageOptions,

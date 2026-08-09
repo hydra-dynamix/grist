@@ -40,6 +40,8 @@ pub mod manifests;
 pub mod markdown;
 #[cfg(feature = "email-message")]
 pub mod mbox;
+#[cfg(feature = "media")]
+pub mod media;
 #[cfg(feature = "odf-word")]
 pub mod odf_word;
 #[cfg(feature = "email-message")]

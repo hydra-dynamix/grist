@@ -61,6 +61,8 @@ pub mod latex;
 pub mod ldgr_projection;
 #[cfg(feature = "markdown")]
 pub mod markdown;
+#[cfg(feature = "media")]
+pub mod media;
 #[cfg(feature = "model-output")]
 pub mod model_output;
 #[cfg(feature = "notebooks")]
