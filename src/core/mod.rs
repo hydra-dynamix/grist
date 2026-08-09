@@ -155,6 +155,7 @@ impl SchemaVersion {
     pub const LDGR_PROJECTION_V1: &'static str = "grist.ldgr_projection.v1";
     pub const DOCUMENT_GRAPH_V1: &'static str = "grist/document-graph/v1";
     pub const DOCUMENT_GRAPH_V2: &'static str = "grist/document-graph/v2";
+    pub const GRAPH_DOCUMENT_V1: &'static str = "grist/graph-document/v1";
     pub const RENDERED_SUMMARY_V1: &'static str = "grist/rendered-summary/v1";
     pub const TEXT_V1: &'static str = "grist/text/v1";
     pub const TEXT_V2: &'static str = "grist/text/v2";
@@ -240,6 +241,7 @@ pub enum ArtifactKind {
     LdgrProjection,
     Detection,
     DocumentGraph,
+    GraphDocument,
     GraphTransformResult,
     RenderResult,
     ReconstructionResult,

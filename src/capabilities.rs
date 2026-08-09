@@ -648,6 +648,7 @@ fn compiled_features() -> Vec<FeatureCapability> {
     feature!("extended-encodings");
     feature!("full");
     feature!("go");
+    feature!("graph");
     feature!("html");
     feature!("java");
     feature!("kotlin");

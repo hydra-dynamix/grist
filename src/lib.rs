@@ -27,6 +27,8 @@ pub mod email;
 pub mod epub;
 pub mod fixtures;
 pub mod formats;
+#[cfg(feature = "graph")]
+pub mod graph;
 pub mod ingest;
 #[cfg(feature = "manifests")]
 pub mod manifests;
