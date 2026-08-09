@@ -999,8 +999,17 @@ fn registrations() -> Vec<Registration> {
             "grist/model-output-event/v1",
             SchemaKind::Event,
             "grist.model-output-event.v1.schema.json",
-            true,
+            false,
             crate::model_output::ModelOutputEvent
+        );
+        add!(
+            "model-output-event-v2",
+            "model-output-event",
+            "grist/model-output-event/v2",
+            SchemaKind::Event,
+            "grist.model-output-event.v2.schema.json",
+            true,
+            crate::model_output::ModelOutputStreamEventV2
         );
         add!(
             "model-output-options",

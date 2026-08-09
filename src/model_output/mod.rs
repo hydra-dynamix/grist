@@ -11,6 +11,9 @@ use serde_json::Value;
 #[cfg(feature = "schemas")]
 use schemars::JsonSchema;
 
+mod streaming;
+pub use streaming::{DEFAULT_STREAM_BUFFER_BYTES, StreamingModelOutputParserV2};
+
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ModelOutputReport {
@@ -256,6 +259,53 @@ pub enum StreamingState {
     CandidateDetected,
     Complete,
     Incomplete,
+}
+
+/// Version 2 streaming contract. V1 remains unchanged for consumers that use
+/// the original non-terminal event schema.
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(tag = "event", rename_all = "snake_case")]
+pub enum ModelOutputStreamEventV2 {
+    CandidateStarted {
+        candidate_id: String,
+        grammar: CandidateGrammar,
+    },
+    CandidateUpdated {
+        candidate_id: String,
+        bytes_seen: usize,
+    },
+    CandidateCompleted {
+        candidate_id: String,
+        candidate: ModelOutputCandidate,
+    },
+    Diagnostic {
+        diagnostic: Diagnostic,
+    },
+    ParserStateChanged {
+        state: StreamingStateV2,
+    },
+    /// Exactly one terminal event closes the stream. It is always the last
+    /// event, including for cancellation and resource exhaustion.
+    Terminal {
+        terminal: crate::core::StreamTerminal,
+    },
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum StreamingStateV2 {
+    Empty,
+    Accumulating,
+    CandidateDetected,
+    Complete,
+    Incomplete,
+    Malformed,
+    Ambiguous,
+    Unparsed,
+    Failed,
+    Cancelled,
 }
 
 pub type ModelOutputEnvelope = Envelope<ModelOutputReport>;
@@ -2775,6 +2825,7 @@ fn strip_think_blocks(text: &str) -> String {
     }
     String::from_utf8(output).expect("masking UTF-8 with ASCII spaces stays valid UTF-8")
 }
+
 fn looks_like_candidate_start(text: &str) -> bool {
     text.contains("```")
         || text.contains("function")
@@ -2793,7 +2844,6 @@ fn infer_streaming_grammar(text: &str) -> CandidateGrammar {
         CandidateGrammar::RawJson
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;

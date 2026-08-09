@@ -965,3 +965,154 @@ fn cli_transforms_documents_through_document_graph() {
     let rendered_markdown = run_text(&["transform", tex.to_str().unwrap(), "--to", "markdown"]);
     assert!(rendered_markdown.contains("# Intro"));
 }
+#[test]
+fn cli_streams_model_output_fixture_with_schema_and_batch_parity() {
+    let fixture = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("fixtures/generated/model_output/streaming-tool-call.txt");
+    let fixture_path = fixture.to_str().unwrap();
+    let batch = run(&["parse", "model-output", fixture_path]);
+    let output = run_text(&[
+        "parse",
+        "model-output",
+        fixture_path,
+        "--stream",
+        "--max-buffer-bytes",
+        "4096",
+    ]);
+    let events = output
+        .lines()
+        .map(|line| serde_json::from_str::<serde_json::Value>(line).unwrap())
+        .collect::<Vec<_>>();
+    assert!(!events.is_empty());
+    for event in &events {
+        validate_with_schema(event, "model-output-event-v2");
+    }
+    let streamed_candidates = events
+        .iter()
+        .filter(|event| event["event"] == "candidate_completed")
+        .map(|event| event["candidate"].clone())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        streamed_candidates,
+        *batch["payload"]["candidates"].as_array().unwrap()
+    );
+    assert_eq!(events.last().unwrap()["event"], "terminal");
+    assert_eq!(events.last().unwrap()["terminal"]["status"], "complete");
+    assert_eq!(
+        events
+            .iter()
+            .rev()
+            .find(|event| event["event"] == "parser_state_changed")
+            .unwrap()["state"],
+        "complete"
+    );
+}
+
+#[test]
+fn cli_streams_multiread_stdin_and_returns_nonzero_after_hard_terminal() {
+    let input = format!("{}{{\"value\":1}}", " ".repeat(9 * 1024));
+    let mut child = Command::new(grist())
+        .args(["parse", "model-output", "-", "--stream"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(input.as_bytes())
+        .unwrap();
+    let output = child.wait_with_output().unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let events = String::from_utf8(output.stdout)
+        .unwrap()
+        .lines()
+        .map(|line| serde_json::from_str::<serde_json::Value>(line).unwrap())
+        .collect::<Vec<_>>();
+    assert!(
+        events
+            .iter()
+            .any(|event| event["event"] == "candidate_completed")
+    );
+    let terminal = events.last().unwrap();
+    assert_eq!(terminal["event"], "terminal");
+    assert_eq!(terminal["terminal"]["status"], "complete");
+    assert_eq!(
+        terminal["terminal"]["budget_usage"]["input_bytes"],
+        input.len()
+    );
+    validate_with_schema(terminal, "model-output-event-v2");
+
+    let mut failed = Command::new(grist())
+        .args([
+            "parse",
+            "model-output",
+            "-",
+            "--stream",
+            "--max-buffer-bytes",
+            "16",
+        ])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    failed
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(br#"{"value":"this input exceeds the configured limit"}"#)
+        .unwrap();
+    let output = failed.wait_with_output().unwrap();
+    assert!(!output.status.success());
+    let events = String::from_utf8(output.stdout)
+        .unwrap()
+        .lines()
+        .map(|line| serde_json::from_str::<serde_json::Value>(line).unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(events.last().unwrap()["event"], "terminal");
+    assert_eq!(events.last().unwrap()["terminal"]["status"], "failed");
+    assert!(output.stderr.is_empty());
+}
+
+#[test]
+fn cli_stream_open_failure_is_terminal_last_ndjson() {
+    let missing = temp_dir("missing-stream").join("does-not-exist.json");
+    let output = Command::new(grist())
+        .args([
+            "parse",
+            "model-output",
+            missing.to_str().unwrap(),
+            "--stream",
+        ])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(output.stderr.is_empty());
+    let events = String::from_utf8(output.stdout)
+        .unwrap()
+        .lines()
+        .map(|line| serde_json::from_str::<serde_json::Value>(line).unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        events
+            .iter()
+            .filter(|event| event["event"] == "terminal")
+            .count(),
+        1
+    );
+    assert!(events.iter().any(|event| {
+        event["event"] == "diagnostic" && event["diagnostic"]["code"] == "stream.io_open_failed"
+    }));
+    assert_eq!(events.last().unwrap()["event"], "terminal");
+    assert_eq!(events.last().unwrap()["terminal"]["status"], "failed");
+    validate_with_schema(events.last().unwrap(), "model-output-event-v2");
+}

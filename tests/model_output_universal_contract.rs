@@ -1,9 +1,13 @@
 #![cfg(feature = "model-output")]
 
-use grist::core::SourceInfo;
+use grist::core::{
+    BudgetSelection, CancellationToken, OperationControl, OperationStatus, ResourceBudget,
+    SourceInfo,
+};
 use grist::model_output::{
-    AliasRule, AliasRules, CandidateGrammar, CandidateStatus, ModelOutputOptions,
-    ModelOutputStatus, RepairKind, RepairLimits, parse_model_output,
+    AliasRule, AliasRules, CandidateGrammar, CandidateStatus, ModelOutputEvent, ModelOutputOptions,
+    ModelOutputStatus, ModelOutputStreamEventV2, RepairKind, RepairLimits,
+    StreamingModelOutputParser, StreamingModelOutputParserV2, StreamingStateV2, parse_model_output,
 };
 use serde_json::json;
 
@@ -543,5 +547,479 @@ fn bounded_repair_property_matrix_never_changes_valid_controls() {
         assert_eq!(candidate.raw_text.as_deref(), Some(malformed.as_str()));
         serde_json::from_str::<serde_json::Value>(candidate.repaired_text.as_ref().unwrap())
             .expect("every repaired property case is valid JSON");
+    }
+}
+
+#[test]
+fn every_byte_chunking_converges_to_batch_candidates() {
+    let fixture = include_bytes!("../fixtures/generated/model_output/streaming-tool-call.txt");
+    let text = std::str::from_utf8(fixture).unwrap();
+    let options = ModelOutputOptions::default();
+    let batch = parse_model_output(text, SourceInfo::stdin("stream-fixture"), &options);
+
+    for split in 0..=fixture.len() {
+        let mut parser =
+            StreamingModelOutputParserV2::new(SourceInfo::stdin("stream-fixture"), options.clone());
+        let mut events = parser.push_bytes(&fixture[..split]);
+        events.extend(parser.push_bytes(&fixture[split..]));
+        let (finish_events, streamed) = parser.finish();
+        events.extend(finish_events);
+        assert_eq!(
+            streamed.payload.as_ref().unwrap().candidates,
+            batch.payload.as_ref().unwrap().candidates,
+            "candidate mismatch at byte split {split}"
+        );
+        assert_eq!(
+            streamed, batch,
+            "batch envelope mismatch at byte split {split}"
+        );
+        assert_eq!(
+            events.last().map(event_name),
+            Some("terminal"),
+            "terminal event mismatch at byte split {split}"
+        );
+        assert_stable_candidate_lifecycle(&events, split);
+    }
+
+    let mut bytewise =
+        StreamingModelOutputParserV2::new(SourceInfo::stdin("stream-fixture"), options);
+    for byte in fixture {
+        bytewise.push_bytes(std::slice::from_ref(byte));
+    }
+    let (_, streamed) = bytewise.finish();
+    assert_eq!(streamed, batch);
+}
+
+#[test]
+fn streaming_events_are_ordered_and_repairs_are_deferred_until_finish() {
+    let mut parser = StreamingModelOutputParserV2::new(
+        SourceInfo::stdin("ordered-stream"),
+        ModelOutputOptions::default(),
+    );
+    let first = parser.push_chunk(r#"{"name":"tool","arguments":{"value":1}}"#);
+    assert!(matches!(
+        first.as_slice(),
+        [ModelOutputStreamEventV2::ParserStateChanged {
+            state: StreamingStateV2::Accumulating
+        }]
+    ));
+    assert!(
+        !first
+            .iter()
+            .any(|event| matches!(event, ModelOutputStreamEventV2::CandidateCompleted { .. }))
+    );
+
+    let update = parser.push_chunk(r#", "call_id":"stream"}"#);
+    assert!(update.is_empty());
+    let (finish_events, envelope) = parser.finish();
+    assert!(matches!(
+        finish_events.last(),
+        Some(ModelOutputStreamEventV2::Terminal { terminal })
+            if terminal.status == OperationStatus::Complete && terminal.emitted_items == 1
+    ));
+    let (completed_id, completed) = finish_events
+        .iter()
+        .find_map(|event| match event {
+            ModelOutputStreamEventV2::CandidateCompleted {
+                candidate_id,
+                candidate,
+            } => Some((candidate_id, candidate)),
+            _ => None,
+        })
+        .unwrap();
+    assert_eq!(completed.status, CandidateStatus::Recovered);
+    assert_eq!(
+        completed.repairs[0].kind,
+        RepairKind::RemovePrematureClosingBrace
+    );
+    assert_eq!(completed, &envelope.payload.as_ref().unwrap().candidates[0]);
+    let started = finish_events.iter().find_map(|event| match event {
+        ModelOutputStreamEventV2::CandidateStarted {
+            candidate_id,
+            grammar,
+        } => Some((candidate_id, grammar)),
+        _ => None,
+    });
+    assert_eq!(started, Some((completed_id, &completed.grammar)));
+}
+
+#[test]
+fn closed_prefix_candidate_emits_incremental_stable_updates_before_finish() {
+    let mut parser = StreamingModelOutputParserV2::new(
+        SourceInfo::stdin("incremental-prefix"),
+        ModelOutputOptions::default(),
+    );
+    let mut events = parser.push_chunk("```json\n{\"value\":1}\n```");
+    let started = events
+        .iter()
+        .find_map(|event| match event {
+            ModelOutputStreamEventV2::CandidateStarted {
+                candidate_id,
+                grammar,
+            } => Some((candidate_id.clone(), grammar.clone())),
+            _ => None,
+        })
+        .expect("closed fenced candidate starts before finish");
+    assert_eq!(started.1, CandidateGrammar::FencedJson);
+    assert!(events.iter().any(|event| matches!(
+        event,
+        ModelOutputStreamEventV2::CandidateUpdated { candidate_id, .. }
+            if candidate_id == &started.0
+    )));
+    assert!(
+        !events
+            .iter()
+            .any(|event| matches!(event, ModelOutputStreamEventV2::CandidateCompleted { .. }))
+    );
+
+    let update = parser.push_chunk("\ntrailing prose");
+    assert!(update.iter().any(|event| matches!(
+        event,
+        ModelOutputStreamEventV2::CandidateUpdated { candidate_id, .. }
+            if candidate_id == &started.0
+    )));
+    events.extend(update);
+    let (finish_events, _) = parser.finish();
+    events.extend(finish_events);
+    assert_stable_candidate_lifecycle(&events, 0);
+}
+
+#[test]
+fn incomplete_cancelled_bounded_and_invalid_streams_are_explicit() {
+    let mut incomplete = StreamingModelOutputParserV2::new(
+        SourceInfo::stdin("incomplete"),
+        ModelOutputOptions::default(),
+    );
+    incomplete.push_chunk(r#"{"value":"#);
+    let (events, envelope) = incomplete.finish();
+    assert_eq!(
+        envelope.payload.as_ref().unwrap().status,
+        ModelOutputStatus::Incomplete
+    );
+    assert!(events.iter().any(|event| matches!(
+        event,
+        ModelOutputStreamEventV2::ParserStateChanged {
+            state: StreamingStateV2::Incomplete
+        }
+    )));
+    assert!(matches!(
+        events.last(),
+        Some(ModelOutputStreamEventV2::Terminal { terminal })
+            if terminal.status == OperationStatus::Partial
+    ));
+
+    let cancellation = CancellationToken::new();
+    let mut cancelled = StreamingModelOutputParserV2::new_with_cancellation(
+        SourceInfo::stdin("cancelled"),
+        ModelOutputOptions::default(),
+        cancellation.clone(),
+    );
+    cancelled.push_chunk(r#"{"retained":true"#);
+    cancellation.cancel();
+    let (events, envelope) = cancelled.finish();
+    assert_eq!(envelope.status, OperationStatus::Cancelled);
+    assert!(envelope.payload.is_none());
+    assert!(matches!(
+        events.as_slice(),
+        [
+            ModelOutputStreamEventV2::Diagnostic { .. },
+            ModelOutputStreamEventV2::ParserStateChanged {
+                state: StreamingStateV2::Cancelled
+            },
+            ModelOutputStreamEventV2::Terminal { terminal }
+        ] if terminal.status == OperationStatus::Cancelled
+    ));
+
+    let mut bounded = StreamingModelOutputParserV2::new_with_limit(
+        SourceInfo::stdin("bounded"),
+        ModelOutputOptions::default(),
+        7,
+    );
+    bounded.push_bytes(b"{\"a\":1}");
+    let events = bounded.push_bytes(b"x");
+    assert_eq!(bounded.buffered_bytes(), 7);
+    assert_eq!(bounded.max_buffer_bytes(), 7);
+    assert!(bounded.is_terminated());
+    assert!(matches!(
+        events.last(),
+        Some(ModelOutputStreamEventV2::Terminal { terminal })
+            if terminal.status == OperationStatus::Failed
+    ));
+    assert!(bounded.push_bytes(b"ignored").is_empty());
+    let (finish_events, envelope) = bounded.finish();
+    assert!(
+        finish_events.is_empty(),
+        "no events may follow the terminal"
+    );
+    assert_eq!(envelope.status, OperationStatus::Failed);
+    assert!(envelope.payload.is_none());
+    assert_eq!(envelope.hashes.as_ref().unwrap().size_bytes, 7);
+
+    let mut invalid = StreamingModelOutputParserV2::new(
+        SourceInfo::stdin("invalid-utf8"),
+        ModelOutputOptions::default(),
+    );
+    invalid.push_bytes(b"{\"value\":\"");
+    invalid.push_bytes(&[0xf0, 0x9f]);
+    let (events, envelope) = invalid.finish();
+    assert_eq!(envelope.status, OperationStatus::Failed);
+    assert!(events.iter().any(|event| matches!(
+        event,
+        ModelOutputStreamEventV2::Diagnostic { diagnostic }
+            if diagnostic.code.as_str() == "stream.invalid_utf8"
+    )));
+    assert!(matches!(
+        events.last(),
+        Some(ModelOutputStreamEventV2::Terminal { terminal })
+            if terminal.status == OperationStatus::Failed
+    ));
+    let diagnostic = events
+        .iter()
+        .find_map(|event| match event {
+            ModelOutputStreamEventV2::Diagnostic { diagnostic }
+                if diagnostic.code.as_str() == "stream.invalid_utf8" =>
+            {
+                Some(diagnostic)
+            }
+            _ => None,
+        })
+        .unwrap();
+    assert_eq!(diagnostic.range.as_ref().unwrap().byte_start, 10);
+}
+
+#[test]
+fn bytewise_utf8_chunks_converge_to_batch_candidates() {
+    for unicode in ["{\"note\":\"Δ\"}", "{\"note\":\"€\"}", "{\"note\":\"😀\"}"] {
+        let unicode_batch = parse_model_output(
+            unicode,
+            SourceInfo::stdin("unicode-stream"),
+            &ModelOutputOptions::default(),
+        );
+        let mut unicode_stream = StreamingModelOutputParserV2::new(
+            SourceInfo::stdin("unicode-stream"),
+            ModelOutputOptions::default(),
+        );
+        for byte in unicode.as_bytes() {
+            unicode_stream.push_bytes(std::slice::from_ref(byte));
+        }
+        let (_, unicode_result) = unicode_stream.finish();
+        assert_eq!(unicode_result, unicode_batch);
+    }
+}
+
+#[test]
+fn multi_candidate_events_keep_batch_ids_and_grammars_at_every_split() {
+    let input = br#"prefix {"a":1} middle {"b":2} suffix"#;
+    let options = ModelOutputOptions::default();
+    let batch = parse_model_output(
+        std::str::from_utf8(input).unwrap(),
+        SourceInfo::stdin("multi"),
+        &options,
+    );
+    assert!(batch.payload.as_ref().unwrap().candidates.len() >= 2);
+
+    for split in 0..=input.len() {
+        let mut parser =
+            StreamingModelOutputParserV2::new(SourceInfo::stdin("multi"), options.clone());
+        let mut events = parser.push_bytes(&input[..split]);
+        events.extend(parser.push_bytes(&input[split..]));
+        let (finish_events, streamed) = parser.finish();
+        events.extend(finish_events);
+        assert_eq!(streamed, batch, "batch mismatch at split {split}");
+
+        let starts = events
+            .iter()
+            .filter_map(|event| match event {
+                ModelOutputStreamEventV2::CandidateStarted {
+                    candidate_id,
+                    grammar,
+                } => Some((candidate_id.clone(), grammar.clone())),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        let completed = events
+            .iter()
+            .filter_map(|event| match event {
+                ModelOutputStreamEventV2::CandidateCompleted {
+                    candidate_id,
+                    candidate,
+                } => Some((candidate_id.clone(), candidate.grammar.clone())),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(
+            starts, completed,
+            "identity/grammar mismatch at split {split}"
+        );
+        assert_stable_candidate_lifecycle(&events, split);
+    }
+}
+
+#[test]
+fn successful_terminals_match_authoritative_batch_status() {
+    let cases = [
+        ("", StreamingStateV2::Empty),
+        (r#"{"a":"#, StreamingStateV2::Incomplete),
+        (r#"{"a":}"#, StreamingStateV2::Malformed),
+        (
+            r#"first {"a":1} second {"b":2}"#,
+            StreamingStateV2::Ambiguous,
+        ),
+        ("plain prose", StreamingStateV2::Unparsed),
+        (r#"{"a":1}"#, StreamingStateV2::Complete),
+    ];
+    for (input, expected_state) in cases {
+        let source = SourceInfo::stdin("terminal-state");
+        let batch = parse_model_output(input, source.clone(), &ModelOutputOptions::default());
+        let mut parser = StreamingModelOutputParserV2::new(source, ModelOutputOptions::default());
+        parser.push_chunk(input);
+        let (events, streamed) = parser.finish();
+        assert_eq!(streamed, batch);
+        assert!(
+            events.iter().any(|event| matches!(
+                event,
+                ModelOutputStreamEventV2::ParserStateChanged { state } if state == &expected_state
+            )),
+            "missing state {expected_state:?} for {input:?}: {events:?}"
+        );
+        assert!(matches!(
+            events.last(),
+            Some(ModelOutputStreamEventV2::Terminal { terminal }) if terminal.status == batch.status
+        ));
+    }
+}
+
+#[test]
+fn v1_streaming_parser_source_contract_remains_available() {
+    let mut parser = StreamingModelOutputParser::new(
+        SourceInfo::stdin("v1-source-compatibility"),
+        ModelOutputOptions::default(),
+    );
+    let _: Vec<ModelOutputEvent> = parser.push_chunk(r#"{"a":1}"#);
+    let (_events, envelope): (Vec<ModelOutputEvent>, _) = parser.finish();
+    assert_eq!(envelope.status, OperationStatus::Complete);
+}
+
+#[test]
+fn limited_constructor_retains_untrusted_caps() {
+    let parser = StreamingModelOutputParserV2::new_with_limit(
+        SourceInfo::stdin("limited-untrusted"),
+        ModelOutputOptions::default(),
+        1024,
+    );
+    let budget = parser.resource_budget();
+    assert_eq!(budget.max_input_bytes, Some(1024));
+    assert_eq!(budget.max_decoded_characters, Some(1024));
+    assert_eq!(budget.max_pages, Some(10_000));
+    assert_eq!(budget.max_records, Some(1_000_000));
+    assert_eq!(budget.max_nodes, Some(2_000_000));
+    assert_eq!(budget.max_parse_millis, Some(120_000));
+    assert_eq!(budget.max_output_bytes, Some(268_435_456));
+}
+
+#[test]
+fn decoded_character_rejection_precedes_retention_and_reallocation() {
+    let mut budget = ResourceBudget::trusted_unbounded();
+    budget.max_decoded_characters = Some(0);
+    let control =
+        OperationControl::new(&BudgetSelection::custom(budget), CancellationToken::new()).unwrap();
+    let mut parser = StreamingModelOutputParserV2::new_with_control(
+        SourceInfo::stdin("decoded-preflight"),
+        ModelOutputOptions::default(),
+        1024,
+        control,
+    );
+    assert!(parser.push_bytes(&[0xf0, 0x9f]).is_empty());
+    let bytes_before = parser.buffered_bytes();
+    let capacity_before = parser.buffered_capacity();
+    let usage_before = parser.budget_usage();
+
+    let events = parser.push_bytes(&[0x98, 0x80]);
+    assert!(matches!(
+        events.last(),
+        Some(ModelOutputStreamEventV2::Terminal { terminal })
+            if terminal.status == OperationStatus::Failed
+    ));
+    assert_eq!(parser.buffered_bytes(), bytes_before);
+    assert_eq!(parser.buffered_capacity(), capacity_before);
+    let usage_after = parser.budget_usage();
+    assert_eq!(usage_after.input_bytes, usage_before.input_bytes);
+    assert_eq!(usage_after.memory_bytes, usage_before.memory_bytes);
+    assert_eq!(usage_after.decoded_characters, 1);
+}
+
+#[test]
+fn shared_operation_control_enforces_memory_before_retention() {
+    let mut budget = ResourceBudget::trusted_unbounded();
+    budget.max_memory_bytes = Some(1);
+    let control =
+        OperationControl::new(&BudgetSelection::custom(budget), CancellationToken::new()).unwrap();
+    let mut parser = StreamingModelOutputParserV2::new_with_control(
+        SourceInfo::stdin("budgeted"),
+        ModelOutputOptions::default(),
+        1024,
+        control,
+    );
+    let events = parser.push_bytes(b"{");
+    assert_eq!(parser.buffered_bytes(), 0);
+    assert!(matches!(
+        events.last(),
+        Some(ModelOutputStreamEventV2::Terminal { terminal })
+            if terminal.status == OperationStatus::Failed
+                && terminal.budget_usage.input_bytes == 1
+                && terminal.budget_usage.memory_bytes > 1
+    ));
+    assert!(parser.push_bytes(b"ignored").is_empty());
+    let (finish_events, _) = parser.finish();
+    assert!(finish_events.is_empty());
+}
+
+fn event_name(event: &ModelOutputStreamEventV2) -> &'static str {
+    match event {
+        ModelOutputStreamEventV2::CandidateStarted { .. } => "candidate_started",
+        ModelOutputStreamEventV2::CandidateUpdated { .. } => "candidate_updated",
+        ModelOutputStreamEventV2::CandidateCompleted { .. } => "candidate_completed",
+        ModelOutputStreamEventV2::Diagnostic { .. } => "diagnostic",
+        ModelOutputStreamEventV2::ParserStateChanged { .. } => "parser_state_changed",
+        ModelOutputStreamEventV2::Terminal { .. } => "terminal",
+    }
+}
+
+fn assert_stable_candidate_lifecycle(events: &[ModelOutputStreamEventV2], split: usize) {
+    let starts = events
+        .iter()
+        .filter_map(|event| match event {
+            ModelOutputStreamEventV2::CandidateStarted {
+                candidate_id,
+                grammar,
+            } => Some((candidate_id.clone(), grammar.clone())),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    let completed = events
+        .iter()
+        .filter_map(|event| match event {
+            ModelOutputStreamEventV2::CandidateCompleted {
+                candidate_id,
+                candidate,
+            } => Some((candidate_id.clone(), candidate.grammar.clone())),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        starts, completed,
+        "candidate lifecycle mismatch at split {split}"
+    );
+    for (candidate_id, grammar) in starts {
+        assert!(
+            events.iter().any(|event| matches!(
+                event,
+                ModelOutputStreamEventV2::CandidateUpdated {
+                    candidate_id: updated_id,
+                    ..
+                } if updated_id == &candidate_id
+            )),
+            "missing update for {candidate_id} ({grammar:?}) at split {split}"
+        );
     }
 }

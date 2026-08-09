@@ -319,8 +319,14 @@ enum ParseCommand {
         #[arg(long)]
         python_style: bool,
         /// Emit only the selected JSON value instead of the full envelope.
-        #[arg(long)]
+        #[arg(long, conflicts_with = "stream")]
         json_value: bool,
+        /// Emit incremental model-output events as NDJSON.
+        #[arg(long)]
+        stream: bool,
+        /// Maximum bytes retained by the incremental parser.
+        #[arg(long, requires = "stream")]
+        max_buffer_bytes: Option<usize>,
     },
     /// Route any enabled registry format without adding CLI parser logic.
     #[command(external_subcommand)]
@@ -613,11 +619,34 @@ enum SchemaCommand {
 #[cfg(feature = "cli")]
 fn main() {
     if let Err(err) = run() {
-        let diagnostic = Diagnostic::error("grist.cli", "cli.error", err.to_string());
-        println!("{}", serde_json::to_string_pretty(&diagnostic).unwrap());
+        // A streaming command has already emitted its exactly-once terminal
+        // NDJSON event. Preserve that terminal as the final stdout record while
+        // still communicating hard failure through the process status.
+        if err.downcast_ref::<ModelOutputStreamExit>().is_none() {
+            let diagnostic = Diagnostic::error("grist.cli", "cli.error", err.to_string());
+            println!("{}", serde_json::to_string_pretty(&diagnostic).unwrap());
+        }
         std::process::exit(1);
     }
 }
+
+#[cfg(feature = "cli")]
+#[derive(Debug)]
+struct ModelOutputStreamExit(grist::core::OperationStatus);
+
+#[cfg(feature = "cli")]
+impl std::fmt::Display for ModelOutputStreamExit {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            formatter,
+            "model-output stream terminated with status {:?}",
+            self.0
+        )
+    }
+}
+
+#[cfg(feature = "cli")]
+impl std::error::Error for ModelOutputStreamExit {}
 
 #[cfg(feature = "cli")]
 fn run() -> Result<(), Box<dyn std::error::Error>> {
@@ -859,6 +888,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 strip_think_blocks,
                 python_style,
                 json_value,
+                stream,
+                max_buffer_bytes,
             } => {
                 let options = grist::model_output::ModelOutputOptions {
                     schema: load_json_value_optional(schema.as_ref())?,
@@ -871,16 +902,23 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     },
                     ..Default::default()
                 };
-                let report =
-                    parse_registry(&input, "model_output", Some(serde_json::to_value(options)?))?;
-                if json_value {
-                    let payload = report
-                        .payload
-                        .as_ref()
-                        .ok_or("model-output operation produced no payload")?;
-                    print_json(selected_model_output_json_value(payload)?)?;
+                if stream {
+                    stream_model_output_cli(&input, options, max_buffer_bytes)?;
                 } else {
-                    print_json(&report)?;
+                    let report = parse_registry(
+                        &input,
+                        "model_output",
+                        Some(serde_json::to_value(options)?),
+                    )?;
+                    if json_value {
+                        let payload = report
+                            .payload
+                            .as_ref()
+                            .ok_or("model-output operation produced no payload")?;
+                        print_json(selected_model_output_json_value(payload)?)?;
+                    } else {
+                        print_json(&report)?;
+                    }
                 }
             }
             ParseCommand::External(args) => {
@@ -2031,4 +2069,104 @@ fn load_alias_rules(
 fn main() {
     eprintln!("grist CLI requires the `cli` feature");
     std::process::exit(1);
+}
+#[cfg(feature = "cli")]
+fn stream_model_output_cli(
+    input: &str,
+    options: grist::model_output::ModelOutputOptions,
+    max_buffer_bytes: Option<usize>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let source = if input == "-" {
+        SourceInfo::stdin("stdin")
+    } else {
+        SourceInfo::from_path(&PathBuf::from(input))
+    };
+    let mut parser = if let Some(max_buffer_bytes) = max_buffer_bytes {
+        grist::model_output::StreamingModelOutputParserV2::new_with_limit(
+            source,
+            options,
+            max_buffer_bytes,
+        )
+    } else {
+        grist::model_output::StreamingModelOutputParserV2::new(source, options)
+    };
+    let mut reader: Box<dyn Read> = if input == "-" {
+        Box::new(std::io::stdin())
+    } else {
+        let path = PathBuf::from(input);
+        match std::fs::File::open(&path) {
+            Ok(file) => Box::new(file),
+            Err(error) => {
+                return fail_model_output_stream(
+                    parser,
+                    "stream.io_open_failed",
+                    format!(
+                        "failed to open model-output stream {}: {error}",
+                        path.display()
+                    ),
+                );
+            }
+        }
+    };
+    let mut terminal_status = None;
+    let mut chunk = [0_u8; 8 * 1024];
+    loop {
+        let read = match reader.read(&mut chunk) {
+            Ok(read) => read,
+            Err(error) => {
+                return fail_model_output_stream(
+                    parser,
+                    "stream.io_read_failed",
+                    format!("failed to read model-output stream: {error}"),
+                );
+            }
+        };
+        if read == 0 {
+            break;
+        }
+        for event in parser.push_bytes(&chunk[..read]) {
+            if let grist::model_output::ModelOutputStreamEventV2::Terminal { terminal } = &event {
+                terminal_status = Some(terminal.status);
+            }
+            print_json(&serde_json::to_value(event)?)?;
+        }
+        if parser.is_terminated() {
+            break;
+        }
+    }
+    let (events, _) = parser.finish();
+    for event in events {
+        if let grist::model_output::ModelOutputStreamEventV2::Terminal { terminal } = &event {
+            terminal_status = Some(terminal.status);
+        }
+        print_json(&serde_json::to_value(event)?)?;
+    }
+    if matches!(
+        terminal_status,
+        Some(grist::core::OperationStatus::Failed | grist::core::OperationStatus::Cancelled)
+    ) {
+        return Err(Box::new(ModelOutputStreamExit(
+            terminal_status.expect("matched terminal status"),
+        )));
+    }
+    Ok(())
+}
+
+#[cfg(feature = "cli")]
+fn fail_model_output_stream(
+    parser: grist::model_output::StreamingModelOutputParserV2,
+    code: &'static str,
+    message: String,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let (events, _) = parser.fail(Diagnostic::error(
+        "grist.model_output.streaming",
+        code,
+        message,
+    ));
+    for event in events {
+        print_json(&serde_json::to_value(event)?)?;
+    }
+    Err(Box::new(ModelOutputStreamExit(
+        grist::core::OperationStatus::Failed,
+    )))
 }

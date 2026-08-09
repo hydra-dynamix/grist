@@ -1,0 +1,1 @@
+{"name":"tool","arguments":{"value":1,"note":"\u0394"}},"call_id":"fixture"}
