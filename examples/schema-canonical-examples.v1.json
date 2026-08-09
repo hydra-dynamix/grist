@@ -2150,6 +2150,56 @@
         }
       }
     },
+    "media": {
+      "schema_name": "media",
+      "schema_version": "grist/media/v1",
+      "canonical_sha256": "sha256:14dbfcdba84aec260222be65a86a99d689d68fac287dc1c9a4ed7eead4c1d739",
+      "value": {
+        "artwork": [],
+        "attachments": [],
+        "chapters": [],
+        "complete": false,
+        "diagnostics": [],
+        "encrypted": false,
+        "format": "mp3",
+        "metadata": [],
+        "schema_version": "grist/media/v1",
+        "streams": [],
+        "subtitle_tracks": [],
+        "technical": {
+          "byte_length": 0
+        }
+      }
+    },
+    "media-envelope": {
+      "schema_name": "media-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "media-options": {
+      "schema_name": "media-options",
+      "schema_version": "grist/media-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
     "metric-event": {
       "schema_name": "metric-event",
       "schema_version": "grist/metric-event/v1",
@@ -2241,6 +2291,16 @@
     "model-output-event": {
       "schema_name": "model-output-event",
       "schema_version": "grist/model-output-event/v1",
+      "canonical_sha256": "sha256:2f2ec5a8d1945edcc6849ec31d5916ad29c055628c3d20aa47b61c68dcd58380",
+      "value": {
+        "candidate_id": "",
+        "event": "candidate_started",
+        "grammar": "python_style_command"
+      }
+    },
+    "model-output-event-v2": {
+      "schema_name": "model-output-event-v2",
+      "schema_version": "grist/model-output-event/v2",
       "canonical_sha256": "sha256:2f2ec5a8d1945edcc6849ec31d5916ad29c055628c3d20aa47b61c68dcd58380",
       "value": {
         "candidate_id": "",
