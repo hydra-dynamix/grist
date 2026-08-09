@@ -42,6 +42,11 @@ enum Command {
         request_id: String,
     },
     /// Parse one input into a typed Grist JSON envelope.
+    ///
+    /// Named subcommands expose common formats. Every other enabled registry
+    /// format uses `grist parse <FORMAT> <INPUT>`; run
+    /// `grist parse <FORMAT> --help` for its generic options and
+    /// `grist capabilities` for the compiled format manifest.
     Parse {
         #[command(subcommand)]
         command: ParseCommand,
@@ -74,11 +79,17 @@ enum Command {
         command: SchemaCommand,
     },
     /// Render parsed artifacts into stable inspection JSON such as rendered summaries.
+    ///
+    /// DocumentGraph inputs accept either `grist render graph <INPUT> --to
+    /// <TARGET>` or the shorthand `grist render <INPUT> --to <TARGET>`.
     Render {
         #[command(subcommand)]
         command: RenderCommand,
     },
     /// Validate inputs against stable Grist-supported contracts.
+    ///
+    /// Use `grist validate input <INPUT> --schema <SCHEMA>` or the equivalent
+    /// shorthand `grist validate <INPUT> --schema <SCHEMA>`.
     Validate {
         #[command(subcommand)]
         command: ValidateCommand,
@@ -111,9 +122,9 @@ enum Command {
     },
     /// Report the complete compiled feature and capability manifest.
     Capabilities,
-    /// Convert supported inputs through DocumentGraph and render graph/Markdown/LaTeX.
+    /// Parse registry-supported inputs through DocumentGraph and emit graph, Markdown, LaTeX, HTML, or text.
     Transform {
-        /// Positional paths: INPUT [OUTPUT], or OUTPUT when --file supplies INPUT. Input kind is inferred from extension: .md, .tex, .py, .rs, .ts, .tsx, .jsx.
+        /// Positional paths: INPUT [OUTPUT], or OUTPUT when --file supplies INPUT. Input format is selected by the built-in parser registry from extension and content evidence.
         #[arg(value_name = "PATH", num_args = 0..=2)]
         paths: Vec<String>,
         /// Input path as a named flag, equivalent to the positional INPUT.
@@ -257,7 +268,7 @@ enum ParseCommand {
         #[arg(long)]
         no_resolve_includes: bool,
     },
-    /// Parse TypeScript, TSX, or JSX code with tree-sitter.
+    /// Parse TypeScript, JavaScript, TSX, or JSX code with tree-sitter.
     #[command(name = "typescript", alias = "ts")]
     TypeScript {
         /// Input path or `-` for stdin.
@@ -922,14 +933,16 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             ParseCommand::External(args) => {
-                let (format, input, hints, request_id, options) = parse_external_parse(args)?;
-                print_json(&grist::cli::parse_input(
-                    &format,
-                    &input,
-                    &hints,
-                    parse_request_id(request_id)?,
-                    options,
-                )?)?;
+                if !print_external_parse_help(&args)? {
+                    let (format, input, hints, request_id, options) = parse_external_parse(args)?;
+                    print_json(&grist::cli::parse_input(
+                        &format,
+                        &input,
+                        &hints,
+                        parse_request_id(request_id)?,
+                        options,
+                    )?)?;
+                }
             }
         },
         Command::Ingest { command } => match command {
@@ -1472,6 +1485,56 @@ type ExternalParseArgs = (
     String,
     Option<serde_json::Value>,
 );
+
+#[cfg(feature = "cli")]
+fn print_external_parse_help(args: &[String]) -> Result<bool, Box<dyn std::error::Error>> {
+    let Some(format) = args.first() else {
+        return Ok(false);
+    };
+    if !args[1..]
+        .iter()
+        .any(|argument| argument == "--help" || argument == "-h")
+    {
+        return Ok(false);
+    }
+
+    let registry = grist::registry::builtin_parser_registry()?;
+    let descriptor = match registry.select_format(format) {
+        grist::registry::ParserSelection::Available(descriptor) => descriptor,
+        grist::registry::ParserSelection::Unsupported { format, .. } => {
+            return Err(format!(
+                "unsupported parser format `{format}`; run `grist capabilities` to list compiled formats"
+            )
+            .into());
+        }
+    };
+    let aliases = join_registry_values(&descriptor.format.aliases);
+    let extensions = join_registry_values(&descriptor.format.extensions);
+    let media_types = join_registry_values(&descriptor.format.media_types);
+    println!(
+        "Parse {} through the built-in parser registry\n\nUsage: grist parse {} [OPTIONS] <INPUT>\n\nArguments:\n  <INPUT>  Input path or `-` for stdin\n\nOptions:\n      --filename <FILENAME>      Filename hint, especially for stdin\n      --mime <MIME>              Declared MIME type hint\n      --kind <KIND>              Explicit format-kind hint\n      --request-id <REQUEST_ID>  Stable caller correlation ID [default: request-000000]\n      --options <OPTIONS>        JSON, YAML, or TOML parser-options file\n  -h, --help                     Print help\n\nRegistry:\n  Canonical format: {}\n  Aliases: {}\n  Extensions: {}\n  Media types: {}\n  Payload schema: {} ({})\n  Options schema: {} ({})\n\nRun `grist capabilities` for the complete compiled format manifest.",
+        descriptor.format.display_name,
+        format,
+        descriptor.format.id,
+        aliases,
+        extensions,
+        media_types,
+        descriptor.payload_schema.name,
+        descriptor.payload_schema.version,
+        descriptor.options.schema.name,
+        descriptor.options.schema.version,
+    );
+    Ok(true)
+}
+
+#[cfg(feature = "cli")]
+fn join_registry_values(values: &std::collections::BTreeSet<String>) -> String {
+    if values.is_empty() {
+        "(none)".to_string()
+    } else {
+        values.iter().cloned().collect::<Vec<_>>().join(", ")
+    }
+}
 
 #[cfg(feature = "cli")]
 fn parse_external_parse(

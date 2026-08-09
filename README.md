@@ -1,6 +1,6 @@
 # Grist
 
-Grist is a Rust library and optional JSON-only CLI for interpretation tasks shared across Hydra Dynamix projects. It parses and normalizes documents, code, repository files, serializations, CSV data, and model outputs while leaving downstream policy, orchestration, trust, validation, and canonical-state decisions to consumers.
+Grist is a Rust library and optional JSON-oriented CLI for interpretation tasks shared across Hydra Dynamix projects. It parses and normalizes documents, code, repository files, serializations, tabular data, and model outputs while leaving downstream policy, orchestration, trust, validation, and canonical-state decisions to consumers.
 
 ## What Grist provides
 
@@ -67,7 +67,10 @@ retains an exact lexical stream and declared encodings, and inventories scripts,
 forms, remote references, and event handlers without executing or fetching
 them. See [docs/html.md](docs/html.md). XML/JATS parsing preserves namespaces, XML paths, metadata, links, tables, media, and unknown elements while rejecting external resolution; see [docs/xml-jats.md](docs/xml-jats.md).
 
-All successful parse, ingest, schema, render, and validate CLI commands print JSON. Transform renderers may emit Markdown or LaTeX text when requested. CLI errors are emitted as structured diagnostics.
+Successful parse, ingest, schema, render, and validate commands print JSON. A
+graph transform prints a `graph-transform-envelope`; Markdown, LaTeX, HTML, and
+plain-text transform targets print normalized text. CLI errors are emitted as
+structured diagnostics.
 
 ## Rust usage
 
@@ -79,11 +82,15 @@ let envelope = grist::markdown::parse_markdown("# Title\n", source);
 println!("{}", envelope.schema_version);
 ```
 
-Enable only the parser features you need, or use default features for the current full parser set.
+Enable only the parser feature families you need. Use the `full` feature (or the
+`cli` feature, which includes it) for the complete built-in registry.
 
 ## Features
 
-Default features enable Markdown, HTML, CSV, Rust, Python, TypeScript, serialization, model-output, DocumentGraph, schema, and LDGR projection support used by downstream LDGR tooling. The `latex` feature enables LaTeX parsing and LaTeX graph transforms; it is also included by the `cli` feature.
+Cargo default features are the `text-publishing`, `structured-data`, `code`,
+`model-output`, `document-graph`, and `schemas` families. LDGR projection is not
+enabled by default; it is included by `full` and `cli`. The `latex` feature
+enables LaTeX parsing and LaTeX graph transforms and is also included by `cli`.
 
 The `bibliography` feature enables lossless BibTeX/BibLaTeX parsing, bounded string/crossref resolution, citation lookup, and graph projection. It is included in `scholarly`, `full`, and `cli`.
 

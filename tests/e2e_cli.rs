@@ -828,25 +828,56 @@ fn cli_help_menus_describe_parse_and_transform_surfaces() {
     assert!(top.contains("Parse one input into a typed Grist JSON envelope"));
     assert!(top.contains("Render parsed artifacts into stable inspection JSON"));
     assert!(top.contains("Validate inputs against stable Grist-supported contracts"));
-    assert!(top.contains("Convert supported inputs through DocumentGraph"));
+    assert!(top.contains("Parse registry-supported inputs through DocumentGraph"));
+
+    for command in [
+        "detect",
+        "parse",
+        "ingest",
+        "inspect",
+        "schema",
+        "render",
+        "validate",
+        "segment",
+        "capabilities",
+        "transform",
+    ] {
+        let help = run_text(&[command, "--help"]);
+        assert!(help.contains("Usage:"), "missing usage for {command}");
+        assert!(help.contains("--help"), "missing help option for {command}");
+    }
 
     let parse = run_text(&["parse", "--help"]);
     assert!(parse.contains("Parse LaTeX documents"));
-    assert!(parse.contains("Parse TypeScript, TSX, or JSX code"));
+    assert!(parse.contains("Parse TypeScript, JavaScript, TSX, or JSX code"));
+    assert!(parse.contains("grist parse <FORMAT> <INPUT>"));
+    assert!(parse.contains("grist capabilities"));
+
+    for format in ["pdf", "eml", "graph"] {
+        let help = run_text(&["parse", format, "--help"]);
+        assert!(help.contains(&format!("Usage: grist parse {format} [OPTIONS] <INPUT>")));
+        assert!(help.contains(&format!("Canonical format: {format}")));
+        assert!(help.contains("--options <OPTIONS>"));
+        assert!(help.contains("Payload schema:"));
+    }
 
     let render = run_text(&["render", "--help"]);
     assert!(render.contains("json-summary"));
     assert!(render.contains("serialization-summary"));
+    assert!(render.contains("grist render <INPUT> --to <TARGET>"));
 
     let validate = run_text(&["validate", "--help"]);
     assert!(validate.contains("Parse JSON and validate it against a JSON Schema file"));
+    assert!(validate.contains("grist validate <INPUT> --schema <SCHEMA>"));
 
     let transform = run_text(&["transform", "--help"]);
     assert!(transform.contains("Target representation to emit"));
     assert!(transform.contains("--file <INPUT>"));
     assert!(transform.contains("--output <OUTPUT>"));
     assert!(transform.contains("extract-obligations"));
-    assert!(transform.contains(".md, .tex, .py, .rs, .ts, .tsx, .jsx"));
+    assert!(transform.contains("built-in parser registry"));
+    assert!(transform.contains("graph, markdown, latex, html, text"));
+    assert!(!transform.contains(".md, .tex, .py, .rs, .ts, .tsx, .jsx"));
 }
 
 #[test]

@@ -87,7 +87,7 @@ grist capabilities
 grist parse auto <retained fixture>
 grist transform <retained fixture> --to graph
 grist validate <graph envelope> --schema graph-transform-envelope
-grist segment <graph envelope> --graph
+grist segment <graph envelope> --graph --config <segment options>
 ```
 
 The repository currently carries advisory Clippy style/deprecation lints, but

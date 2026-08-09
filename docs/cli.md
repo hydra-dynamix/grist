@@ -35,7 +35,14 @@ grist parse --help
 grist render --help
 grist validate --help
 grist transform --help
+grist parse pdf --help
 ```
+
+The named parse subcommands cover common formats. Every other enabled selector
+uses the registry-routed form `grist parse FORMAT INPUT`; the generic flags are
+`--filename`, `--mime`, `--kind`, `--request-id`, and `--options`. Run
+`grist parse FORMAT --help` for selector metadata and generic options, and
+`grist capabilities` for the complete compiled registry.
 
 ## Parse commands
 
@@ -205,14 +212,10 @@ returns an operation `validate` envelope containing `SchemaValidationReport`.
 
 Transforms parse the source file, project it into `DocumentGraph`, optionally run semantic passes, then emit the requested target.
 
-Supported source extensions:
-
-- `.md`, `.markdown`
-- `.rst`, `.rest`
-- `.tex`, `.latex`
-- `.py`, `.pyi`
-- `.rs`
-- `.ts`, `.mts`, `.cts`, `.tsx`, `.jsx`
+Supported source formats are selected by the same built-in parser registry used
+by `parse auto`, using extension and content evidence. The compiled selector
+set is reported by `grist capabilities`; the retained format/feature matrix is
+in `cross-format-integration.md`.
 
 Targets:
 
@@ -234,7 +237,8 @@ Target behavior:
 
 The input may be positional (`grist transform README.md --to latex`) or named with `--file`. Output goes to stdout unless you provide a second positional output path or `--output`.
 
-- `--to graph` emits JSON `DocumentGraph`.
+- `--to graph` emits a JSON `graph-transform-envelope` whose payload contains
+  the `DocumentGraph` and complete attribution.
 - `--to markdown|latex|html|text` emits normalized text.
 - `--manifest PATH` writes the source-map/fidelity companion for that text.
 - `--fidelity strict|raw-fallback|lossy` makes the loss policy explicit.
