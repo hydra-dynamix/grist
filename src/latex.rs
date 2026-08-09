@@ -19,6 +19,11 @@ use std::fs;
 use std::ops::Range;
 use std::path::{Path, PathBuf};
 
+#[cfg(feature = "pdf")]
+mod pdf_association;
+#[cfg(feature = "pdf")]
+pub use pdf_association::*;
+
 #[cfg(feature = "schemas")]
 use schemars::JsonSchema;
 
