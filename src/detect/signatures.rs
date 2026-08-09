@@ -68,7 +68,9 @@ fn truncated_pdf(diagnostics: &mut Vec<Diagnostic>) -> Option<Signal> {
 }
 
 fn media_signature(bytes: &[u8]) -> Option<Signal> {
-    if bytes.starts_with(b"ID3") || bytes.get(..4).is_some_and(valid_mpeg_audio_header) {
+    if bytes.starts_with(b"ID3")
+        || (!has_unicode_bom(bytes) && bytes.get(..4).is_some_and(valid_mpeg_audio_header))
+    {
         Some(magic("mp3", "audio/mpeg", "ID3/MPEG audio signature", 0.97))
     } else if bytes.len() >= 12 && bytes.starts_with(b"RIFF") && &bytes[8..12] == b"WAVE" {
         Some(magic("wav", "audio/wav", "RIFF WAVE form signature", 0.99))
@@ -104,6 +106,13 @@ fn media_signature(bytes: &[u8]) -> Option<Signal> {
     } else {
         None
     }
+}
+
+fn has_unicode_bom(bytes: &[u8]) -> bool {
+    bytes.starts_with(&[0xef, 0xbb, 0xbf])
+        || bytes.starts_with(&[0xff, 0xfe])
+        || bytes.starts_with(&[0xfe, 0xff])
+        || bytes.starts_with(&[0x00, 0x00, 0xfe, 0xff])
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
