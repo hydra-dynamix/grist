@@ -1,0 +1,14 @@
+{
+  "schema_version": "grist/graph-document/v1",
+  "directed": true,
+  "nodes": [
+    {"id": "present"}
+  ],
+  "edges": [
+    {
+      "id": "edge.to-missing",
+      "source": "present",
+      "target": "missing"
+    }
+  ]
+}

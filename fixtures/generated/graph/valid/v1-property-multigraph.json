@@ -1,0 +1,68 @@
+{
+  "schema_version": "grist/graph-document/v1",
+  "id": "release-plan",
+  "directed": true,
+  "nodes": [
+    {
+      "id": "ticket.alpha",
+      "labels": ["ticket", "ready"],
+      "attrs": {
+        "priority": 2,
+        "active": true,
+        "owner": null,
+        "org.example.layout": {"x": 12.5, "y": -3}
+      }
+    },
+    {
+      "id": "ticket.beta",
+      "labels": ["ticket"],
+      "attrs": {"tags": ["parser", "graph"]}
+    },
+    {
+      "id": "ticket.gamma",
+      "labels": [],
+      "attrs": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge.alpha-beta.1",
+      "source": "ticket.alpha",
+      "target": "ticket.beta",
+      "label": "relates",
+      "attrs": {"weight": 1}
+    },
+    {
+      "id": "edge.alpha-beta.2",
+      "source": "ticket.alpha",
+      "target": "ticket.beta",
+      "label": "relates",
+      "attrs": {"weight": 1}
+    },
+    {
+      "id": "edge.beta-alpha",
+      "source": "ticket.beta",
+      "target": "ticket.alpha",
+      "label": "returns"
+    },
+    {
+      "id": "edge.gamma-loop",
+      "source": "ticket.gamma",
+      "target": "ticket.gamma",
+      "label": "observes",
+      "attrs": {"empty": ""}
+    },
+    {
+      "id": "edge.beta-gamma-undirected",
+      "source": "ticket.beta",
+      "target": "ticket.gamma",
+      "directed": false,
+      "attrs": {}
+    }
+  ],
+  "attrs": {
+    "description": "cycle, loop, parallel edges, and mixed direction",
+    "revision": 1,
+    "flags": [true, false, null]
+  }
+}
