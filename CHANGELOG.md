@@ -9,3 +9,6 @@
 - Added the optional generic graph JSON/YAML adapter with ranked detection,
   shared ingest/CLI dispatch, validation and DAG analysis, LDGR conversion,
   normalized DocumentGraph projection, and generated schemas.
+- Added inert TNEF attribute inventory and signed/encrypted S/MIME evidence,
+  with explicit provider-routed decryption, preserved ciphertext, provider
+  provenance, graph/segment integration, and secret-safe defaults.

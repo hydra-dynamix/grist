@@ -97,6 +97,11 @@ analysis, normalized `DocumentGraph` projection, ranked detection, registry
 dispatch, and generated schemas. It is included in `full`, `cli`, and
 `ldgr-projection`. See [docs/graph-input-contract.md](docs/graph-input-contract.md).
 
+The `email-message` feature includes inert TNEF attribute inventory and signed or
+encrypted S/MIME representation. Decryption occurs only through an explicitly
+selected runtime provider; ciphertext, signatures, identities, locators, and
+provider provenance remain separate. See [docs/email.md](docs/email.md).
+
 The `word-ooxml` feature enables bounded inert DOCX, DOCM, DOTX, and DOTM package parsing, including content types, relationships, properties, quarantined macro inventory, and embedded child artifacts. It is included in `word-processing`, `full`, and `cli`.
 
 The `presentation-ooxml` feature enables bounded inert PPTX, PPTM, POTX, and PPSX package parsing, including slide order, masters/layouts/themes, properties, action inventory, macro quarantine, and embedded child artifacts. It is included in `presentations`, `full`, and `cli`.

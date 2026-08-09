@@ -41,6 +41,19 @@ impl<'a> DecryptionRequest<'a> {
         Ok(Self { context, options })
     }
 
+    /// Construct a request for an explicitly selected provider that owns its
+    /// credentials internally. The provider binding remains runtime-only and
+    /// neither the credential material nor its presence enters this request.
+    pub fn with_provider_credentials(
+        context: ProviderRequestContext<'a>,
+        options: DecryptionOptions,
+    ) -> Result<Self, ProviderContractError> {
+        if options.scheme.trim().is_empty() {
+            return Err(ProviderContractError::InvalidField("decryption.scheme"));
+        }
+        Ok(Self { context, options })
+    }
+
     pub fn manifest(&self) -> Result<ProviderRequestManifest, ProviderContractError> {
         Ok(ProviderRequestManifest {
             kind: ProviderKind::Decryption,

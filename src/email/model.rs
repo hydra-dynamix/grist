@@ -1,5 +1,5 @@
 use crate::container::EmbeddedArtifact;
-use crate::core::{Diagnostic, OperationStatus, SourceLocator};
+use crate::core::{Diagnostic, OperationStatus, RawContentIdentity, SourceLocator};
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "schemas")]
@@ -160,10 +160,98 @@ pub struct MimePart {
     pub epilogue: Option<String>,
     pub children: Vec<MimePart>,
     pub attachment: Option<EmailAttachment>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tnef: Option<TnefDocument>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub smime: Option<SmimePart>,
     pub encrypted: bool,
     pub signed: bool,
     pub locator: SourceLocator,
     pub body_locator: SourceLocator,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct OpaqueEmailContent {
+    pub identity: RawContentIdentity,
+    pub locator: SourceLocator,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum SmimeKind {
+    EnvelopedData,
+    MultipartEncrypted,
+    MultipartSigned,
+    DetachedSignature,
+    SignedData,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SmimePart {
+    pub kind: SmimeKind,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub smime_type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub protocol: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub micalg: Option<String>,
+    pub native: OpaqueEmailContent,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub signed_content_path: Option<Vec<usize>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub signature_path: Option<Vec<usize>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub decryption: Option<SmimeDecryption>,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SmimeDecryption {
+    pub status: OperationStatus,
+    pub provider: String,
+    pub request_digest: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output_identity: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_identity: Option<RawContentIdentity>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub media_type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parsed: Option<NestedEmailParse>,
+    #[serde(default)]
+    pub diagnostics: Vec<Diagnostic>,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TnefDocument {
+    pub signature: u32,
+    pub signature_valid: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub key: Option<u16>,
+    pub identity: RawContentIdentity,
+    pub attributes: Vec<TnefAttribute>,
+    pub trailing_bytes: usize,
+    pub complete: bool,
+    pub locator: SourceLocator,
+}
+
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TnefAttribute {
+    pub ordinal: usize,
+    pub level: u8,
+    pub name: u16,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub known_name: Option<String>,
+    pub attribute_type: u16,
+    pub value: RawContentIdentity,
+    pub checksum: u16,
+    pub checksum_valid: bool,
+    pub locator: SourceLocator,
 }
 
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]

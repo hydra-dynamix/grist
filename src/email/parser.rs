@@ -226,6 +226,8 @@ impl ParseState<'_> {
             epilogue: None,
             children: Vec::new(),
             attachment: None,
+            tnef: None,
+            smime: None,
             encrypted: false,
             signed: false,
             locator,
@@ -244,7 +246,14 @@ impl ParseState<'_> {
             || matches!(
                 essence,
                 "application/pkcs7-signature" | "application/x-pkcs7-signature"
-            );
+            )
+            || matches!(
+                essence,
+                "application/pkcs7-mime" | "application/x-pkcs7-mime"
+            ) && part
+                .content_type
+                .parameter("smime-type")
+                .is_some_and(|value| value.eq_ignore_ascii_case("signed-data"));
         if part.encrypted {
             self.encrypted_parts.push(path.clone());
             self.partial(
@@ -261,6 +270,7 @@ impl ParseState<'_> {
         } else {
             self.parse_leaf(&mut part, body, depth);
         }
+        super::secure::represent_smime(&mut part, body);
         if let Some(location) = &part.content_location
             && is_remote_uri(location)
         {
@@ -427,6 +437,12 @@ impl ParseState<'_> {
         }
         part.decoded_body_sha256 = Some(sha256_hex(&decoded.bytes));
         part.decoded_body_bytes = Some(decoded.bytes.len());
+        if super::secure::is_tnef_media_type(&part.content_type.essence) {
+            let (tnef, diagnostics) =
+                super::secure::parse_tnef(&decoded.bytes, part.body_locator.clone(), self.control);
+            self.diagnostics.extend(diagnostics);
+            part.tnef = Some(tnef);
+        }
         if part.content_type.essence.starts_with("text/") {
             let charset = part.content_type.parameter("charset").unwrap_or("us-ascii");
             let (text, used_charset, lossy) = decode_charset(&decoded.bytes, charset);
@@ -654,6 +670,8 @@ impl ParseState<'_> {
             epilogue: None,
             children: Vec::new(),
             attachment: None,
+            tnef: None,
+            smime: None,
             encrypted: false,
             signed: false,
             locator: range_locator(

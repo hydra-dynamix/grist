@@ -2283,29 +2283,19 @@ fn register_email(registry: &mut ParserRegistry) -> Result<(), ParserRegistryErr
         .with_aliases(["email", "rfc5322", "message_rfc822"])
         .with_extensions(["eml"])
         .with_media_types(["message/rfc822"]);
-    register(
-        registry,
-        descriptor(
-            "grist.email",
-            format,
-            crate::email::parser_info(),
-            crate::core::SchemaVersion::EMAIL_V1,
-            Some("email-message"),
-            serde_json::to_value(crate::email::EmailOptions::default()).unwrap_or_default(),
-        ),
-        parse_email,
-    )
-}
-
-#[cfg(feature = "email-message")]
-fn parse_email(context: &mut ParserContext<'_>) -> Result<ParserOutput, ParserError> {
-    let options = decode_options::<crate::email::EmailOptions>(context)?;
-    output(crate::email::parse_email_with_operation_control(
-        context.bytes(),
-        context.source().clone(),
-        &options,
-        context.control(),
-    ))
+    let mut metadata = descriptor(
+        "grist.email",
+        format,
+        crate::email::parser_info(),
+        crate::core::SchemaVersion::EMAIL_V1,
+        Some("email-message"),
+        serde_json::to_value(crate::email::EmailOptions::default()).unwrap_or_default(),
+    );
+    metadata.allowed_providers.insert(ProviderKind::Decryption);
+    metadata
+        .capabilities
+        .insert(Capability::ProviderDerivedContent);
+    register(registry, metadata, crate::email::parse_registered)
 }
 
 #[cfg(feature = "email-message")]

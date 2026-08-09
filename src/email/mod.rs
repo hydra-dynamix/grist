@@ -4,6 +4,7 @@ mod decode;
 mod graph;
 mod model;
 mod parser;
+mod secure;
 
 pub use model::*;
 
@@ -11,6 +12,7 @@ use crate::core::{
     ArtifactKind, BudgetProfile, BudgetSelection, Diagnostic, Envelope, Hashes, OperationControl,
     OperationKind, OperationStatus, ParserInfo, SchemaVersion, SourceInfo,
 };
+use crate::registry::{ParserContext, ParserError, ParserOutput};
 
 const PARSER: &str = "grist.email";
 pub type EmailEnvelope = Envelope<EmailDocument>;
@@ -19,7 +21,35 @@ pub fn parser_info() -> ParserInfo {
     ParserInfo::new(PARSER)
         .with_implementation("grist-rfc5322-mime", env!("CARGO_PKG_VERSION"))
         .with_feature("email-message")
-        .with_specification_version("RFC 5322; MIME RFC 2045-2049; RFC 2231")
+        .with_specification_version("RFC 5322; MIME RFC 2045-2049; RFC 2231; TNEF; S/MIME RFC 8551")
+}
+
+pub(crate) fn parse_registered(
+    context: &mut ParserContext<'_>,
+) -> Result<ParserOutput, ParserError> {
+    let options: EmailOptions = serde_json::from_value(context.options().clone())
+        .map_err(|error| Box::new(Diagnostic::malformed("grist.registry", error.to_string())))?;
+    let mut document = parser::parse_document(
+        context.bytes(),
+        context.source(),
+        &options,
+        context.control(),
+    )?;
+    let provider_evidence = secure::apply_smime_decryption(context, &mut document);
+    let status = if document.complete {
+        OperationStatus::Complete
+    } else {
+        OperationStatus::Partial
+    };
+    let payload = serde_json::to_value(&document)
+        .map_err(|error| Box::new(Diagnostic::parser_defect(PARSER, error.to_string())))?;
+    Ok(ParserOutput {
+        status,
+        payload: Some(payload),
+        diagnostics: document.diagnostics.clone(),
+        providers: provider_evidence.providers,
+        provenance: provider_evidence.provenance,
+    })
 }
 
 pub fn parse_email(bytes: &[u8], source: SourceInfo, options: &EmailOptions) -> EmailEnvelope {

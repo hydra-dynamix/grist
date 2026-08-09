@@ -14,7 +14,8 @@ network resolver, calendar agent, or executable MIME handler.
 - Message-ID, In-Reply-To, References, Received, Thread-Index, Thread-Topic,
   normalized-subject hints, DKIM, ARC, and authentication headers remain evidence.
 - MIME types, RFC 2231 parameter continuations, dispositions, transfer encodings,
-  preambles, epilogues, alternatives, text, inline resources, and attachments are typed.
+  preambles, epilogues, alternatives, text, inline resources, attachments, TNEF,
+  and S/MIME parts are typed.
 - Each entity has a one-based MIME path plus an exact half-open byte/text range.
   Attachment identity is calculated over decoded attachment bytes.
 - Supported attachment formats may be parsed recursively from supplied bytes
@@ -32,12 +33,29 @@ attachment parsing can be disabled.
 No URI is dereferenced. HTTP(S) HTML attributes and remote `Content-Location`
 facts are inventoried with `resolved: false`. HTML remains inert source text.
 S/MIME encryption, MIME signatures, TNEF, scripts, executables, and active
-attachments are data only. Encrypted bodies are explicit partial results unless
-a separate authorized decryption operation supplies plaintext. Unsafe captured
-bytes are quarantined by the shared embedded-artifact contract.
+attachments are data only. TNEF parsing validates the signature, inventories
+ordered attributes with checksum evidence, retains unknown attributes by identity,
+and never executes embedded content. Signed S/MIME retains the signed-content and
+signature paths, algorithms, exact native identities, and locators without
+attempting trust or signature verification.
+
+Encrypted S/MIME bodies are explicit partial results unless the caller selects a
+`Decryption` provider on the registry request. Provider selection is per request;
+the parser performs no network activity or key discovery by default. A selected
+provider may own credentials inside its runtime-only binding, so credentials never
+enter `EmailOptions`, schemas, diagnostics, hashes, debug output, or serialized
+artifacts. Ciphertext evidence remains authoritative and separate when decryption
+succeeds. The provider invocation, request/output identities, decrypted parse, and
+lossless provenance link are recorded independently. Provider failure preserves
+the ciphertext and produces a partial result.
+
+DocumentGraph MIME nodes carry the structured `smime` and `tnef` evidence. Default
+segmentation emits signed or decrypted textual MIME content only; opaque TNEF,
+ciphertext, and signature bytes do not become text segments. Unsafe captured bytes
+remain quarantined by the shared embedded-artifact contract.
 
 Stable diagnostics use the `email.header.*`, `email.limit.*`, `email.mime.*`,
-and `email.nested.*` namespaces.
+`email.tnef.*`, `email.smime.*`, and `email.nested.*` namespaces.
 
 ## MBOX mailboxes
 

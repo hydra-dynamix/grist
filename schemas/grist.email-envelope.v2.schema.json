@@ -2092,10 +2092,30 @@
         "signed": {
           "type": "boolean"
         },
+        "smime": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SmimePart"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "text": {
           "anyOf": [
             {
               "$ref": "#/definitions/MimeTextBody"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tnef": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TnefDocument"
             },
             {
               "type": "null"
@@ -2188,6 +2208,21 @@
         "envelope",
         "format",
         "status"
+      ],
+      "type": "object"
+    },
+    "OpaqueEmailContent": {
+      "properties": {
+        "identity": {
+          "$ref": "#/definitions/RawContentIdentity"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        }
+      },
+      "required": [
+        "identity",
+        "locator"
       ],
       "type": "object"
     },
@@ -2456,6 +2491,139 @@
       ],
       "type": "string"
     },
+    "SmimeDecryption": {
+      "properties": {
+        "content_identity": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RawContentIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "diagnostics": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Diagnostic"
+          },
+          "type": "array"
+        },
+        "media_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "output_identity": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parsed": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/NestedEmailParse"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "provider": {
+          "type": "string"
+        },
+        "request_digest": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/OperationStatus"
+        }
+      },
+      "required": [
+        "provider",
+        "request_digest",
+        "status"
+      ],
+      "type": "object"
+    },
+    "SmimeKind": {
+      "enum": [
+        "enveloped_data",
+        "multipart_encrypted",
+        "multipart_signed",
+        "detached_signature",
+        "signed_data"
+      ],
+      "type": "string"
+    },
+    "SmimePart": {
+      "properties": {
+        "decryption": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SmimeDecryption"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "kind": {
+          "$ref": "#/definitions/SmimeKind"
+        },
+        "micalg": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "native": {
+          "$ref": "#/definitions/OpaqueEmailContent"
+        },
+        "protocol": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "signature_path": {
+          "items": {
+            "format": "uint",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "signed_content_path": {
+          "items": {
+            "format": "uint",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "smime_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "native"
+      ],
+      "type": "object"
+    },
     "SourceInfo": {
       "description": "Descriptive source metadata supplied by the caller.\n\nURI values are labels only. Resolving or fetching them is outside Grist's source contract.",
       "properties": {
@@ -2647,6 +2815,111 @@
         "end_line",
         "start_column",
         "start_line"
+      ],
+      "type": "object"
+    },
+    "TnefAttribute": {
+      "properties": {
+        "attribute_type": {
+          "format": "uint16",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "checksum": {
+          "format": "uint16",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "checksum_valid": {
+          "type": "boolean"
+        },
+        "known_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "level": {
+          "format": "uint8",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "name": {
+          "format": "uint16",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "ordinal": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "value": {
+          "$ref": "#/definitions/RawContentIdentity"
+        }
+      },
+      "required": [
+        "attribute_type",
+        "checksum",
+        "checksum_valid",
+        "level",
+        "locator",
+        "name",
+        "ordinal",
+        "value"
+      ],
+      "type": "object"
+    },
+    "TnefDocument": {
+      "properties": {
+        "attributes": {
+          "items": {
+            "$ref": "#/definitions/TnefAttribute"
+          },
+          "type": "array"
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "identity": {
+          "$ref": "#/definitions/RawContentIdentity"
+        },
+        "key": {
+          "format": "uint16",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "signature": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "signature_valid": {
+          "type": "boolean"
+        },
+        "trailing_bytes": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "attributes",
+        "complete",
+        "identity",
+        "locator",
+        "signature",
+        "signature_valid",
+        "trailing_bytes"
       ],
       "type": "object"
     }

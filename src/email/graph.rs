@@ -131,6 +131,8 @@ fn project_part(
                 serde_json::to_value(&part.content_location).map_err(error)?,
             )
             .with_attr("transfer_encoding", part.transfer_encoding.clone())
+            .with_attr("smime", serde_json::to_value(&part.smime).map_err(error)?)
+            .with_attr("tnef", serde_json::to_value(&part.tnef).map_err(error)?)
             .with_attr("encrypted", part.encrypted)
             .with_attr("signed", part.signed),
     );
