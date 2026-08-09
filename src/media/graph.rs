@@ -136,6 +136,13 @@ impl ToDocumentGraph for MediaDocument {
                     cue_node
                         .attrs
                         .insert("cue_id".into(), cue.id.clone().into());
+                    cue_node
+                        .attrs
+                        .insert("text_origin".into(), "native_subtitle".into());
+                    cue_node.attrs.insert(
+                        "segment_primary".into(),
+                        serde_json::Value::Bool(self.transcription.reconciled.is_none()),
+                    );
                     if let Some(start) = cue.timing.start_ms {
                         cue_node.attrs.insert("start_ms".into(), start.into());
                     }
@@ -157,6 +164,9 @@ impl ToDocumentGraph for MediaDocument {
                 }
             }
         }
+        super::transcription_graph::project_transcription_representations(
+            &mut graph, &ids, &root, self,
+        )?;
         graph.finalize_projection(&ids).map_err(error)?;
         Ok(graph)
     }

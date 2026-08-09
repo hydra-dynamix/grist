@@ -66,7 +66,7 @@ pub(crate) fn parse_document(
         .drain(..)
         .enumerate()
         .map(|(index, candidate)| build_subtitle(index, candidate, options))
-        .collect();
+        .collect::<Vec<_>>();
     let artwork = parsed
         .artwork_candidates
         .drain(..)
@@ -74,6 +74,8 @@ pub(crate) fn parse_document(
         .map(|(index, candidate)| build_artwork(index, candidate, options))
         .collect();
 
+    let transcription = super::transcription::native_transcription_content(&subtitle_tracks)
+        .expect("native media transcript serializes");
     let mut document = MediaDocument {
         schema_version: crate::core::SchemaVersion::MEDIA_V1.into(),
         format,
@@ -82,6 +84,7 @@ pub(crate) fn parse_document(
         chapters: parsed.chapters,
         attachments,
         subtitle_tracks,
+        transcription,
         artwork,
         metadata: parsed.metadata,
         encrypted: parsed.encrypted,
@@ -130,6 +133,7 @@ fn validate_options(options: &MediaOptions) -> Result<(), MediaParseError> {
         || options.max_metadata_bytes == 0
         || options.max_attachment_bytes == 0
         || options.max_subtitle_bytes == 0
+        || options.transcription.max_streams == 0
     {
         return Err(MediaParseError::Malformed(
             "media limits must all be greater than zero".into(),

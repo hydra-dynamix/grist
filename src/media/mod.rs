@@ -9,6 +9,8 @@ mod parse;
 mod parse_audio;
 mod parse_ebml;
 mod parse_iso;
+mod transcription;
+mod transcription_graph;
 
 pub use model::*;
 
@@ -156,14 +158,21 @@ pub(crate) fn parse_registered(
                 ));
             }
         };
-    let diagnostics = document.diagnostics.clone();
+    let mut document = document;
+    let transcription =
+        transcription::apply_selected_transcription(context, &mut document, &options);
+    let mut diagnostics = document.diagnostics.clone();
+    diagnostics.extend(transcription.diagnostics);
     let payload = serde_json::to_value(document)
         .map_err(|error| Box::new(Diagnostic::parser_defect(parse::PARSER, error.to_string())))?;
-    if diagnostics.iter().any(|diagnostic| diagnostic.partial) {
-        Ok(ParserOutput::partial(Some(payload), diagnostics))
+    let mut output = if diagnostics.iter().any(|diagnostic| diagnostic.partial) {
+        ParserOutput::partial(Some(payload), diagnostics)
     } else {
         let mut output = ParserOutput::complete(payload);
         output.diagnostics = diagnostics;
-        Ok(output)
-    }
+        output
+    };
+    output.providers = transcription.invocations;
+    output.provenance = transcription.provenance;
+    Ok(output)
 }

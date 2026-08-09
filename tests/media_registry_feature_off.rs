@@ -18,6 +18,16 @@ fn disabled_media_descriptors_retain_contract_metadata() {
         "max_metadata_bytes": 16 * 1024 * 1024,
         "max_attachment_bytes": 32 * 1024 * 1024,
         "max_subtitle_bytes": 16 * 1024 * 1024,
+        "transcription": {
+            "selection": {"mode": "disabled"},
+            "provider_options": {
+                "language_hints": [],
+                "speaker_diarization": false,
+                "word_timestamps": false,
+            },
+            "max_streams": 1_000,
+            "reconcile": false,
+        },
     });
 
     for format in ["mp3", "mp4", "quicktime", "wav", "flac", "matroska"] {
@@ -35,11 +45,20 @@ fn disabled_media_descriptors_retain_contract_metadata() {
         assert_eq!(descriptor.options.schema.name, "media-options");
         assert_eq!(descriptor.options.schema.version, "grist/media-options/v1");
         assert_eq!(descriptor.options.default, expected);
-        assert!(descriptor.allowed_providers.is_empty());
+        assert!(
+            descriptor
+                .allowed_providers
+                .contains(&grist::core::ProviderKind::Transcription)
+        );
         assert!(
             descriptor
                 .capabilities
                 .contains(&Capability::EmbeddedArtifacts)
+        );
+        assert!(
+            descriptor
+                .capabilities
+                .contains(&Capability::ProviderDerivedContent)
         );
     }
 }

@@ -850,6 +850,16 @@ fn media_options_defaults() -> serde_json::Value {
         "max_metadata_bytes": 16 * 1024 * 1024,
         "max_attachment_bytes": 32 * 1024 * 1024,
         "max_subtitle_bytes": 16 * 1024 * 1024,
+        "transcription": {
+            "selection": {"mode": "disabled"},
+            "provider_options": {
+                "language_hints": [],
+                "speaker_diarization": false,
+                "word_timestamps": false,
+            },
+            "max_streams": 1_000,
+            "reconcile": false,
+        },
     })
 }
 
@@ -876,6 +886,12 @@ fn register_media(registry: &mut ParserRegistry) -> Result<(), ParserRegistryErr
             defaults,
         );
         metadata.capabilities.insert(Capability::EmbeddedArtifacts);
+        metadata
+            .allowed_providers
+            .insert(crate::core::ProviderKind::Transcription);
+        metadata
+            .capabilities
+            .insert(Capability::ProviderDerivedContent);
         register(registry, metadata, crate::media::parse_registered)?;
     }
     Ok(())
@@ -903,6 +919,12 @@ fn register_media(registry: &mut ParserRegistry) -> Result<(), ParserRegistryErr
             media_options_defaults(),
         );
         metadata.capabilities.insert(Capability::EmbeddedArtifacts);
+        metadata
+            .allowed_providers
+            .insert(crate::core::ProviderKind::Transcription);
+        metadata
+            .capabilities
+            .insert(Capability::ProviderDerivedContent);
         register_disabled(registry, metadata, "media")?;
     }
     Ok(())
