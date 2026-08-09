@@ -2583,6 +2583,229 @@
       ],
       "type": "object"
     },
+    "MediaNativeTranscript": {
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/definitions/MediaNativeTranscriptItem"
+          },
+          "type": "array"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "items",
+        "text"
+      ],
+      "type": "object"
+    },
+    "MediaNativeTranscriptItem": {
+      "properties": {
+        "cue_id": {
+          "type": "string"
+        },
+        "end_ms": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "speaker": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "start_ms": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "subtitle_track_id": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "cue_id",
+        "end_ms",
+        "index",
+        "locator",
+        "start_ms",
+        "subtitle_track_id",
+        "text"
+      ],
+      "type": "object"
+    },
+    "MediaReconciledTranscript": {
+      "properties": {
+        "confidence_evidence": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/definitions/MediaReconciledTranscriptItem"
+          },
+          "type": "array"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "items",
+        "text"
+      ],
+      "type": "object"
+    },
+    "MediaReconciledTranscriptItem": {
+      "properties": {
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProviderConfidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "end_ms": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "origin": {
+          "$ref": "#/definitions/MediaTranscriptOrigin"
+        },
+        "source": {
+          "$ref": "#/definitions/MediaReconciledTranscriptSource"
+        },
+        "speaker": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "start_ms": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "index",
+        "locator",
+        "origin",
+        "source",
+        "text"
+      ],
+      "type": "object"
+    },
+    "MediaReconciledTranscriptSource": {
+      "oneOf": [
+        {
+          "properties": {
+            "cue_id": {
+              "type": "string"
+            },
+            "origin": {
+              "enum": [
+                "native_subtitle"
+              ],
+              "type": "string"
+            },
+            "subtitle_track_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "cue_id",
+            "origin",
+            "subtitle_track_id"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "attempt_index": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "origin": {
+              "enum": [
+                "provider_segment"
+              ],
+              "type": "string"
+            },
+            "segment_index": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "attempt_index",
+            "origin",
+            "segment_index"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "attempt_index": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "origin": {
+              "enum": [
+                "provider_overall"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "attempt_index",
+            "origin"
+          ],
+          "type": "object"
+        }
+      ]
+    },
     "MediaStream": {
       "properties": {
         "channels": {
@@ -2740,6 +2963,133 @@
       ],
       "type": "object"
     },
+    "MediaTranscriptOrigin": {
+      "enum": [
+        "native_subtitle",
+        "provider_transcription"
+      ],
+      "type": "string"
+    },
+    "MediaTranscriptSegment": {
+      "properties": {
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProviderConfidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "end_ms": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "speaker": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "start_ms": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "end_ms",
+        "index",
+        "locator",
+        "start_ms",
+        "text"
+      ],
+      "type": "object"
+    },
+    "MediaTranscriptionAttempt": {
+      "properties": {
+        "response": {
+          "$ref": "#/definitions/ProviderResponse"
+        },
+        "scope": {
+          "$ref": "#/definitions/MediaTranscriptionScope"
+        },
+        "segments": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/MediaTranscriptSegment"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "response",
+        "scope"
+      ],
+      "type": "object"
+    },
+    "MediaTranscriptionContent": {
+      "properties": {
+        "native": {
+          "$ref": "#/definitions/NativeRepresentation_for_MediaNativeTranscript"
+        },
+        "provider_attempts": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/MediaTranscriptionAttempt"
+          },
+          "type": "array"
+        },
+        "reconciled": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ReconciledRepresentation_for_MediaReconciledTranscript"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "native"
+      ],
+      "type": "object"
+    },
+    "MediaTranscriptionScope": {
+      "properties": {
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "stream_id": {
+          "type": "string"
+        },
+        "stream_index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "locator",
+        "stream_id",
+        "stream_index"
+      ],
+      "type": "object"
+    },
     "NativeRepresentation_for_ImageNativeText": {
       "properties": {
         "diagnostics": {
@@ -2754,6 +3104,28 @@
         },
         "value": {
           "$ref": "#/definitions/ImageNativeText"
+        }
+      },
+      "required": [
+        "identity",
+        "value"
+      ],
+      "type": "object"
+    },
+    "NativeRepresentation_for_MediaNativeTranscript": {
+      "properties": {
+        "diagnostics": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Diagnostic"
+          },
+          "type": "array"
+        },
+        "identity": {
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/definitions/MediaNativeTranscript"
         }
       },
       "required": [
@@ -3291,6 +3663,61 @@
         },
         "value": {
           "$ref": "#/definitions/ImageReconciledText"
+        }
+      },
+      "required": [
+        "algorithm",
+        "algorithm_version",
+        "configuration_digest",
+        "identity",
+        "native_input_identity",
+        "provider_output_identities",
+        "value"
+      ],
+      "type": "object"
+    },
+    "ReconciledRepresentation_for_MediaReconciledTranscript": {
+      "properties": {
+        "algorithm": {
+          "type": "string"
+        },
+        "algorithm_version": {
+          "type": "string"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProviderConfidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "configuration_digest": {
+          "type": "string"
+        },
+        "diagnostics": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Diagnostic"
+          },
+          "type": "array"
+        },
+        "identity": {
+          "type": "string"
+        },
+        "native_input_identity": {
+          "type": "string"
+        },
+        "provider_output_identities": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "value": {
+          "$ref": "#/definitions/MediaReconciledTranscript"
         }
       },
       "required": [
@@ -4201,6 +4628,25 @@
     },
     "technical": {
       "$ref": "#/definitions/MediaTechnicalMetadata"
+    },
+    "transcription": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/MediaTranscriptionContent"
+        }
+      ],
+      "default": {
+        "native": {
+          "diagnostics": [],
+          "identity": "sha256:6e7d579ef5a4430ef5cc3edd53969c69040430b48c26266113578b825195cf2c",
+          "value": {
+            "items": [],
+            "text": ""
+          }
+        },
+        "provider_attempts": []
+      },
+      "description": "Native subtitle tracks remain authoritative; provider attempts and any reconciliation are retained here as separate additive representations."
     }
   },
   "required": [
