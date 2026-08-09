@@ -3,7 +3,7 @@ use super::{
     ParserError, ParserOrigin, ParserOutput, ParserRegistry, ParserRegistryError, SchemaMetadata,
     UnavailableParser, UnavailableReason,
 };
-use crate::core::{ArtifactKind, Diagnostic, ParserInfo, ProviderKind};
+use crate::core::{ArtifactKind, Diagnostic, ParserInfo};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
@@ -48,45 +48,7 @@ fn descriptor(
     default_options: Value,
 ) -> ParserDescriptor {
     let mut capabilities = BTreeSet::from([Capability::NativeExtraction, Capability::TypedPayload]);
-    if matches!(
-        format.artifact_kind,
-        ArtifactKind::Archive
-            | ArtifactKind::Text
-            | ArtifactKind::Markdown
-            | ArtifactKind::RestructuredText
-            | ArtifactKind::AsciiDoc
-            | ArtifactKind::Html
-            | ArtifactKind::Epub
-            | ArtifactKind::Pdf
-            | ArtifactKind::Image
-            | ArtifactKind::Subtitle
-            | ArtifactKind::Media
-            | ArtifactKind::WordOoxml
-            | ArtifactKind::PresentationOoxml
-            | ArtifactKind::SpreadsheetOoxml
-            | ArtifactKind::SpreadsheetOdf
-            | ArtifactKind::PresentationOdf
-            | ArtifactKind::OdfWord
-            | ArtifactKind::Rtf
-            | ArtifactKind::Xml
-            | ArtifactKind::Latex
-            | ArtifactKind::Bibliography
-            | ArtifactKind::Serialization
-            | ArtifactKind::StructuredBinary
-            | ArtifactKind::Columnar
-            | ArtifactKind::Sqlite
-            | ArtifactKind::Email
-            | ArtifactKind::Mbox
-            | ArtifactKind::OutlookMsg
-            | ArtifactKind::Notebook
-            | ArtifactKind::RustCode
-            | ArtifactKind::PythonCode
-            | ArtifactKind::JavaScriptCode
-            | ArtifactKind::TypeScriptCode
-            | ArtifactKind::Code
-            | ArtifactKind::Manifest
-            | ArtifactKind::GraphDocument
-    ) {
+    if format.artifact_kind.supports_document_graph_projection() {
         capabilities.insert(Capability::DocumentGraphProjection);
     }
     if matches!(
@@ -111,18 +73,17 @@ fn descriptor(
     ) {
         capabilities.insert(Capability::EmbeddedArtifacts);
     }
+    let (payload_schema_name, options_schema_name, options_schema_version) =
+        canonical_schema_contract(&format);
     ParserDescriptor {
         id: id.to_string(),
         origin: ParserOrigin::BuiltIn,
         priority: ParserDescriptor::BUILTIN_PRIORITY,
         options: OptionsMetadata::new(
-            SchemaMetadata::new(
-                format.id.clone() + "-options",
-                "grist/".to_string() + &format.id + "-options/v1",
-            ),
+            SchemaMetadata::new(options_schema_name, options_schema_version),
             default_options,
         ),
-        payload_schema: SchemaMetadata::new(format.id.clone(), payload_schema),
+        payload_schema: SchemaMetadata::new(payload_schema_name, payload_schema),
         format,
         parser,
         required_features: feature.into_iter().map(str::to_string).collect(),
@@ -130,6 +91,69 @@ fn descriptor(
         allowed_providers: BTreeSet::new(),
         required_providers: BTreeSet::new(),
     }
+}
+
+/// Map selector-specific registry entries onto the authoritative public schema
+/// contract for their payload family. A selector such as `docx` or `json` is a
+/// format choice, not a second wire type.
+fn canonical_schema_contract(format: &FormatMetadata) -> (String, String, String) {
+    let name = match format.artifact_kind {
+        ArtifactKind::Archive => "archive",
+        ArtifactKind::Markdown => match format.id.as_str() {
+            "quarto" => "quarto",
+            "r_markdown" => "r_markdown",
+            _ => "markdown",
+        },
+        ArtifactKind::RestructuredText => "restructured-text",
+        ArtifactKind::AsciiDoc => "asciidoc",
+        ArtifactKind::Html => "html",
+        ArtifactKind::Epub => "epub",
+        ArtifactKind::Pdf => "pdf",
+        ArtifactKind::Image => "image",
+        ArtifactKind::Subtitle => "subtitle",
+        ArtifactKind::Media => "media",
+        ArtifactKind::WordOoxml => "word-ooxml",
+        ArtifactKind::PresentationOoxml => "presentation-ooxml",
+        ArtifactKind::SpreadsheetOoxml => "spreadsheet-ooxml",
+        ArtifactKind::SpreadsheetOdf => "spreadsheet-odf",
+        ArtifactKind::PresentationOdf => "presentation-odf",
+        ArtifactKind::OdfWord => "odf-word",
+        ArtifactKind::Rtf => "rtf",
+        ArtifactKind::Xml => "xml",
+        ArtifactKind::Csv => "csv",
+        ArtifactKind::RustCode => "rust-code",
+        ArtifactKind::PythonCode => "python-code",
+        ArtifactKind::JavaScriptCode => "javascript-code",
+        ArtifactKind::TypeScriptCode => "typescript-code",
+        ArtifactKind::Code => "code",
+        ArtifactKind::Manifest => "manifest",
+        ArtifactKind::Latex => "latex",
+        ArtifactKind::Bibliography => "bibliography",
+        ArtifactKind::Serialization => "serialization",
+        ArtifactKind::StructuredBinary => "structured-binary",
+        ArtifactKind::Columnar => "columnar",
+        ArtifactKind::Sqlite => "sqlite",
+        ArtifactKind::Email => "email",
+        ArtifactKind::Mbox => "mbox",
+        ArtifactKind::OutlookMsg => "outlook-msg",
+        ArtifactKind::ICalendar => "icalendar",
+        ArtifactKind::VCard => "vcard",
+        ArtifactKind::Notebook => "ipynb",
+        ArtifactKind::ModelOutput => "model-output",
+        ArtifactKind::Text => "text",
+        ArtifactKind::LdgrProjection => "ldgr-projection",
+        ArtifactKind::GraphDocument => "graph",
+        _ => format.id.as_str(),
+    };
+    let options_version = match format.artifact_kind {
+        ArtifactKind::Csv => "grist/csv-options/v2".to_string(),
+        ArtifactKind::Serialization => "grist/structured-text-options/v2".to_string(),
+        ArtifactKind::Markdown if format.id == "r_markdown" => {
+            "grist/r-markdown-options/v1".to_string()
+        }
+        _ => format!("grist/{name}-options/v1"),
+    };
+    (name.to_string(), format!("{name}-options"), options_version)
 }
 
 fn register(
@@ -160,7 +184,6 @@ pub fn builtin_parser_registry() -> Result<ParserRegistry, ParserRegistryError> 
         parse_text,
     )?;
     register_feature_parsers(&mut registry)?;
-    register_unimplemented_formats(&mut registry)?;
     Ok(registry)
 }
 
@@ -2291,7 +2314,9 @@ fn register_email(registry: &mut ParserRegistry) -> Result<(), ParserRegistryErr
         Some("email-message"),
         serde_json::to_value(crate::email::EmailOptions::default()).unwrap_or_default(),
     );
-    metadata.allowed_providers.insert(ProviderKind::Decryption);
+    metadata
+        .allowed_providers
+        .insert(crate::core::ProviderKind::Decryption);
     metadata
         .capabilities
         .insert(Capability::ProviderDerivedContent);
@@ -2960,124 +2985,4 @@ fn register_ldgr_projection(registry: &mut ParserRegistry) -> Result<(), ParserR
         serde_json::json!({}),
     );
     register_disabled(registry, metadata, "ldgr-projection")
-}
-
-fn register_unimplemented_formats(
-    registry: &mut ParserRegistry,
-) -> Result<(), ParserRegistryError> {
-    for &(id, extension, feature) in unimplemented_formats() {
-        if matches!(
-            id,
-            "png"
-                | "jpeg"
-                | "tiff"
-                | "webp"
-                | "gif"
-                | "bmp"
-                | "heif"
-                | "svg"
-                | "mp3"
-                | "mp4"
-                | "quicktime"
-                | "wav"
-                | "flac"
-                | "matroska"
-        ) {
-            continue;
-        }
-        let mut format = FormatMetadata::new(id, ArtifactKind::Unsupported);
-        if !extension.is_empty() {
-            format = format.with_extensions([extension]);
-        }
-        let mut metadata = descriptor(
-            &("grist.".to_string() + id),
-            format,
-            ParserInfo::new("grist.registry").with_feature(feature),
-            &("grist/".to_string() + id + "/v1"),
-            Some(feature),
-            serde_json::json!({}),
-        );
-        let reason = configure_unavailable_provider(id, &mut metadata);
-        registry.register_unavailable(UnavailableParser {
-            descriptor: metadata,
-            reason,
-        })?;
-    }
-    Ok(())
-}
-
-fn unimplemented_formats() -> &'static [(&'static str, &'static str, &'static str)] {
-    &[
-        // PDF is registered by register_pdf above.
-        ("doc", "doc", "word-processing"),
-        ("wordprocessingml", "wml", "word-processing"),
-        ("flat_opc", "fopc", "word-processing"),
-        ("ppt", "ppt", "presentations"),
-        ("xlsb", "xlsb", "spreadsheets"),
-        ("xls", "xls", "spreadsheets"),
-        ("spreadsheetml", "xmlss", "spreadsheets"),
-        ("cbor", "cbor", "structured-data"),
-        ("messagepack", "msgpack", "structured-data"),
-        ("protobuf", "pb", "structured-data"),
-        ("pst", "pst", "email-message"),
-        ("ost", "ost", "email-message"),
-        ("tnef", "dat", "email-message"),
-        ("smime", "p7m", "email-message"),
-        ("png", "png", "media"),
-        ("jpeg", "jpg", "media"),
-        ("tiff", "tiff", "media"),
-        ("webp", "webp", "media"),
-        ("gif", "gif", "media"),
-        ("bmp", "bmp", "media"),
-        ("heif", "heif", "media"),
-        ("svg", "svg", "media"),
-        ("mp3", "mp3", "media"),
-        ("mp4", "mp4", "media"),
-        ("wav", "wav", "media"),
-        ("flac", "flac", "media"),
-        ("matroska", "mkv", "media"),
-        ("quicktime", "mov", "media"),
-    ]
-}
-
-fn configure_unavailable_provider(id: &str, metadata: &mut ParserDescriptor) -> UnavailableReason {
-    if matches!(
-        id,
-        "pdf" | "png" | "jpeg" | "tiff" | "webp" | "gif" | "bmp" | "heif" | "svg"
-    ) {
-        metadata.allowed_providers.insert(ProviderKind::Ocr);
-        metadata
-            .capabilities
-            .insert(Capability::ProviderDerivedContent);
-    }
-    if matches!(
-        id,
-        "mp3" | "mp4" | "wav" | "flac" | "matroska" | "quicktime"
-    ) {
-        metadata
-            .allowed_providers
-            .insert(ProviderKind::Transcription);
-        metadata
-            .capabilities
-            .insert(Capability::ProviderDerivedContent);
-    }
-    if id == "smime" {
-        metadata.allowed_providers.insert(ProviderKind::Decryption);
-        metadata
-            .capabilities
-            .insert(Capability::ProviderDerivedContent);
-    }
-    if matches!(id, "doc" | "ppt" | "xls" | "msg" | "pst" | "ost") {
-        metadata
-            .allowed_providers
-            .insert(ProviderKind::IsolatedParserBackend);
-        metadata
-            .required_providers
-            .insert(ProviderKind::IsolatedParserBackend);
-        metadata.capabilities.insert(Capability::IsolatedBackend);
-        return UnavailableReason::BackendUnavailable {
-            backend: "caller-isolated-backend".to_string(),
-        };
-    }
-    UnavailableReason::NotImplemented
 }

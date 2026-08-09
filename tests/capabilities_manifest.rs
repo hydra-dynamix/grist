@@ -1,7 +1,7 @@
 use grist::capabilities::{CapabilityManifest, discover};
 #[cfg(feature = "pdf")]
 use grist::core::{BudgetAxis, ProviderKind, SchemaVersion};
-use grist::registry::{builtin_parser_registry, builtin_provider_registry};
+use grist::registry::{Capability, builtin_parser_registry, builtin_provider_registry};
 use grist::transform::{
     FormatReconstructionClaim, ReconstructionFidelity, ReconstructionFixtureEvidence,
 };
@@ -107,4 +107,71 @@ fn generated_manifest_validates_against_checked_contract() {
     let value = serde_json::to_value(discover().unwrap()).unwrap();
     let report = grist::schema::validate_schema("capability-manifest", &value).unwrap();
     assert!(report.valid, "{:?}", report.issues);
+}
+
+#[cfg(feature = "schemas")]
+#[test]
+fn every_available_format_advertises_resolvable_contracts_and_graph_support() {
+    let manifest = discover().expect("built-in capability discovery");
+    for format in manifest.formats.iter().filter(|format| format.available) {
+        assert!(
+            !format.payload_schemas.is_empty(),
+            "{} payload schema",
+            format.format.id
+        );
+        assert!(
+            !format.options_schemas.is_empty(),
+            "{} options schema",
+            format.format.id
+        );
+        for schema in format
+            .payload_schemas
+            .iter()
+            .chain(format.options_schemas.iter())
+        {
+            assert!(
+                grist::schema::schema_json_version(&schema.name, &schema.version).is_some(),
+                "{} advertises unresolved schema {} at {}",
+                format.format.id,
+                schema.name,
+                schema.version
+            );
+        }
+
+        let advertised = format
+            .parser_capabilities
+            .contains(&Capability::DocumentGraphProjection);
+        assert_eq!(
+            advertised,
+            format
+                .format
+                .artifact_kind
+                .supports_document_graph_projection(),
+            "{} graph capability disagrees with its public projection surface",
+            format.format.id
+        );
+    }
+}
+
+#[test]
+fn feature_disabled_formats_keep_contract_identity_without_claiming_availability() {
+    let manifest = discover().expect("built-in capability discovery");
+    for format in manifest.formats.iter().filter(|format| !format.available) {
+        assert!(
+            !format.required_features.is_empty(),
+            "{} feature gate",
+            format.format.id
+        );
+        assert!(
+            !format.payload_schemas.is_empty(),
+            "{} payload contract",
+            format.format.id
+        );
+        assert!(
+            !format.options_schemas.is_empty(),
+            "{} options contract",
+            format.format.id
+        );
+        assert!(format.backends.iter().all(|backend| !backend.available));
+    }
 }

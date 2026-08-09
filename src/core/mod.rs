@@ -252,6 +252,55 @@ pub enum ArtifactKind {
     Unsupported,
 }
 
+impl ArtifactKind {
+    /// Whether a parser payload of this kind has a public `DocumentGraph`
+    /// projection through the library and CLI surfaces.
+    pub const fn supports_document_graph_projection(&self) -> bool {
+        matches!(
+            self,
+            Self::Archive
+                | Self::Text
+                | Self::Markdown
+                | Self::RestructuredText
+                | Self::AsciiDoc
+                | Self::Html
+                | Self::Epub
+                | Self::Pdf
+                | Self::Image
+                | Self::Subtitle
+                | Self::Media
+                | Self::WordOoxml
+                | Self::PresentationOoxml
+                | Self::SpreadsheetOoxml
+                | Self::SpreadsheetOdf
+                | Self::PresentationOdf
+                | Self::OdfWord
+                | Self::Rtf
+                | Self::Xml
+                | Self::Csv
+                | Self::Latex
+                | Self::Bibliography
+                | Self::Serialization
+                | Self::StructuredBinary
+                | Self::Columnar
+                | Self::Sqlite
+                | Self::Email
+                | Self::Mbox
+                | Self::OutlookMsg
+                | Self::ICalendar
+                | Self::VCard
+                | Self::Notebook
+                | Self::RustCode
+                | Self::PythonCode
+                | Self::JavaScriptCode
+                | Self::TypeScriptCode
+                | Self::Code
+                | Self::Manifest
+                | Self::GraphDocument
+        )
+    }
+}
+
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Hashes {
