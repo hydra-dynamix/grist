@@ -59,6 +59,9 @@ __pycache__/
 /fixtures/private/
 /fixtures/intake-staging/
 
+# Quality gate run evidence (logs and reports)
+/artifacts/quality-gate/
+
 
 # Added by cargo
 #
