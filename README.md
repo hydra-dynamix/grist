@@ -154,6 +154,12 @@ cargo clippy --all-targets --all-features
 cargo test --all-features
 ```
 
+The complete serial release gate suite (formatting, all-feature tests,
+minimal-feature tests, Clippy, schema drift, CLI smoke, fuzz target, and
+whitespace checks) runs via `scripts/quality-gate.sh`. Each run writes per-gate
+logs and a Markdown report under `artifacts/quality-gate/`. See
+`docs/complete-parser-contract.md` for the contract the gates enforce.
+
 ## License
 
 Licensed under the [Apache License, Version 2.0](LICENSE).

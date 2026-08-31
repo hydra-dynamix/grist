@@ -986,6 +986,9 @@ fn visible_paths(
         .git_ignore(true)
         .git_exclude(true)
         .git_global(false)
+        // Repository-local ignore rules apply to any ingested root, including
+        // directories that are not inside a Git worktree.
+        .require_git(false)
         .follow_links(false);
     let mut visible = HashSet::new();
     let mut diagnostics = Vec::new();
