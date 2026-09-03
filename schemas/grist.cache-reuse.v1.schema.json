@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "CacheReuseOutcome": {
+      "enum": [
+        "miss_stored",
+        "hit_validated"
+      ],
+      "type": "string"
+    }
+  },
+  "description": "Public proof that a result was computed or reused only after validation.",
+  "properties": {
+    "input_sha256": {
+      "type": "string"
+    },
+    "key_digest": {
+      "type": "string"
+    },
+    "options_digest": {
+      "type": "string"
+    },
+    "outcome": {
+      "$ref": "#/definitions/CacheReuseOutcome"
+    },
+    "output_sha256": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "input_sha256",
+    "key_digest",
+    "options_digest",
+    "outcome",
+    "output_sha256",
+    "schema_version"
+  ],
+  "title": "CacheReuseRecord",
+  "type": "object"
+}

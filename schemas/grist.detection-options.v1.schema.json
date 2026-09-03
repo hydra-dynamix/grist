@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "AmbiguityPolicy": {
+      "enum": [
+        "return_ambiguous",
+        "prefer_available",
+        "select_highest_ranked"
+      ],
+      "type": "string"
+    }
+  },
+  "properties": {
+    "ambiguity_margin": {
+      "format": "float",
+      "type": "number"
+    },
+    "ambiguity_policy": {
+      "$ref": "#/definitions/AmbiguityPolicy"
+    },
+    "max_probe_bytes": {
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "minimum_confidence": {
+      "format": "float",
+      "type": "number"
+    }
+  },
+  "required": [
+    "ambiguity_margin",
+    "ambiguity_policy",
+    "max_probe_bytes",
+    "minimum_confidence"
+  ],
+  "title": "DetectionOptions",
+  "type": "object"
+}

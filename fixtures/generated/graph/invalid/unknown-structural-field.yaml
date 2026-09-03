@@ -1,0 +1,6 @@
+schema_version: grist/graph-document/v1
+directed: true
+nodes:
+  - id: node-a
+    colour: blue
+edges: []

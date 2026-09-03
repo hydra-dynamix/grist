@@ -1,0 +1,197 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "CodeParseError": {
+      "properties": {
+        "missing": {
+          "type": "boolean"
+        },
+        "node_kind": {
+          "type": "string"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "raw": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "missing",
+        "node_kind",
+        "range",
+        "raw"
+      ],
+      "type": "object"
+    },
+    "CodeSyntaxNode": {
+      "properties": {
+        "error": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "missing": {
+          "type": "boolean"
+        },
+        "named": {
+          "type": "boolean"
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "raw": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "id",
+        "kind",
+        "missing",
+        "named",
+        "range",
+        "raw"
+      ],
+      "type": "object"
+    },
+    "SourceRange": {
+      "properties": {
+        "byte_end": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "byte_start": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "end_column": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "end_line": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "start_column": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "start_line": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "byte_end",
+        "byte_start",
+        "end_column",
+        "end_line",
+        "start_column",
+        "start_line"
+      ],
+      "type": "object"
+    },
+    "TreeSitterAdapterCapability": {
+      "enum": [
+        "grammar_detection",
+        "source_ranges",
+        "error_recovery",
+        "document_graph_projection",
+        "inert_parsing"
+      ],
+      "type": "string"
+    },
+    "TreeSitterAdapterMetadata": {
+      "properties": {
+        "active_content_execution": {
+          "type": "boolean"
+        },
+        "capabilities": {
+          "items": {
+            "$ref": "#/definitions/TreeSitterAdapterCapability"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "enabled_feature": {
+          "type": "string"
+        },
+        "grammar": {
+          "type": "string"
+        },
+        "grammar_version": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        },
+        "network_access": {
+          "type": "boolean"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "active_content_execution",
+        "capabilities",
+        "enabled_feature",
+        "grammar",
+        "grammar_version",
+        "language",
+        "network_access",
+        "schema_version"
+      ],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "adapter": {
+      "$ref": "#/definitions/TreeSitterAdapterMetadata"
+    },
+    "parse_errors": {
+      "items": {
+        "$ref": "#/definitions/CodeParseError"
+      },
+      "type": "array"
+    },
+    "root_kind": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "syntax_nodes": {
+      "items": {
+        "$ref": "#/definitions/CodeSyntaxNode"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "adapter",
+    "parse_errors",
+    "root_kind",
+    "schema_version",
+    "syntax_nodes"
+  ],
+  "title": "CodeFile",
+  "type": "object"
+}

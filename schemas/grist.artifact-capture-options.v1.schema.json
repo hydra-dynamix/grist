@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "The caller-visible inline cutoff, retained with either extracted storage form.",
+  "properties": {
+    "inline_threshold_bytes": {
+      "format": "uint64",
+      "minimum": 0.0,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "inline_threshold_bytes"
+  ],
+  "title": "ArtifactCaptureOptions",
+  "type": "object"
+}

@@ -1,0 +1,4 @@
+Plain text fixture.
+
+Windows paths, URLs, <script>inert()</script>, and punctuation remain literal text.
+Regression marker: GRIST-TEXT-0001.

@@ -1,0 +1,1158 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "BoundingBox": {
+      "description": "A rectangle in a declared coordinate system.",
+      "properties": {
+        "height": {
+          "format": "double",
+          "type": "number"
+        },
+        "origin": {
+          "$ref": "#/definitions/CoordinateOrigin"
+        },
+        "unit": {
+          "$ref": "#/definitions/CoordinateUnit"
+        },
+        "width": {
+          "format": "double",
+          "type": "number"
+        },
+        "x": {
+          "format": "double",
+          "type": "number"
+        },
+        "y": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "height",
+        "origin",
+        "unit",
+        "width",
+        "x",
+        "y"
+      ],
+      "type": "object"
+    },
+    "CellAddress": {
+      "description": "A sheet cell address with explicit row and column bases.",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/IndexBase"
+        },
+        "column": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "row": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "column",
+        "row"
+      ],
+      "type": "object"
+    },
+    "CoordinateOrigin": {
+      "description": "Coordinate-system origin for rectangular source regions.",
+      "enum": [
+        "top_left",
+        "bottom_left"
+      ],
+      "type": "string"
+    },
+    "CoordinateUnit": {
+      "description": "Units used by rectangular source regions.",
+      "enum": [
+        "points",
+        "pixels",
+        "normalized"
+      ],
+      "type": "string"
+    },
+    "DependencyScope": {
+      "enum": [
+        "runtime",
+        "development",
+        "build",
+        "test",
+        "optional",
+        "peer",
+        "platform",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "DerivedNodeReference": {
+      "description": "A reference from derived content back to the nodes and declared transforms that produced it.",
+      "properties": {
+        "derivation_steps": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "source_node_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "derivation_steps",
+        "source_node_ids"
+      ],
+      "type": "object"
+    },
+    "IndexBase": {
+      "description": "Whether an ordinal is counted from zero or one.\n\nEvery format component carrying a page, slide, cell, frame, token, output, member, track, or record ordinal uses this type rather than relying on an undocumented convention.",
+      "enum": [
+        "zero",
+        "one"
+      ],
+      "type": "string"
+    },
+    "IndexPosition": {
+      "description": "One explicitly based ordinal.",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/IndexBase"
+        },
+        "value": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "value"
+      ],
+      "type": "object"
+    },
+    "IndexRange": {
+      "description": "A half-open range of ordinals using one declared base.",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/IndexBase"
+        },
+        "end": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "start": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "end",
+        "start"
+      ],
+      "type": "object"
+    },
+    "LocationComponent": {
+      "description": "One location inside its immediately preceding parent component.",
+      "oneOf": [
+        {
+          "description": "A zero-based half-open byte range relative to the immediately preceding component, or to the source when this is the outermost component.",
+          "properties": {
+            "byte_end": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "byte_start": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "type": {
+              "enum": [
+                "byte_range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "byte_end",
+            "byte_start",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "byte_end": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "byte_start": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "end_column": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "end_line": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "start_column": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "start_line": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "type": {
+              "enum": [
+                "text_range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "byte_end",
+            "byte_start",
+            "end_column",
+            "end_line",
+            "start_column",
+            "start_line",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "bbox": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/BoundingBox"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "page": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "rotation_degrees": {
+              "format": "int16",
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "tokens": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexRange"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "enum": [
+                "pdf_region"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "page",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "column": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "object_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "paragraph": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "part": {
+              "type": "string"
+            },
+            "row": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "run": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "table": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "enum": [
+                "ooxml_part"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "part",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "bbox": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/BoundingBox"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "shape_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "slide": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "type": {
+              "enum": [
+                "slide_region"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "slide",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "end_cell": {
+              "$ref": "#/definitions/CellAddress"
+            },
+            "sheet": {
+              "type": "string"
+            },
+            "start_cell": {
+              "$ref": "#/definitions/CellAddress"
+            },
+            "type": {
+              "enum": [
+                "sheet_range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "end_cell",
+            "sheet",
+            "start_cell",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "cell_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "index": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "output_index": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "enum": [
+                "notebook_cell"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "index",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "header": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "message_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "mime_path": {
+              "items": {
+                "$ref": "#/definitions/IndexPosition"
+              },
+              "type": "array"
+            },
+            "type": {
+              "enum": [
+                "email_part"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "member_index": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "member_path": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "archive_member"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "member_index",
+            "member_path",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "bbox": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/BoundingBox"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "frame": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "type": {
+              "enum": [
+                "image_region"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "frame",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "end_ms": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "start_ms": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "track": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "enum": [
+                "media_time"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "end_ms",
+            "start_ms",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "collection": {
+              "type": "string"
+            },
+            "field": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "records": {
+              "$ref": "#/definitions/IndexRange"
+            },
+            "type": {
+              "enum": [
+                "record_range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "collection",
+            "records",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "pointer": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "json_pointer"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "pointer",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "xml_path"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "type"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "LocatorConfidence": {
+      "format": "double",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "type": "number"
+    },
+    "ManifestDependency": {
+      "properties": {
+        "integrity": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "optional": {
+          "type": "boolean"
+        },
+        "provenance": {
+          "$ref": "#/definitions/ManifestProvenance"
+        },
+        "requirement": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "resolved": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scope": {
+          "$ref": "#/definitions/DependencyScope"
+        }
+      },
+      "required": [
+        "name",
+        "optional",
+        "provenance",
+        "scope"
+      ],
+      "type": "object"
+    },
+    "ManifestFormat": {
+      "enum": [
+        "cargo_toml",
+        "cargo_lock",
+        "npm_package",
+        "npm_lock",
+        "pnpm_lock",
+        "yarn_lock",
+        "python_project",
+        "python_requirements",
+        "python_setup",
+        "python_lock",
+        "maven_pom",
+        "gradle_build",
+        "gradle_settings",
+        "go_mod",
+        "go_sum",
+        "dockerfile",
+        "compose",
+        "ci_workflow",
+        "kubernetes",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "ManifestInstruction": {
+      "properties": {
+        "arguments": {
+          "type": "string"
+        },
+        "executable": {
+          "type": "boolean"
+        },
+        "keyword": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "raw": {
+          "type": "string"
+        },
+        "templated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "arguments",
+        "executable",
+        "keyword",
+        "locator",
+        "range",
+        "raw",
+        "templated"
+      ],
+      "type": "object"
+    },
+    "ManifestParseError": {
+      "properties": {
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "message": {
+          "type": "string"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "raw": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "locator",
+        "message",
+        "range",
+        "raw"
+      ],
+      "type": "object"
+    },
+    "ManifestProvenance": {
+      "properties": {
+        "declaration": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "source_format": {
+          "$ref": "#/definitions/ManifestFormat"
+        }
+      },
+      "required": [
+        "declaration",
+        "locator",
+        "range",
+        "source_format"
+      ],
+      "type": "object"
+    },
+    "ManifestReference": {
+      "properties": {
+        "kind": {
+          "$ref": "#/definitions/ManifestReferenceKind"
+        },
+        "provenance": {
+          "$ref": "#/definitions/ManifestProvenance"
+        },
+        "target": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "provenance",
+        "target"
+      ],
+      "type": "object"
+    },
+    "ManifestReferenceKind": {
+      "enum": [
+        "parent",
+        "workspace",
+        "registry",
+        "repository",
+        "file",
+        "url",
+        "image",
+        "build_context",
+        "include",
+        "action",
+        "secret",
+        "config",
+        "service",
+        "artifact",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "ManifestRole": {
+      "enum": [
+        "package_manifest",
+        "lockfile",
+        "build_configuration",
+        "container_build",
+        "service_composition",
+        "continuous_integration",
+        "orchestration",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "SourceInfo": {
+      "description": "Descriptive source metadata supplied by the caller.\n\nURI values are labels only. Resolving or fetching them is outside Grist's source contract.",
+      "properties": {
+        "declared_mime_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "ingestion_timestamp": {
+          "description": "Caller-supplied timestamp. Grist never inserts the current time.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SourceInfo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "repository_relative_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "uri": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "display_name"
+      ],
+      "type": "object"
+    },
+    "SourceLocator": {
+      "description": "An outermost-to-innermost containment chain.\n\nComponent `n` is interpreted relative to component `n - 1`. For example, `[archive_member, email_part, ooxml_part, text_range]` identifies text in an OOXML part attached to an email stored in an archive without flattening any parent coordinate system.",
+      "oneOf": [
+        {
+          "properties": {
+            "derived_from": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/DerivedNodeReference"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "precision": {
+              "enum": [
+                "exact"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "precision"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "confidence": {
+              "$ref": "#/definitions/LocatorConfidence"
+            },
+            "derived_from": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/DerivedNodeReference"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "precision": {
+              "enum": [
+                "approximate"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "confidence",
+            "precision"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "confidence": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/LocatorConfidence"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "derived_from": {
+              "$ref": "#/definitions/DerivedNodeReference"
+            },
+            "precision": {
+              "enum": [
+                "synthetic"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "derived_from",
+            "precision"
+          ],
+          "type": "object"
+        }
+      ],
+      "properties": {
+        "components": {
+          "items": {
+            "$ref": "#/definitions/LocationComponent"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "components"
+      ],
+      "type": "object"
+    },
+    "SourceRange": {
+      "properties": {
+        "byte_end": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "byte_start": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "end_column": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "end_line": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "start_column": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "start_line": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "byte_end",
+        "byte_start",
+        "end_column",
+        "end_line",
+        "start_column",
+        "start_line"
+      ],
+      "type": "object"
+    },
+    "UnknownManifestField": {
+      "properties": {
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "path": {
+          "type": "string"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "raw": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "locator",
+        "path",
+        "range",
+        "raw"
+      ],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "active_content_execution": {
+      "type": "boolean"
+    },
+    "dependencies": {
+      "default": [],
+      "items": {
+        "$ref": "#/definitions/ManifestDependency"
+      },
+      "type": "array"
+    },
+    "detected_name": {
+      "type": "string"
+    },
+    "format": {
+      "$ref": "#/definitions/ManifestFormat"
+    },
+    "instructions": {
+      "default": [],
+      "items": {
+        "$ref": "#/definitions/ManifestInstruction"
+      },
+      "type": "array"
+    },
+    "locator": {
+      "$ref": "#/definitions/SourceLocator"
+    },
+    "metadata": {
+      "additionalProperties": true,
+      "default": {},
+      "type": "object"
+    },
+    "network_access": {
+      "type": "boolean"
+    },
+    "parse_errors": {
+      "default": [],
+      "items": {
+        "$ref": "#/definitions/ManifestParseError"
+      },
+      "type": "array"
+    },
+    "range": {
+      "$ref": "#/definitions/SourceRange"
+    },
+    "raw": {
+      "type": "string"
+    },
+    "references": {
+      "default": [],
+      "items": {
+        "$ref": "#/definitions/ManifestReference"
+      },
+      "type": "array"
+    },
+    "role": {
+      "$ref": "#/definitions/ManifestRole"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "source": {
+      "$ref": "#/definitions/SourceInfo"
+    },
+    "template_evaluation": {
+      "type": "boolean"
+    },
+    "unknown_fields": {
+      "default": [],
+      "items": {
+        "$ref": "#/definitions/UnknownManifestField"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "active_content_execution",
+    "detected_name",
+    "format",
+    "locator",
+    "network_access",
+    "range",
+    "raw",
+    "role",
+    "schema_version",
+    "source",
+    "template_evaluation"
+  ],
+  "title": "ManifestDocument",
+  "type": "object"
+}

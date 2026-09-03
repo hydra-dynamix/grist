@@ -4,7 +4,7 @@ use crate::core::{
 use crate::markdown::{MarkdownNodeKind, parse_markdown};
 use serde::{Deserialize, Deserializer, Serialize, de::Error as _};
 use serde_json::{Map, Value};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashSet};
 
 #[cfg(feature = "schemas")]
 use schemars::JsonSchema;
@@ -26,9 +26,14 @@ pub struct LdgrProjectionDocument {
 
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default, deny_unknown_fields)]
 pub struct LdgrProjectionOptions {
     pub strict: bool,
     pub include_markdown_trace: bool,
+}
+
+impl crate::core::FormatOptions for LdgrProjectionOptions {
+    const FORMAT: &'static str = "ldgr_projection";
 }
 
 impl Default for LdgrProjectionOptions {
@@ -315,6 +320,132 @@ pub struct LdgrGraphEdge {
     pub kind: Option<String>,
 }
 
+#[derive(Debug, Clone, thiserror::Error, PartialEq, Eq)]
+pub enum LdgrGraphConversionError {
+    #[error("graph schema version is not supported: {0}")]
+    UnsupportedSchemaVersion(String),
+    #[error("LDGR dependency graphs cannot represent undirected edge {0}")]
+    UndirectedEdge(String),
+    #[error("node {node_id} attribute {field} is not a valid LDGR reference: {message}")]
+    InvalidReference {
+        node_id: String,
+        field: String,
+        message: String,
+    },
+}
+
+impl From<&LdgrGraphDocument> for crate::graph::GraphDocument {
+    fn from(document: &LdgrGraphDocument) -> Self {
+        let mut graph = crate::graph::GraphDocument::new(true);
+        graph.nodes = document
+            .nodes
+            .iter()
+            .map(|node| {
+                let mut converted = crate::graph::GraphNode::new(&node.id);
+                converted.labels.push("ldgr".into());
+                if let Some(artifact) = &node.artifact {
+                    converted
+                        .attrs
+                        .insert("artifact".into(), Value::String(artifact.as_string()));
+                }
+                if let Some(work_item) = &node.work_item {
+                    converted
+                        .attrs
+                        .insert("work_item".into(), Value::String(work_item.as_string()));
+                }
+                converted
+            })
+            .collect();
+        let mut occurrences = BTreeMap::<(String, String, Option<String>), usize>::new();
+        graph.edges = document
+            .edges
+            .iter()
+            .map(|edge| {
+                let key = (
+                    edge.dependency.clone(),
+                    edge.dependent.clone(),
+                    edge.kind.clone(),
+                );
+                let occurrence = occurrences.entry(key).or_default();
+                let id = format!(
+                    "ldgr:{}:{}:{}:{}",
+                    edge.dependency,
+                    edge.dependent,
+                    edge.kind.as_deref().unwrap_or("dependency"),
+                    *occurrence
+                );
+                *occurrence += 1;
+                let mut converted =
+                    crate::graph::GraphEdge::new(id, &edge.dependency, &edge.dependent, true);
+                converted.label = edge.kind.clone().or_else(|| Some("dependency".into()));
+                converted
+            })
+            .collect();
+        graph
+    }
+}
+
+impl TryFrom<&crate::graph::GraphDocument> for LdgrGraphDocument {
+    type Error = LdgrGraphConversionError;
+
+    fn try_from(document: &crate::graph::GraphDocument) -> Result<Self, Self::Error> {
+        if document.schema_version != crate::graph::GraphDocument::SCHEMA_VERSION {
+            return Err(LdgrGraphConversionError::UnsupportedSchemaVersion(
+                document.schema_version.clone(),
+            ));
+        }
+        let nodes = document
+            .nodes
+            .iter()
+            .map(|node| {
+                Ok(LdgrGraphNode {
+                    id: node.id.clone(),
+                    artifact: graph_reference(node, "artifact")?,
+                    work_item: graph_reference(node, "work_item")?,
+                })
+            })
+            .collect::<Result<Vec<_>, LdgrGraphConversionError>>()?;
+        let edges = document
+            .edges
+            .iter()
+            .map(|edge| {
+                if !edge.directed {
+                    return Err(LdgrGraphConversionError::UndirectedEdge(edge.id.clone()));
+                }
+                Ok(LdgrGraphEdge {
+                    dependency: edge.source.clone(),
+                    dependent: edge.target.clone(),
+                    kind: edge.label.clone().filter(|label| label != "dependency"),
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(Self { nodes, edges })
+    }
+}
+
+fn graph_reference(
+    node: &crate::graph::GraphNode,
+    field: &str,
+) -> Result<Option<LdgrRef>, LdgrGraphConversionError> {
+    let Some(value) = node.attrs.get(field) else {
+        return Ok(None);
+    };
+    let raw = value
+        .as_str()
+        .ok_or_else(|| LdgrGraphConversionError::InvalidReference {
+            node_id: node.id.clone(),
+            field: field.into(),
+            message: "value must be a string".into(),
+        })?;
+    LdgrRef::parse(raw)
+        .map(Some)
+        .map_err(|message| LdgrGraphConversionError::InvalidReference {
+            node_id: node.id.clone(),
+            field: field.into(),
+            message,
+        })
+}
+
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(default)]
@@ -431,9 +562,13 @@ pub fn parse_ldgr_projection(
     options: LdgrProjectionOptions,
 ) -> LdgrProjectionEnvelope {
     let markdown = parse_markdown(text, source.clone());
+    let markdown_payload = markdown
+        .payload
+        .as_ref()
+        .expect("complete Markdown parse envelope");
     let mut diagnostics = markdown.diagnostics.clone();
     let metadata = parse_metadata(
-        markdown.payload.frontmatter.as_ref().map(|fm| &fm.value),
+        markdown_payload.frontmatter.as_ref().map(|fm| &fm.value),
         &mut diagnostics,
     );
     let mut machine_blocks = parse_machine_blocks(&markdown, &options, &mut diagnostics);
@@ -442,8 +577,7 @@ pub fn parse_ldgr_projection(
     let trace = options
         .include_markdown_trace
         .then(|| MarkdownProjectionTrace {
-            frontmatter_range: markdown
-                .payload
+            frontmatter_range: markdown_payload
                 .frontmatter
                 .as_ref()
                 .map(|fm| fm.range.clone()),
@@ -483,6 +617,9 @@ pub fn parse_ldgr_projection(
         document,
     )
     .with_hashes(Hashes::for_bytes(text.as_bytes(), Some(text)))
+    .with_options_digest(
+        crate::core::options_digest(&options).expect("LDGR projection options must serialize"),
+    )
     .with_diagnostics(diagnostics)
 }
 
@@ -637,7 +774,11 @@ fn parse_machine_blocks(
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Vec<LdgrMachineBlock> {
     let mut blocks = Vec::new();
-    for node in &markdown.payload.nodes {
+    let payload = markdown
+        .payload
+        .as_ref()
+        .expect("complete Markdown parse envelope");
+    for node in &payload.nodes {
         if node.kind != MarkdownNodeKind::CodeFence {
             continue;
         }
@@ -869,35 +1010,57 @@ fn validate_ticket_index(doc: &LdgrTicketIndexDocument, diagnostics: &mut Vec<Di
 }
 
 fn validate_graph(doc: &LdgrGraphDocument, diagnostics: &mut Vec<Diagnostic>) {
-    check_unique(
-        doc.nodes.iter().map(|node| node.id.as_str()),
-        "graph.node_id.duplicate",
-        diagnostics,
-    );
-    let node_ids: HashSet<&str> = doc.nodes.iter().map(|node| node.id.as_str()).collect();
-    let mut adjacency: HashMap<&str, Vec<&str>> = HashMap::new();
-    for edge in &doc.edges {
-        if edge.dependency == edge.dependent {
-            diagnostics.push(error("graph.edge.self", "graph self-edges are not allowed"));
+    let graph = crate::graph::GraphDocument::from(doc);
+    let validation = crate::graph::validate_graph(
+        &graph,
+        &crate::graph::GraphSourceMap::default(),
+        &crate::graph::GraphValidationOptions {
+            allow_self_loops: false,
+            allow_parallel_edges: true,
+            allow_undirected_edges: false,
+            require_dag: false,
+            max_attribute_depth: None,
+        },
+    )
+    .expect("trusted LDGR graph validation cannot exhaust its budget");
+    for finding in validation.diagnostics {
+        match finding.code.as_str() {
+            crate::graph::diagnostic_codes::NODE_ID_DUPLICATE => {
+                diagnostics.push(error("graph.node_id.duplicate", finding.message))
+            }
+            crate::graph::diagnostic_codes::ID_EMPTY => {
+                diagnostics.push(error("graph.node_id.empty", finding.message))
+            }
+            crate::graph::diagnostic_codes::SELF_LOOP_FORBIDDEN => {
+                diagnostics.push(error("graph.edge.self", "graph self-edges are not allowed"))
+            }
+            crate::graph::diagnostic_codes::EDGE_ENDPOINT_UNKNOWN => {
+                let endpoint = finding.affected_ids.get(1).cloned().unwrap_or_default();
+                let edge_id = finding.affected_ids.first().cloned().unwrap_or_default();
+                if let Some(edge) = graph.edges.iter().find(|edge| edge.id == edge_id) {
+                    let (code, role) = if edge.source == endpoint {
+                        ("graph.edge.dependency_missing", "dependency")
+                    } else {
+                        ("graph.edge.dependent_missing", "dependent")
+                    };
+                    diagnostics.push(error(
+                        code,
+                        format!("edge {role} `{endpoint}` is not a node"),
+                    ));
+                }
+            }
+            _ => {}
         }
-        if !node_ids.contains(edge.dependency.as_str()) {
-            diagnostics.push(error(
-                "graph.edge.dependency_missing",
-                format!("edge dependency `{}` is not a node", edge.dependency),
-            ));
-        }
-        if !node_ids.contains(edge.dependent.as_str()) {
-            diagnostics.push(error(
-                "graph.edge.dependent_missing",
-                format!("edge dependent `{}` is not a node", edge.dependent),
-            ));
-        }
-        adjacency
-            .entry(edge.dependency.as_str())
-            .or_default()
-            .push(edge.dependent.as_str());
     }
-    if has_cycle(&adjacency) {
+    let cyclic = crate::graph::analyze_graph(
+        &graph,
+        &crate::graph::GraphSourceMap::default(),
+        &crate::graph::GraphAnalysisOptions {
+            require_directed: true,
+        },
+    )
+    .is_ok_and(|analysis| !analysis.cycle_witnesses.is_empty());
+    if cyclic {
         diagnostics.push(error("graph.cycle", "graph contains a dependency cycle"));
     }
 }
@@ -1242,37 +1405,6 @@ fn check_unique<'a>(
     }
 }
 
-fn has_cycle<'a>(adjacency: &HashMap<&'a str, Vec<&'a str>>) -> bool {
-    fn visit<'a>(
-        node: &'a str,
-        adjacency: &HashMap<&'a str, Vec<&'a str>>,
-        visiting: &mut HashSet<&'a str>,
-        visited: &mut HashSet<&'a str>,
-    ) -> bool {
-        if visited.contains(node) {
-            return false;
-        }
-        if !visiting.insert(node) {
-            return true;
-        }
-        if let Some(nexts) = adjacency.get(node) {
-            for next in nexts {
-                if visit(next, adjacency, visiting, visited) {
-                    return true;
-                }
-            }
-        }
-        visiting.remove(node);
-        visited.insert(node);
-        false
-    }
-    let mut visiting = HashSet::new();
-    let mut visited = HashSet::new();
-    adjacency
-        .keys()
-        .any(|node| visit(node, adjacency, &mut visiting, &mut visited))
-}
-
 fn error(code: impl Into<String>, message: impl Into<String>) -> Diagnostic {
     Diagnostic::error(PARSER, code, message)
 }
@@ -1305,8 +1437,21 @@ mod tests {
                 .iter()
                 .all(|d| d.severity != crate::core::Severity::Error)
         );
-        assert_eq!(report.payload.metadata.extra["extra"], "kept");
-        match &report.payload.typed {
+        assert_eq!(
+            report
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .metadata
+                .extra["extra"],
+            "kept"
+        );
+        match &report
+            .payload
+            .as_ref()
+            .expect("complete operation payload")
+            .typed
+        {
             LdgrDocument::Ticket(ticket) => assert_eq!(ticket.title, "Ready"),
             other => panic!("unexpected typed doc: {other:?}"),
         }
@@ -1325,7 +1470,12 @@ mod tests {
         let graph = parse(
             "---\nldgr_doc: 1\nkind: graph\nid: graph.a\nschema: ldgr.graph.v1\n---\n```ldgr-graph yaml\nnodes:\n  - id: first\n    artifact: artifact:1\n    work_item: work:first\n  - id: second\nedges:\n  - dependency: first\n    dependent: second\n    kind: blocks\n```\n",
         );
-        match &graph.payload.typed {
+        match &graph
+            .payload
+            .as_ref()
+            .expect("complete operation payload")
+            .typed
+        {
             LdgrDocument::Graph(doc) => {
                 assert_eq!(doc.edges[0].dependency, "first");
                 assert_eq!(doc.edges[0].dependent, "second");
@@ -1342,7 +1492,12 @@ mod tests {
                 .iter()
                 .all(|d| d.severity != crate::core::Severity::Error)
         );
-        match &index.payload.typed {
+        match &index
+            .payload
+            .as_ref()
+            .expect("complete operation payload")
+            .typed
+        {
             LdgrDocument::TicketIndex(doc) => assert_eq!(doc.tickets[0].artifact.kind, "artifact"),
             other => panic!("unexpected typed doc: {other:?}"),
         }
@@ -1359,7 +1514,12 @@ mod tests {
                 .iter()
                 .all(|d| d.severity != crate::core::Severity::Error)
         );
-        match &batch.payload.typed {
+        match &batch
+            .payload
+            .as_ref()
+            .expect("complete operation payload")
+            .typed
+        {
             LdgrDocument::BatchState(doc) => {
                 assert_eq!(doc.current_wave.as_deref(), Some("wave-1"))
             }
@@ -1369,7 +1529,12 @@ mod tests {
         let validation = parse(
             "---\nldgr_doc: 1\nkind: validation\nid: validation.1\nschema: ldgr.validation.v1\n---\n```ldgr-validation yaml\nvalidator: conduct.final-validator\nstatus: accepted\ntargets:\n  - graph: graph.a\nevidence:\n  - artifact:44\nfindings:\n  - id: finding.covered\n    status: passed\n    text: Covered\n```\n",
         );
-        match &validation.payload.typed {
+        match &validation
+            .payload
+            .as_ref()
+            .expect("complete operation payload")
+            .typed
+        {
             LdgrDocument::Validation(doc) => assert_eq!(doc.evidence[0].kind, "artifact"),
             other => panic!("unexpected typed doc: {other:?}"),
         }
@@ -1413,7 +1578,7 @@ mod tests {
             "---\nldgr_doc: 1\nkind: ticket\nid: ticket.a\nschema: ldgr.ticket.v1\n---\n```ldgr-contract yaml\ntitle: Ready\ndescription: Do work.\nrequirements:\n  - id: req.a\n    text: A requirement\nvalidation_instructions:\n  - inspect output\n```\n",
         );
         let rendered = render_ldgr_projection(
-            &report.payload,
+            report.payload.as_ref().expect("complete operation payload"),
             LdgrProjectionRenderOptions {
                 include_title: true,
                 contextual_prose: None,
@@ -1421,7 +1586,31 @@ mod tests {
         )
         .unwrap();
         let reparsed = parse(&rendered);
-        assert_eq!(report.payload.metadata.id, reparsed.payload.metadata.id);
-        assert_eq!(report.payload.typed, reparsed.payload.typed);
+        assert_eq!(
+            report
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .metadata
+                .id,
+            reparsed
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .metadata
+                .id
+        );
+        assert_eq!(
+            report
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .typed,
+            reparsed
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .typed
+        );
     }
 }

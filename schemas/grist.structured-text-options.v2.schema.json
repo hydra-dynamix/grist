@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "JsonDuplicateProjection": {
+      "enum": [
+        "first_wins",
+        "last_wins",
+        "reject"
+      ],
+      "type": "string"
+    },
+    "MalformedRecoveryPolicy": {
+      "oneOf": [
+        {
+          "description": "Reject a malformed single-document input; JSONL still isolates bad records.",
+          "enum": [
+            "strict"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Retain the unparsed region as a raw unknown and return a partial payload.",
+          "enum": [
+            "preserve_raw"
+          ],
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "properties": {
+    "duplicate_projection": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/JsonDuplicateProjection"
+        }
+      ],
+      "default": "last_wins",
+      "description": "Governs only the compatibility JSON projection; source entries are always retained."
+    },
+    "malformed_recovery": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/MalformedRecoveryPolicy"
+        }
+      ],
+      "default": "strict"
+    },
+    "max_nesting_depth": {
+      "default": 256,
+      "description": "Parser-stack safety ceiling used by legacy convenience entry points. Registry calls also enforce the shared `ResourceBudget` and use the lower ceiling.",
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "schema": {
+      "default": null
+    }
+  },
+  "title": "SerializationOptions",
+  "type": "object"
+}

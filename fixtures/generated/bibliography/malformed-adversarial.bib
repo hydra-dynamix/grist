@@ -1,0 +1,9 @@
+% Synthetic malformed and adversarial fixture; no content is executable.
+@string{a = b}
+@string{b = a}
+@book{duplicate, title = a, shell = {$(touch must-not-run)}}
+@article{duplicate, title = {second}}
+@book{left, crossref = {right}}
+@book{right, crossref = {left}}
+@online{broken, title = "unterminated}
+raw unknown construct

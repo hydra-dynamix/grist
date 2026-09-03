@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "batch_limit": {
+      "default": null,
+      "format": "uint",
+      "minimum": 0.0,
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "batch_start": {
+      "default": 0,
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "columns": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "max_encoded_page_bytes": {
+      "default": 268435456,
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_metadata_bytes": {
+      "default": 67108864,
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "preserve_unselected_schema": {
+      "default": true,
+      "type": "boolean"
+    },
+    "row_limit": {
+      "default": 1000000,
+      "format": "uint64",
+      "minimum": 0.0,
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "row_start": {
+      "default": 0,
+      "format": "uint64",
+      "minimum": 0.0,
+      "type": "integer"
+    }
+  },
+  "title": "ColumnarOptions",
+  "type": "object"
+}

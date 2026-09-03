@@ -46,8 +46,11 @@ pub fn parse_strict_normalized_model_output(
     };
     let envelope = parse_model_output(text, SourceInfo::stdin("model-output"), &options);
     let warnings = flatten_diagnostics(&envelope.diagnostics);
-    let matching = envelope
+    let payload = envelope
         .payload
+        .as_ref()
+        .expect("complete model-output parse envelope");
+    let matching = payload
         .candidates
         .iter()
         .filter(|candidate| {
@@ -131,14 +134,14 @@ pub fn rust_code_facts(path: &str, source: &str, max_bytes: usize) -> CodeFacts 
     };
     let envelope = parse_rust(
         bounded,
-        SourceInfo {
-            path: Some(path.to_string()),
-            display_name: path.to_string(),
-        },
+        SourceInfo::new(path).with_path(path),
         &RustIngestOptions::default(),
     );
-    let tests = envelope
+    let payload = envelope
         .payload
+        .as_ref()
+        .expect("complete Rust parse envelope");
+    let tests = payload
         .symbols
         .iter()
         .filter(|symbol| symbol.attributes.iter().any(|attr| attr.contains("test")))
@@ -153,9 +156,8 @@ pub fn rust_code_facts(path: &str, source: &str, max_bytes: usize) -> CodeFacts 
     CodeFacts {
         path: path.to_string(),
         language: "rust".into(),
-        symbols: envelope.payload.symbols.iter().map(code_symbol).collect(),
-        imports: envelope
-            .payload
+        symbols: payload.symbols.iter().map(code_symbol).collect(),
+        imports: payload
             .imports
             .iter()
             .map(|import| import.path.clone())

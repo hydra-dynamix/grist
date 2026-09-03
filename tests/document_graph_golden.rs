@@ -20,7 +20,7 @@ fn cross_format_document_graph_golden_matrix() {
         "# Intro\n\nIf the file is executable, it must have a shebang.\n\n| A | B |\n|---|---|\n| 1 | 2 |\n",
         SourceInfo::stdin("rules.md"),
     )
-    .payload
+    .payload.as_ref().expect("complete operation payload")
     .to_document_graph(DocumentGraphContext::new("golden:markdown"))
     .expect("markdown graph");
     assert_eq!(markdown.kind, DocumentKind::Markdown);
@@ -56,6 +56,8 @@ fn cross_format_document_graph_golden_matrix() {
         &grist::latex::LatexOptions::default(),
     )
     .payload
+    .as_ref()
+    .expect("complete operation payload")
     .to_document_graph(DocumentGraphContext::new("golden:latex"))
     .expect("latex graph");
     assert_eq!(latex_graph.kind, DocumentKind::Latex);
@@ -72,7 +74,7 @@ fn cross_format_document_graph_golden_matrix() {
         SourceInfo::stdin("forms.py"),
         &grist::python::PythonIngestOptions::default(),
     )
-    .payload
+    .payload.as_ref().expect("complete operation payload")
     .to_document_graph(DocumentGraphContext::new("golden:python"))
     .expect("python graph");
     assert!(
@@ -94,6 +96,8 @@ fn cross_format_document_graph_golden_matrix() {
         &grist::rust::RustIngestOptions::default(),
     )
     .payload
+    .as_ref()
+    .expect("complete operation payload")
     .to_document_graph(DocumentGraphContext::new("golden:rust"))
     .expect("rust graph");
     assert!(
@@ -113,6 +117,8 @@ fn cross_format_document_graph_golden_matrix() {
         &grist::typescript::TypeScriptIngestOptions::default(),
     )
     .payload
+    .as_ref()
+    .expect("complete operation payload")
     .to_document_graph(DocumentGraphContext::new("golden:typescript"))
     .expect("typescript graph");
     assert!(

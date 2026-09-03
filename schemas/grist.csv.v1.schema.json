@@ -1,1 +1,191 @@
-{"$schema":"http://json-schema.org/draft-07/schema#","definitions":{"CsvCell":{"properties":{"column_index":{"format":"uint","minimum":0.0,"type":"integer"},"empty":{"type":"boolean"},"header":{"type":["string","null"]},"raw":{"type":"string"},"value":true},"required":["column_index","empty","raw","value"],"type":"object"},"CsvDelimiter":{"enum":["comma","tab","semicolon","pipe"],"type":"string"},"CsvHeader":{"properties":{"column_index":{"format":"uint","minimum":0.0,"type":"integer"},"name":{"type":"string"}},"required":["column_index","name"],"type":"object"},"CsvRow":{"properties":{"cells":{"items":{"$ref":"#/definitions/CsvCell"},"type":"array"},"index":{"format":"uint","minimum":0.0,"type":"integer"},"range":{"anyOf":[{"$ref":"#/definitions/SourceRange"},{"type":"null"}]},"source_line":{"format":"uint","minimum":0.0,"type":["integer","null"]},"width":{"format":"uint","minimum":0.0,"type":"integer"}},"required":["cells","index","width"],"type":"object"},"SourceRange":{"properties":{"byte_end":{"format":"uint","minimum":0.0,"type":"integer"},"byte_start":{"format":"uint","minimum":0.0,"type":"integer"},"end_column":{"format":"uint","minimum":0.0,"type":"integer"},"end_line":{"format":"uint","minimum":0.0,"type":"integer"},"start_column":{"format":"uint","minimum":0.0,"type":"integer"},"start_line":{"format":"uint","minimum":0.0,"type":"integer"}},"required":["byte_end","byte_start","end_column","end_line","start_column","start_line"],"type":"object"}},"properties":{"column_count":{"format":"uint","minimum":0.0,"type":"integer"},"delimiter":{"$ref":"#/definitions/CsvDelimiter"},"has_headers":{"type":"boolean"},"headers":{"items":{"$ref":"#/definitions/CsvHeader"},"type":"array"},"record_count":{"format":"uint","minimum":0.0,"type":"integer"},"rows":{"items":{"$ref":"#/definitions/CsvRow"},"type":"array"},"schema_version":{"type":"string"}},"required":["column_count","delimiter","has_headers","headers","record_count","rows","schema_version"],"title":"CsvDocument","type":"object"}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "CsvCell": {
+      "properties": {
+        "column_index": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "empty": {
+          "type": "boolean"
+        },
+        "header": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "raw": {
+          "type": "string"
+        },
+        "value": true
+      },
+      "required": [
+        "column_index",
+        "empty",
+        "raw",
+        "value"
+      ],
+      "type": "object"
+    },
+    "CsvDelimiter": {
+      "enum": [
+        "comma",
+        "tab",
+        "semicolon",
+        "pipe"
+      ],
+      "type": "string"
+    },
+    "CsvHeader": {
+      "properties": {
+        "column_index": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "column_index",
+        "name"
+      ],
+      "type": "object"
+    },
+    "CsvRow": {
+      "properties": {
+        "cells": {
+          "items": {
+            "$ref": "#/definitions/CsvCell"
+          },
+          "type": "array"
+        },
+        "index": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "range": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_line": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "width": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "cells",
+        "index",
+        "width"
+      ],
+      "type": "object"
+    },
+    "SourceRange": {
+      "properties": {
+        "byte_end": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "byte_start": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "end_column": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "end_line": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "start_column": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "start_line": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "byte_end",
+        "byte_start",
+        "end_column",
+        "end_line",
+        "start_column",
+        "start_line"
+      ],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "column_count": {
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "delimiter": {
+      "$ref": "#/definitions/CsvDelimiter"
+    },
+    "has_headers": {
+      "type": "boolean"
+    },
+    "headers": {
+      "items": {
+        "$ref": "#/definitions/CsvHeader"
+      },
+      "type": "array"
+    },
+    "record_count": {
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "rows": {
+      "items": {
+        "$ref": "#/definitions/CsvRow"
+      },
+      "type": "array"
+    },
+    "schema_version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "column_count",
+    "delimiter",
+    "has_headers",
+    "headers",
+    "record_count",
+    "rows",
+    "schema_version"
+  ],
+  "title": "CsvDocument",
+  "type": "object"
+}

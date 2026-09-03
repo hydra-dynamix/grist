@@ -14,10 +14,18 @@ pub struct PythonFile {
     pub schema_version: String,
     pub symbols: Vec<PythonSymbol>,
     pub imports: Vec<PythonImport>,
+    #[serde(default)]
+    pub exports: Vec<PythonExport>,
     pub assignments: Vec<PythonAssignment>,
     pub returns: Vec<PythonReturn>,
     pub calls: Vec<PythonCall>,
     pub branches: Vec<PythonBranch>,
+    #[serde(default)]
+    pub tests: Vec<PythonTest>,
+    #[serde(default)]
+    pub comments: Vec<PythonComment>,
+    #[serde(default)]
+    pub syntax_nodes: Vec<PythonSyntaxNode>,
     pub parse_errors: Vec<PythonParseError>,
     pub detail: Option<PythonSyntaxDetail>,
 }
@@ -113,9 +121,48 @@ pub struct PythonBranch {
 
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PythonExport {
+    pub id: String,
+    pub names: Vec<String>,
+    pub range: SourceRange,
+}
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PythonTest {
+    pub id: String,
+    pub symbol_id: String,
+    pub name: String,
+    pub framework: String,
+    pub range: SourceRange,
+}
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PythonComment {
+    pub id: String,
+    pub text: String,
+    pub range: SourceRange,
+}
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PythonSyntaxNode {
+    pub id: String,
+    pub kind: String,
+    pub named: bool,
+    pub error: bool,
+    pub missing: bool,
+    pub parent: Option<String>,
+    pub raw: String,
+    pub range: SourceRange,
+}
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PythonParseError {
     pub range: SourceRange,
     pub node_kind: String,
+    #[serde(default)]
+    pub raw: String,
+    #[serde(default)]
+    pub missing: bool,
 }
 
 #[cfg_attr(feature = "schemas", derive(JsonSchema))]
@@ -133,7 +180,9 @@ pub struct PythonSyntaxDetail {
     pub node_count: usize,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
 pub enum PythonDetailMode {
     #[default]
     Semantic,
@@ -141,9 +190,15 @@ pub enum PythonDetailMode {
     SyntaxDebug,
 }
 
-#[derive(Debug, Clone, Default)]
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
 pub struct PythonIngestOptions {
     pub detail: PythonDetailMode,
+}
+
+impl crate::core::FormatOptions for PythonIngestOptions {
+    const FORMAT: &'static str = "python";
 }
 
 pub type PythonEnvelope = Envelope<PythonFile>;
@@ -160,23 +215,16 @@ pub fn parse_python(
         .expect("tree-sitter Python language should load");
     let line_index = LineIndex::new(text);
     let Some(tree) = parser.parse(text, None) else {
-        return Envelope::new(
+        return Envelope::without_payload(
+            crate::core::OperationKind::Parse,
             ArtifactKind::PythonCode,
+            crate::core::OperationStatus::Failed,
             source,
             ParserInfo::new("tree-sitter-python"),
+            crate::core::options_digest(options).expect("Python options must serialize"),
             SchemaVersion::PYTHON_CODE_V1,
-            PythonFile {
-                schema_version: SchemaVersion::PYTHON_CODE_V1.to_string(),
-                symbols: Vec::new(),
-                imports: Vec::new(),
-                assignments: Vec::new(),
-                returns: Vec::new(),
-                calls: Vec::new(),
-                branches: Vec::new(),
-                parse_errors: Vec::new(),
-                detail: None,
-            },
         )
+        .expect("failed envelope status is valid")
         .with_hashes(Hashes::for_bytes(text.as_bytes(), Some(text)))
         .with_diagnostics(vec![Diagnostic::error(
             "tree-sitter-python",
@@ -205,6 +253,49 @@ pub fn parse_python(
         source_path,
     };
     collector.walk(root, Vec::new(), Vec::new());
+    let comments = collect_comments(root, text, &line_index);
+    let syntax_nodes = collect_syntax_nodes(root, text, &line_index, options.detail);
+    let exports = collector
+        .assignments
+        .iter()
+        .filter(|assignment| assignment.lhs == "__all__")
+        .enumerate()
+        .map(|(index, assignment)| PythonExport {
+            id: format!("python-export-{index}"),
+            names: assignment
+                .rhs
+                .as_deref()
+                .map(export_names)
+                .unwrap_or_default(),
+            range: assignment.range.clone(),
+        })
+        .collect();
+    let tests = collector
+        .symbols
+        .iter()
+        .filter(|symbol| {
+            symbol.name.starts_with("test_")
+                || symbol.name == "test"
+                || (symbol.kind == PythonSymbolKind::Class && symbol.name.starts_with("Test"))
+        })
+        .enumerate()
+        .map(|(index, symbol)| PythonTest {
+            id: format!("python-test-{index}"),
+            symbol_id: symbol.id.clone(),
+            name: symbol.name.clone(),
+            framework: if symbol
+                .decorators
+                .iter()
+                .any(|decorator| decorator.contains("pytest"))
+            {
+                "pytest"
+            } else {
+                "convention"
+            }
+            .to_string(),
+            range: symbol.range.clone(),
+        })
+        .collect();
     let detail = match options.detail {
         PythonDetailMode::SyntaxDebug => Some(PythonSyntaxDetail {
             root_kind: root.kind().to_string(),
@@ -235,15 +326,22 @@ pub fn parse_python(
             schema_version: SchemaVersion::PYTHON_CODE_V1.to_string(),
             symbols: collector.symbols,
             imports: collector.imports,
+            exports,
             assignments: collector.assignments,
             returns: collector.returns,
             calls: collector.calls,
             branches: collector.branches,
+            tests,
+            comments,
+            syntax_nodes,
             parse_errors,
             detail,
         },
     )
     .with_hashes(Hashes::for_bytes(text.as_bytes(), Some(text)))
+    .with_options_digest(
+        crate::core::options_digest(options).expect("Python options must serialize"),
+    )
     .with_diagnostics(diagnostics)
 }
 
@@ -268,6 +366,8 @@ impl PythonCollector<'_, '_> {
             self.errors.push(PythonParseError {
                 range: self.range(node),
                 node_kind: node.kind().to_string(),
+                raw: self.source(node).to_string(),
+                missing: node.is_missing(),
             });
         }
 
@@ -275,7 +375,7 @@ impl PythonCollector<'_, '_> {
         if kind == "decorated_definition" {
             let decorators = self.decorators_for(node);
             let mut cursor = node.walk();
-            for child in node.named_children(&mut cursor) {
+            for child in node.children(&mut cursor) {
                 if matches!(child.kind(), "class_definition" | "function_definition") {
                     self.walk(child, parents.clone(), decorators.clone());
                 }
@@ -336,15 +436,21 @@ impl PythonCollector<'_, '_> {
             "import_statement" | "import_from_statement" => {
                 self.imports.push(self.import_for(node))
             }
-            "assignment" | "augmented_assignment" => {
+            "assignment" | "augmented_assignment" | "annotated_assignment" | "named_expression" => {
                 self.assignments.push(self.assignment_for(node, &parents));
             }
             "return_statement" => self.returns.push(self.return_for(node, &parents)),
             "call" => self.calls.push(self.call_for(node, &parents)),
-            "if_statement" | "elif_clause" | "else_clause" | "for_statement"
-            | "while_statement" | "match_statement" => {
-                self.branches.push(self.branch_for(node, &parents))
-            }
+            "if_statement"
+            | "elif_clause"
+            | "else_clause"
+            | "for_statement"
+            | "while_statement"
+            | "match_statement"
+            | "case_clause"
+            | "try_statement"
+            | "except_clause"
+            | "conditional_expression" => self.branches.push(self.branch_for(node, &parents)),
             _ => {}
         }
         self.walk_children(node, parents, decorators);
@@ -352,7 +458,7 @@ impl PythonCollector<'_, '_> {
 
     fn walk_children(&mut self, node: Node, parents: Vec<String>, decorators: Vec<String>) {
         let mut cursor = node.walk();
-        for child in node.named_children(&mut cursor) {
+        for child in node.children(&mut cursor) {
             self.walk(child, parents.clone(), decorators.clone());
         }
     }
@@ -378,7 +484,7 @@ impl PythonCollector<'_, '_> {
     fn decorators_for(&self, node: Node) -> Vec<String> {
         let mut out = Vec::new();
         let mut cursor = node.walk();
-        for child in node.named_children(&mut cursor) {
+        for child in node.children(&mut cursor) {
             if child.kind() == "decorator" {
                 out.push(normalize_ws(self.source(child).trim()));
             }
@@ -596,6 +702,106 @@ fn normalize_ws(src: &str) -> String {
     src.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
+fn export_names(src: &str) -> Vec<String> {
+    src.trim_matches(['[', ']', '(', ')'])
+        .split(',')
+        .map(|name| name.trim().trim_matches(['\'', '"']).to_string())
+        .filter(|name| !name.is_empty())
+        .collect()
+}
+
+fn collect_comments(root: Node, text: &str, line_index: &LineIndex) -> Vec<PythonComment> {
+    fn walk(node: Node, text: &str, line_index: &LineIndex, comments: &mut Vec<PythonComment>) {
+        if node.kind() == "comment" {
+            comments.push(PythonComment {
+                id: format!("python-comment-{}", comments.len()),
+                text: text[node.start_byte()..node.end_byte()].to_string(),
+                range: SourceRange::new(node.start_byte(), node.end_byte(), line_index),
+            });
+        }
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            walk(child, text, line_index, comments);
+        }
+    }
+    let mut comments = Vec::new();
+    walk(root, text, line_index, &mut comments);
+    comments
+}
+
+fn collect_syntax_nodes(
+    root: Node,
+    text: &str,
+    line_index: &LineIndex,
+    detail: PythonDetailMode,
+) -> Vec<PythonSyntaxNode> {
+    fn walk(
+        node: Node,
+        parent: Option<String>,
+        text: &str,
+        line_index: &LineIndex,
+        include_named: bool,
+        include_anonymous: bool,
+        next_ordinal: &mut usize,
+        nodes: &mut Vec<PythonSyntaxNode>,
+    ) {
+        let ordinal = *next_ordinal;
+        *next_ordinal += 1;
+        let include = node.is_error()
+            || node.is_missing()
+            || include_anonymous
+            || (include_named && node.is_named());
+        let id = format!(
+            "python-syntax-{ordinal}-{}-{}-{}",
+            node.start_byte(),
+            node.end_byte(),
+            node.kind()
+        );
+        let child_parent = if include {
+            Some(id.clone())
+        } else {
+            parent.clone()
+        };
+        if include {
+            nodes.push(PythonSyntaxNode {
+                id,
+                kind: node.kind().to_string(),
+                named: node.is_named(),
+                error: node.is_error(),
+                missing: node.is_missing(),
+                parent,
+                raw: text[node.start_byte()..node.end_byte()].to_string(),
+                range: SourceRange::new(node.start_byte(), node.end_byte(), line_index),
+            });
+        }
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            walk(
+                child,
+                child_parent.clone(),
+                text,
+                line_index,
+                include_named,
+                include_anonymous,
+                next_ordinal,
+                nodes,
+            );
+        }
+    }
+    let mut nodes = Vec::new();
+    let mut next_ordinal = 0;
+    walk(
+        root,
+        None,
+        text,
+        line_index,
+        detail != PythonDetailMode::Semantic,
+        detail == PythonDetailMode::SyntaxDebug,
+        &mut next_ordinal,
+        &mut nodes,
+    );
+    nodes
+}
 fn count_nodes(node: Node) -> usize {
     let mut count = 1;
     let mut cursor = node.walk();
@@ -621,6 +827,8 @@ mod tests {
         );
         let form = report
             .payload
+            .as_ref()
+            .expect("complete operation payload")
             .symbols
             .iter()
             .find(|s| s.name == "Form")
@@ -632,30 +840,62 @@ mod tests {
         assert!(
             report
                 .payload
+                .as_ref()
+                .expect("complete operation payload")
                 .symbols
                 .iter()
                 .any(|s| s.qualified_name == "Form.create")
         );
-        assert_eq!(report.payload.imports.len(), 2);
+        assert_eq!(
+            report
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .imports
+                .len(),
+            2
+        );
         assert!(
             report
                 .payload
+                .as_ref()
+                .expect("complete operation payload")
                 .imports
                 .iter()
                 .any(|import| import.level == 1)
         );
-        assert!(report.payload.assignments.iter().any(|a| a.lhs == "value"));
         assert!(
             report
                 .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .assignments
+                .iter()
+                .any(|a| a.lhs == "value")
+        );
+        assert!(
+            report
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
                 .returns
                 .iter()
                 .any(|r| r.expression.as_deref() == Some("value"))
         );
-        assert!(report.payload.calls.iter().any(|c| c.target == "cls"));
         assert!(
             report
                 .payload
+                .as_ref()
+                .expect("complete operation payload")
+                .calls
+                .iter()
+                .any(|c| c.target == "cls")
+        );
+        assert!(
+            report
+                .payload
+                .as_ref()
+                .expect("complete operation payload")
                 .branches
                 .iter()
                 .any(|b| b.kind == "if_statement")

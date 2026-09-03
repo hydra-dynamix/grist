@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "UnknownEnumValue": {
+      "properties": {
+        "instance_path": {
+          "type": "string"
+        },
+        "known_values": {
+          "items": true,
+          "type": "array"
+        },
+        "schema_path": {
+          "type": "string"
+        },
+        "value": true
+      },
+      "required": [
+        "instance_path",
+        "known_values",
+        "schema_path",
+        "value"
+      ],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "unknown_values": {
+      "items": {
+        "$ref": "#/definitions/UnknownEnumValue"
+      },
+      "type": "array"
+    },
+    "value": true
+  },
+  "required": [
+    "unknown_values",
+    "value"
+  ],
+  "title": "UnknownEnumDocument",
+  "type": "object"
+}

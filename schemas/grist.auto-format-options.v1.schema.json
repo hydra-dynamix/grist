@@ -1,0 +1,6 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Typed option value used while automatic format selection is requested.",
+  "title": "AutoFormatOptions",
+  "type": "null"
+}

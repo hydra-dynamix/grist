@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "CsvDelimiter": {
+      "enum": [
+        "comma",
+        "tab",
+        "semicolon",
+        "pipe"
+      ],
+      "type": "string"
+    }
+  },
+  "properties": {
+    "delimiter": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/CsvDelimiter"
+        }
+      ],
+      "default": "comma"
+    },
+    "has_headers": {
+      "default": true,
+      "type": "boolean"
+    }
+  },
+  "title": "CsvOptions",
+  "type": "object"
+}

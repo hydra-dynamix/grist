@@ -1,0 +1,138 @@
+{
+  "schema_version": "grist/fixture-builder-recipes/v1",
+  "generator_version": "grist-fixture-builder/1",
+  "seed": "grist-corpus-v1",
+  "outputs": [
+    {
+      "path": "generated/markdown/maximum-complexity.md",
+      "kind": "text",
+      "content": "---\ntitle: Maximum complexity\ntags: [fixture, deterministic]\n---\n\n# Maximum complexity\n\nA paragraph with **strong**, *emphasis*, `code`, [link](https://example.invalid/), and Unicode ?.\n\n> A quote\n> with two lines.\n\n1. ordered\n   - nested\n   - [x] task\n\n| Name | Value |\n|:--|--:|\n| alpha | 1 |\n\n```rust\nfn inert() -> &'static str { \"never executed\" }\n```\n\nReference[^1].\n\n[^1]: Footnote text.\n\n<div data-fixture=\"raw\">raw HTML survives by policy</div>\n\n:::unknown-extension\nopaque body\n:::\n"
+    },
+    {
+      "path": "generated/markdown/malformed-truncated.md",
+      "kind": "text",
+      "content": "---\ntitle: [unterminated\n---\n# Truncated\n\n```rust\nfn incomplete(\n"
+    },
+    {
+      "path": "generated/markdown/adversarial-nesting.md",
+      "kind": "text",
+      "content": "# Adversarial nesting\n\n> 1. outer\n>    - [x] nested\n>      > quote\n>      > | A | B |\n>      > |---|---|\n>      > | `|` | **deep** |\n\n::: warning\n::: nested\nopaque [[wiki]] {{< shortcode >}}\n:::\n:::\n"
+    },
+    {
+      "path": "generated/markdown/malicious-active-content.md",
+      "kind": "text",
+      "content": "<script>throw new Error('MUST NOT RUN')</script>\n\n[blocked](javascript:alert(1))\n\n```{run}\nrm -rf /\n```\n\n::: execute\n../../escape\n:::\n"
+    },
+    {
+      "path": "generated/markdown/downstream-regression.md",
+      "kind": "text",
+      "content": "+++\ntitle = \u0022Regression\u0022\n+++\n# CRLF and extensions\r\n\r\n- [ ] preserve\r\n\r\nFootnote[^case].\r\n\r\n[^case]: retained\r\n"
+    },
+    {
+      "path": "generated/restructured_text/maximum-complexity.rst",
+      "kind": "text",
+      "content": "============================\nMaximum complexity\n============================\n\nParagraph with *emphasis*, **strong**, ``literal``, :code:`role`, `link <https://example.invalid/>`_, target_, [1]_, and |product|.\n\n.. _target: section\n.. |product| replace:: Grist\n.. [1] Located footnote.\n\n.. warning:: inert directive\n   :class: fixture\n\n.. unknown-extension:: opaque\n   retained without execution\n\n.. code-block:: rust\n\n   fn inert() { /* never executed */ }\n\n+--------+-------+\n| Name   | Value |\n+========+=======+\n| alpha  | 1     |\n+--------+-------+\n\nSection\n-------\n\n1. ordered\n2. retained\n"
+    },
+    {
+      "path": "generated/restructured_text/malformed-adversarial.rst",
+      "kind": "text",
+      "content": "Malformed\n=========\n\n.. include:: ../../outside-project.rst\n\n.. execute::\n   :unknown-option:\n\n   ../../escape && https://network.invalid/never\n\nParagraph with :broken:`unclosed role and [#missing]_.\n\n+-----+-----+\n| A   | B\n+-----+-----+\n"
+    },
+    {
+      "path": "generated/restructured_text/downstream-regression.rst",
+      "kind": "text",
+      "content": "Regression\n==========\n\n.. _stable-label:\n\nUse `stable label <stable-label_>`_ and [case]_.\n\n.. [case] Citation-like labels remain distinct from numeric footnotes.\n"
+    },
+    {
+      "path": "generated/container/deeply-nested.zip",
+      "kind": "nested_zip",
+      "depth": 6,
+      "leaf_name": "message.eml",
+      "leaf_content": "From: fixture@example.invalid\r\nTo: parser@example.invalid\r\nSubject: Nested fixture\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=fixture\r\n\r\n--fixture\r\nContent-Type: text/plain; charset=utf-8\r\n\r\nNested body.\r\n--fixture\r\nContent-Type: application/octet-stream\r\nContent-Disposition: attachment; filename=payload.bin\r\nContent-Transfer-Encoding: base64\r\n\r\nR1JJU1Q=\r\n--fixture--\r\n"
+    },
+    {
+      "path": "generated/html/malicious-active-content.html",
+      "kind": "text",
+      "content": "<!doctype html><meta charset=utf-8><script>throw new Error('MUST NOT RUN')</script><img src=\"https://network.invalid/never-fetch\" onerror=\"fetch('/never')\"><iframe srcdoc=\"<script>parent.postMessage('never','*')</script>\"></iframe><a href=\"javascript:alert(1)\">inert link</a>\n"
+    },
+    {
+      "path": "generated/html/maximum-complexity.html",
+      "kind": "hex",
+      "hex": "3c21646f63747970652068746d6c3e0a3c68746d6c206c616e673d22656e223e0a3c686561643e0a3c7469746c653e4d6178696d756d2048544d4c20666978747572653c2f7469746c653e0a3c6d65746120636861727365743d227574662d38223e0a3c6d657461206e616d653d22617574686f722220636f6e74656e743d224772697374223e0a3c6c696e6b2072656c3d227374796c6573686565742220687265663d2268747470733a2f2f6e6574776f726b2e696e76616c69642f6e657665722e637373223e0a3c2f686561643e0a3c626f64793e0a3c6865616465723e3c68313e4d6178696d756d2048544d4c20666978747572653c2f68313e3c2f6865616465723e0a3c6d61696e3e0a3c61727469636c652069643d2261727469636c65223e3c68323e41727469636c653c2f68323e3c703e54657874203c656d3e656d7068617369733c2f656d3e2c203c7374726f6e673e7374726f6e673c2f7374726f6e673e2c20616e64203c6120687265663d222f72656c6174697665223e6c696e6b3c2f613e2e3c2f703e3c2f61727469636c653e0a3c7461626c653e3c74686561643e3c74723e3c74683e4e616d653c2f74683e3c74683e56616c75653c2f74683e3c2f74723e3c2f74686561643e3c74626f64793e3c74723e3c74643e616c7068613c2f74643e3c746420726f777370616e3d2232223e313c2f74643e3c2f74723e3c2f74626f64793e3c2f7461626c653e0a3c706963747572653e3c736f75726365207372637365743d226c617267652e77656270203278223e3c696d67207372633d22736d616c6c2e706e672220616c743d22466967757265223e3c2f706963747572653e0a3c736372697074207372633d2268747470733a2f2f6e6574776f726b2e696e76616c69642f6e657665722e6a73223e77696e646f772e6e6576657252756e73203d20747275653b3c2f7363726970743e0a3c666f726d20616374696f6e3d2268747470733a2f2f6e6574776f726b2e696e76616c69642f706f7374223e3c627574746f6e206f6e636c69636b3d226e657665722829223e53656e643c2f627574746f6e3e3c2f666f726d3e0a3c637573746f6d2d77696467657420646174612d73746174653d226f7061717565223e756e6b6e6f776e2072657461696e65643c2f637573746f6d2d7769646765743e0a3c2f6d61696e3e0a3c2f626f64793e0a3c2f68746d6c3e0a"
+    },
+    {
+      "path": "generated/html/malformed-adversarial.html",
+      "kind": "hex",
+      "hex": "3c7461626c653e3c74643e666f7374657265643c2f7461626c653e0a3c70207469746c653d756e71756f7465643e7472756e63617465640a3c736372697074207372633d2268747470733a2f2f6e6574776f726b2e696e76616c69642f6e657665722e6a73223e666574636828222f6e6576657222293c2f7363726970743e0a3c696672616d65207372633d2268747470733a2f2f6e6574776f726b2e696e76616c69642f6672616d65223e3c2f696672616d653e0a3c666f726d20616374696f6e3d226a6176617363726970743a6e657665722829223e3c696e707574206f6e636c69636b3d226e657665722829223e0a3c21756e6b6e6f776e206465636c61726174696f6e3e0a"
+    },
+    {
+      "path": "generated/html/downstream-regression.xhtml",
+      "kind": "hex",
+      "hex": "3c3f786d6c2076657273696f6e3d22312e302220656e636f64696e673d227574662d38223f3e0a3c68746d6c20786d6c6e733d22687474703a2f2f7777772e77332e6f72672f313939392f7868746d6c2220786d6c3a6c616e673d22656e223e0a3c686561643e3c7469746c653e5848544d4c2072656772657373696f6e3c2f7469746c653e3c2f686561643e0a3c626f64793e3c73656374696f6e2069643d22737461626c65223e3c68313e537461626c652073656374696f6e3c2f68313e3c703e4e616d65737061636564203c6120687265663d2223737461626c65223e6c696e6b3c2f613e2e3c2f703e3c2f73656374696f6e3e3c2f626f64793e0a3c2f68746d6c3e0a"
+    },
+    {
+      "path": "generated/text/mixed-invalid.bin",
+      "kind": "hex",
+      "hex": "efbbbf7574662d3820e298830d0a77696e646f77732d3132353220800d0a696e76616c696420c328ff0a"
+    },
+    {
+      "path": "generated/text/oversized.txt",
+      "kind": "repeat",
+      "content": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\n",
+      "count": 1024
+    },
+    {
+      "path": "generated/structured/truncated.json",
+      "kind": "text",
+      "content": "{\"fixture\":[1,2,{\"truncated\":true}"
+    },
+    {
+      "path": "generated/control/encrypted-sentinel.bin",
+      "kind": "hex",
+      "hex": "47524953542d53594e5448455449432d454e435259505445442d563100010203ff"
+    },
+    {
+      "path": "generated/provider/ocr-baseline.v1.json",
+      "kind": "provider_recording",
+      "provider_kind": "ocr",
+      "input_text": "synthetic image bytes",
+      "public_configuration": {"dpi": 300, "fixture": true},
+      "options": {"language_hints": ["en"], "recognize_layout": true, "recognize_tables": false},
+      "provider": {"name": "fixture-ocr", "implementation": "recorded-fixture", "implementation_version": "1", "model_version": "fixture-model-1", "determinism": "guaranteed_with_recording", "confidence_model": "normalized-probability-v1"},
+      "result": {"text": "Synthetic OCR text", "regions": [{"text": "Synthetic OCR text", "bounding_box": {"x": 0.1, "y": 0.2, "width": 0.7, "height": 0.1, "unit": "normalized", "origin": "top_left"}, "confidence": 0.95, "language": "en", "reading_order": 0}], "confidence": 0.95, "diagnostics": []}
+    },
+    {
+      "path": "generated/provider/transcription-baseline.v1.json",
+      "kind": "provider_recording",
+      "provider_kind": "transcription",
+      "input_text": "synthetic audio bytes",
+      "public_configuration": {"fixture": true, "sample_rate": 16000},
+      "options": {"language_hints": ["en"], "speaker_diarization": true, "word_timestamps": false, "track": "main"},
+      "provider": {"name": "fixture-transcription", "implementation": "recorded-fixture", "implementation_version": "1", "model_version": "fixture-model-1", "determinism": "guaranteed_with_recording", "confidence_model": "normalized-probability-v1"},
+      "result": {"text": "Synthetic transcript.", "segments": [{"start_ms": 0, "end_ms": 1250, "text": "Synthetic transcript.", "speaker": "speaker-1", "confidence": 0.9}], "language": "en", "confidence": 0.9, "diagnostics": []}
+    },
+    {
+      "path": "expected/markdown-maximum-complexity/fixture-summary.json",
+      "kind": "canonical_json",
+      "value": {"fixture_id": "markdown-maximum-complexity", "schema_version": "grist/fixture-summary/v1", "status": "complete", "surfaces": ["authoritative_payload", "document_graph", "segments", "cli_envelope"]}
+    },
+{
+        "path":  "generated/asciidoc/maximum-complexity.adoc",
+        "kind":  "text",
+        "content":  "= Maximum complexity\n:toc: left\n:source-highlighter: none\n\n== Section\n\nParagraph with _emphasis_, *strong*, `literal`, [.lead]#role#, https://example.invalid/[link], \u003c\u003ctarget\u003e\u003e, footnote:id[Located footnote], footnote:id[], {toc}, and widget:thing[].\n\n[[target]]\nimage::figure.png[Alt text]\nunknown-extension::opaque[retained]\n\n[source,rust,linenums]\n----\nfn inert() { /* never executed */ }\n----\n\n|===\n|Name |Value\n|alpha |1\n|===\n\n1. ordered\n2. retained"
+    },
+    {
+        "path":  "generated/asciidoc/malformed-adversarial.adoc",
+        "kind":  "text",
+        "content":  "= Malformed\n\ninclude::../../outside-project.adoc[]\ninclude::https://network.invalid/never[]\n\n[unknown\n\n[source,rust]\n----\nfn never() { /* unclosed and inert */ }\n\nunknown::../../escape[https://network.invalid/never]"
+    },
+    {
+        "path":  "generated/asciidoc/downstream-regression.adoc",
+        "kind":  "text",
+        "content":  "= Regression\n\n[[stable-label]]\n== Stable section\n\nUse \u003c\u003cstable-label,stable label\u003e\u003e, footnote:case[Citation-like footnote], footnote:case[], and {.missing-role}#retained#."
+    },
+    {"path":"generated/xml/maximum-complexity.nxml","content":"\u003c?xml version=\"1.0\" encoding=\"UTF-8\"?\u003e\n\u003carticle xmlns=\"http://jats.nlm.nih.gov\" xmlns:xlink=\"http://www.w3.org/1999/xlink\"\u003e\u003cfront\u003e\u003carticle-meta\u003e\u003ctitle-group\u003e\u003carticle-title\u003eMaximum XML JATS fixture\u003c/article-title\u003e\u003c/title-group\u003e\u003carticle-id pub-id-type=\"doi\"\u003e10.1/fixture\u003c/article-id\u003e\u003ccontrib-group\u003e\u003ccontrib contrib-type=\"author\"\u003e\u003cname\u003e\u003csurname\u003eLovelace\u003c/surname\u003e\u003cgiven-names\u003eAda\u003c/given-names\u003e\u003c/name\u003e\u003c/contrib\u003e\u003c/contrib-group\u003e\u003c/article-meta\u003e\u003c/front\u003e\u003cbody\u003e\u003csec id=\"methods\"\u003e\u003ctitle\u003eMethods\u003c/title\u003e\u003cp\u003eText \u0026amp; \u003cbold\u003estructure\u003c/bold\u003e \u003cxref ref-type=\"bibr\" rid=\"r1\"\u003e[1]\u003c/xref\u003e.\u003c/p\u003e\u003ctable-wrap\u003e\u003ctable\u003e\u003ctr\u003e\u003cth\u003eName\u003c/th\u003e\u003cth\u003eValue\u003c/th\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003ealpha\u003c/td\u003e\u003ctd rowspan=\"2\"\u003e1\u003c/td\u003e\u003c/tr\u003e\u003c/table\u003e\u003c/table-wrap\u003e\u003cfig id=\"f1\"\u003e\u003ccaption\u003e\u003cp\u003eFigure caption\u003c/p\u003e\u003c/caption\u003e\u003cgraphic xlink:href=\"figure.png\"/\u003e\u003c/fig\u003e\u003ccustom:opaque xmlns:custom=\"urn:fixture\" custom:state=\"raw\"\u003e\u003c![CDATA[unknown \u003ccontent\u003e]]\u003e\u003c/custom:opaque\u003e\u003c/sec\u003e\u003c/body\u003e\u003cback\u003e\u003cref-list\u003e\u003cref id=\"r1\"\u003e\u003cmixed-citation\u003eReference one\u003c/mixed-citation\u003e\u003c/ref\u003e\u003c/ref-list\u003e\u003c/back\u003e\u003c/article\u003e","kind":"text"},
+    {"path":"generated/xml/malformed-adversarial.xml","content":"\u003c!DOCTYPE article [\u003c!ENTITY xxe SYSTEM \"file:///must-not-read\"\u003e\u003c!ENTITY local \"retained\"\u003e]\u003e\n\u003carticle xmlns:xi=\"http://www.w3.org/2001/XInclude\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"urn:test https://network.invalid/schema.xsd\"\u003e\u003cbody\u003e\u003cxi:include href=\"https://network.invalid/never\"/\u003e\u003csec\u003e\u003ctitle\u003eMalformed\u003c/title\u003e\u003cp attr=\"\u0026local;\"\u003e\u0026xxe;\u003cbroken\u003e\u003c/sec\u003e\u003c/body\u003e\u003c/article\u003etail","kind":"text"},
+    {"path":"generated/xml/downstream-regression.xml","content":"\u003c?xml version=\"1.0\"?\u003e\u003croot xmlns=\"urn:default\" xmlns:p=\"urn:prefixed\"\u003e\u003cp:item p:id=\"stable\"\u003ebefore\u003c![CDATA[\u003cliteral\u003e]]\u003eafter\u003c/p:item\u003e\u003cunknown-extension mode=\"opaque\"\u003eretained\u003c/unknown-extension\u003e\u003c/root\u003e","kind":"text"}
+  ]
+}

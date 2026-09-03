@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "include_parts": {
+      "default": true,
+      "type": "boolean"
+    }
+  },
+  "title": "SpreadsheetOdfOptions",
+  "type": "object"
+}

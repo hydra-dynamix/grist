@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "inline_resource_bytes": {
+      "default": false,
+      "description": "Retain member bytes in embedded-artifact records. Inventory mode keeps the same nested content identities without duplicating package bytes.",
+      "type": "boolean"
+    },
+    "retain_non_spine_documents": {
+      "default": true,
+      "type": "boolean"
+    }
+  },
+  "title": "EpubOptions",
+  "type": "object"
+}

@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "SqliteRecordSelection": {
+      "additionalProperties": false,
+      "properties": {
+        "max_rows_per_table": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "max_tables": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "tables": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "max_rows_per_table",
+        "max_tables",
+        "tables"
+      ],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "include_internal_schema": {
+      "default": false,
+      "type": "boolean"
+    },
+    "record_selection": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/SqliteRecordSelection"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Record extraction is disabled when absent. Supplying it requires both explicit table names and finite table/row limits."
+    }
+  },
+  "title": "SqliteOptions",
+  "type": "object"
+}

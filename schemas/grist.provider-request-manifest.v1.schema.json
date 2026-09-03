@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "NetworkAccess": {
+      "description": "Whether a selected provider may access the network for this request.",
+      "enum": [
+        "denied",
+        "allowed"
+      ],
+      "type": "string"
+    },
+    "ProviderKind": {
+      "description": "Provider capabilities selectable by a parse request.",
+      "enum": [
+        "ocr",
+        "transcription",
+        "decryption",
+        "isolated_parser_backend"
+      ],
+      "type": "string"
+    },
+    "RawContentIdentity": {
+      "description": "SHA-256 of exactly the original input bytes, without a prefix or suffix.",
+      "properties": {
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "byte_length",
+        "sha256"
+      ],
+      "type": "object"
+    }
+  },
+  "description": "Serializable request metadata. Input bytes and every secret are excluded.",
+  "properties": {
+    "configuration_digest": {
+      "type": "string"
+    },
+    "input_identity": {
+      "$ref": "#/definitions/RawContentIdentity"
+    },
+    "kind": {
+      "$ref": "#/definitions/ProviderKind"
+    },
+    "network_access": {
+      "$ref": "#/definitions/NetworkAccess"
+    },
+    "parameters_digest": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "configuration_digest",
+    "input_identity",
+    "kind",
+    "network_access",
+    "parameters_digest"
+  ],
+  "title": "ProviderRequestManifest",
+  "type": "object"
+}

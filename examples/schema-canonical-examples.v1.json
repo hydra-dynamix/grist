@@ -1,0 +1,4724 @@
+{
+  "schema_version": "grist/canonical-examples/v1",
+  "examples": {
+    "archive": {
+      "schema_name": "archive",
+      "schema_version": "grist/archive/v1",
+      "canonical_sha256": "sha256:85e36c9439a5e34556bd5a5d871728ff17e71e4f65a977dcdff68f978e5cb796",
+      "value": {
+        "format": "zip",
+        "schema_version": "grist/archive/v1",
+        "traversal": {
+          "budget_tree": {
+            "final_usage": {
+              "archive_expansion_ratio": 0.0,
+              "archive_members": 0,
+              "cells": 0,
+              "child_artifacts": 0,
+              "decoded_characters": 0,
+              "input_bytes": 0,
+              "memory_bytes": 0,
+              "nesting_depth": 0,
+              "nodes": 0,
+              "output_bytes": 0,
+              "pages": 0,
+              "parse_millis": 0,
+              "provider_millis": 0,
+              "records": 0,
+              "temporary_storage_bytes": 0
+            },
+            "limits": {},
+            "root": {
+              "allocated": {},
+              "allocation_id": "",
+              "depth": 0,
+              "usage_after": {
+                "archive_expansion_ratio": 0.0,
+                "archive_members": 0,
+                "cells": 0,
+                "child_artifacts": 0,
+                "decoded_characters": 0,
+                "input_bytes": 0,
+                "memory_bytes": 0,
+                "nesting_depth": 0,
+                "nodes": 0,
+                "output_bytes": 0,
+                "pages": 0,
+                "parse_millis": 0,
+                "provider_millis": 0,
+                "records": 0,
+                "temporary_storage_bytes": 0
+              },
+              "usage_before": {
+                "archive_expansion_ratio": 0.0,
+                "archive_members": 0,
+                "cells": 0,
+                "child_artifacts": 0,
+                "decoded_characters": 0,
+                "input_bytes": 0,
+                "memory_bytes": 0,
+                "nesting_depth": 0,
+                "nodes": 0,
+                "output_bytes": 0,
+                "pages": 0,
+                "parse_millis": 0,
+                "provider_millis": 0,
+                "records": 0,
+                "temporary_storage_bytes": 0
+              }
+            }
+          },
+          "container_format": "",
+          "identity": {},
+          "options": {
+            "artifact_mode": "inventory_only",
+            "parse_leaf_payloads": false
+          },
+          "request_id": "",
+          "schema_version": "",
+          "source": {
+            "display_name": ""
+          },
+          "status": "complete"
+        }
+      }
+    },
+    "archive-envelope": {
+      "schema_name": "archive-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "archive-options": {
+      "schema_name": "archive-options",
+      "schema_version": "grist/archive-options/v1",
+      "canonical_sha256": "sha256:88d69a413cc8e961be05f22c95a0107e39e74561bc7388bf90fd3718e664303f",
+      "value": {
+        "artifact_mode": "inventory_only",
+        "parse_leaf_payloads": false
+      }
+    },
+    "archive-security-options": {
+      "schema_name": "archive-security-options",
+      "schema_version": "grist/archive-security-options/v1",
+      "canonical_sha256": "sha256:130a119f98b055cb55a14b34830a033d2d6150cb8171a9000ca60445e0f77f2e",
+      "value": {
+        "max_path_bytes": 0,
+        "max_path_components": 0
+      }
+    },
+    "artifact-capture-options": {
+      "schema_name": "artifact-capture-options",
+      "schema_version": "grist/artifact-capture-options/v1",
+      "canonical_sha256": "sha256:28d5d8fdfbc341f1802bf6fefb581dcc7cb50f55c14416c3a0b16b4cf6ab7ee0",
+      "value": {
+        "inline_threshold_bytes": 0
+      }
+    },
+    "asciidoc": {
+      "schema_name": "asciidoc",
+      "schema_version": "grist/asciidoc/v1",
+      "canonical_sha256": "sha256:53576513386f5be59cdf58ae63d9965cc1fc672ef2e40da3a700c0fb8461ee7c",
+      "value": {
+        "decoded_range": {
+          "byte_end": 0,
+          "byte_start": 0,
+          "end_column": 0,
+          "end_line": 0,
+          "start_column": 0,
+          "start_line": 0
+        },
+        "decoded_text": "",
+        "decoding": {
+          "declarations": [],
+          "decoded_identity": {
+            "byte_length": 0,
+            "encoding": "",
+            "lossy": false,
+            "sha256": ""
+          },
+          "diagnostics": [],
+          "encoding": {
+            "kind": "utf8"
+          },
+          "issues": [],
+          "newlines": {
+            "cr_count": 0,
+            "crlf_count": 0,
+            "final_line_terminated": false,
+            "lf_count": 0,
+            "sequences": []
+          },
+          "raw_identity": {
+            "byte_length": 0,
+            "sha256": ""
+          },
+          "schema_version": ""
+        },
+        "encoding": {
+          "kind": "utf8"
+        },
+        "locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        },
+        "nodes": [],
+        "raw_bytes": [],
+        "raw_range": {
+          "end": 0,
+          "start": 0
+        },
+        "schema_version": "grist/asciidoc/v1"
+      }
+    },
+    "asciidoc-envelope": {
+      "schema_name": "asciidoc-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "asciidoc-options": {
+      "schema_name": "asciidoc-options",
+      "schema_version": "grist/asciidoc-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "auto-format-options": {
+      "schema_name": "auto-format-options",
+      "schema_version": "grist/auto-format-options/v1",
+      "canonical_sha256": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+      "value": null
+    },
+    "backend-output-manifest": {
+      "schema_name": "backend-output-manifest",
+      "schema_version": "grist/backend-output-manifest/v1",
+      "canonical_sha256": "sha256:51f67265450b5c53e71dd9b0caee07cfc5e7dd8ba52153049ab28ef3a4ac81b5",
+      "value": {
+        "backend": "",
+        "backend_version": "",
+        "canonical_output_sha256": "",
+        "golden_fixture_sha256": "",
+        "parser": "",
+        "payload_schema_version": "",
+        "schema_version": "grist/backend-output-manifest/v1"
+      }
+    },
+    "basin-code-graph": {
+      "schema_name": "basin-code-graph",
+      "schema_version": "grist/basin-code-graph/v1",
+      "canonical_sha256": "sha256:d8248000b7ccfa7ab697db673abcd29dcfdf708d3ee174c04e9237c9d1e6c8f1",
+      "value": {
+        "edges": [],
+        "module": "",
+        "nodes": [],
+        "roots": []
+      }
+    },
+    "basin-walk-options": {
+      "schema_name": "basin-walk-options",
+      "schema_version": "grist/basin-walk-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "batch-result": {
+      "schema_name": "batch-result",
+      "schema_version": "grist/batch-result/v1",
+      "canonical_sha256": "sha256:ef35a6c1ff18f147f3ad2f93fe9e1873da94f707e61cdd068cc4d631f909bfd2",
+      "value": {
+        "budget_usage": {
+          "archive_expansion_ratio": 0.0,
+          "archive_members": 0,
+          "cells": 0,
+          "child_artifacts": 0,
+          "decoded_characters": 0,
+          "input_bytes": 0,
+          "memory_bytes": 0,
+          "nesting_depth": 0,
+          "nodes": 0,
+          "output_bytes": 0,
+          "pages": 0,
+          "parse_millis": 0,
+          "provider_millis": 0,
+          "records": 0,
+          "temporary_storage_bytes": 0
+        },
+        "diagnostics": [],
+        "items": [],
+        "status": "complete"
+      }
+    },
+    "bibliography": {
+      "schema_name": "bibliography",
+      "schema_version": "grist/bibliography/v1",
+      "canonical_sha256": "sha256:c43a45cff54d4def96443170e0c3ea12ddc8b8e8fa16e48700306b23447a0df8",
+      "value": {
+        "decoding": {
+          "declarations": [],
+          "decoded_identity": {
+            "byte_length": 0,
+            "encoding": "",
+            "lossy": false,
+            "sha256": ""
+          },
+          "diagnostics": [],
+          "encoding": {
+            "kind": "utf8"
+          },
+          "issues": [],
+          "newlines": {
+            "cr_count": 0,
+            "crlf_count": 0,
+            "final_line_terminated": false,
+            "lf_count": 0,
+            "sequences": []
+          },
+          "raw_identity": {
+            "byte_length": 0,
+            "sha256": ""
+          },
+          "schema_version": ""
+        },
+        "dialect": "auto",
+        "encoding": {
+          "kind": "utf8"
+        },
+        "locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        },
+        "range": {
+          "byte_end": 0,
+          "byte_start": 0,
+          "end_column": 0,
+          "end_line": 0,
+          "start_column": 0,
+          "start_line": 0
+        },
+        "schema_version": "grist/bibliography/v1",
+        "source": {
+          "display_name": ""
+        }
+      }
+    },
+    "bibliography-citation-resolution": {
+      "schema_name": "bibliography-citation-resolution",
+      "schema_version": "grist/bibliography-citation-resolution/v1",
+      "canonical_sha256": "sha256:395087a3f62ceeef5ee9269ab0a7e1057f74ddeb878320cf83c02e4767f021d2",
+      "value": {
+        "schema_version": "grist/bibliography-citation-resolution/v1"
+      }
+    },
+    "bibliography-envelope": {
+      "schema_name": "bibliography-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "bibliography-options": {
+      "schema_name": "bibliography-options",
+      "schema_version": "grist/bibliography-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "cache-entry": {
+      "schema_name": "cache-entry",
+      "schema_version": "grist/cache-entry/v1",
+      "canonical_sha256": "sha256:1fef8d694d9033034d71d9912cc9e47e3fa2a61d97e39f071a85bfd50e362855",
+      "value": {
+        "canonical_output": [],
+        "canonical_output_sha256": "",
+        "key_digest": "",
+        "schema_version": "grist/cache-entry/v1"
+      }
+    },
+    "cache-key": {
+      "schema_name": "cache-key",
+      "schema_version": "grist/cache-key/v1",
+      "canonical_sha256": "sha256:5b42be654b3465620bdaf9ab5f18ce0a9a79d87ff9cdc6c006d44b55fc79e225",
+      "value": {
+        "canonicalization": "grist/canonical-json/v1",
+        "digest": "",
+        "input_sha256": "",
+        "namespace": "",
+        "operation": "parse",
+        "options_digest": "",
+        "parser_sha256": "",
+        "payload_schema_version": "",
+        "provider_configuration_digests": [],
+        "schema_version": "grist/cache-key/v1"
+      }
+    },
+    "cache-reuse": {
+      "schema_name": "cache-reuse",
+      "schema_version": "grist/cache-reuse/v1",
+      "canonical_sha256": "sha256:0a001509c8b1bd8936433518a11abbc3e688beb213611db38ba797f4474efb8c",
+      "value": {
+        "input_sha256": "",
+        "key_digest": "",
+        "options_digest": "",
+        "outcome": "miss_stored",
+        "output_sha256": "",
+        "schema_version": "grist/cache-reuse/v1"
+      }
+    },
+    "canonical-examples": {
+      "schema_name": "canonical-examples",
+      "schema_version": "grist/canonical-examples/v1",
+      "canonical_sha256": "sha256:1ca146d9e5d2b9a774386ddeee6d55df460fc113aa6d4fec222c43d70b0bed9b",
+      "value": {
+        "examples": {},
+        "schema_version": "grist/canonical-examples/v1"
+      }
+    },
+    "capability-manifest": {
+      "schema_name": "capability-manifest",
+      "schema_version": "grist/capability-manifest/v1",
+      "canonical_sha256": "sha256:b9751af51aca611971f00ab6383a92f642916a52dc4b98bb2e9b6d18ed4134a6",
+      "value": {
+        "backends": [],
+        "budgets": {
+          "axes": [],
+          "cli_default_profile": "",
+          "explicit_selection_required": false,
+          "profiles": []
+        },
+        "enabled_features": [],
+        "envelope_schema_versions": [],
+        "features": [],
+        "formats": [],
+        "grist_version": "",
+        "normalized_rendering_reconstruction_claim": "normalized_not_byte_round_trip",
+        "operations": [],
+        "providers": [],
+        "reconstruction": [],
+        "registry": {
+          "parsers": [],
+          "providers": [],
+          "unavailable_parsers": []
+        },
+        "schema_catalog": {
+          "schema_version": "",
+          "schemas": []
+        },
+        "schema_version": "grist/capability-manifest/v1",
+        "schemas": [],
+        "security": {
+          "active_content_execution": false,
+          "default_policy": {
+            "active_rendering": "escape",
+            "archive": {
+              "max_path_bytes": 0,
+              "max_path_components": 0
+            },
+            "execution": "preserve_inert",
+            "input_metadata": "caller_directed_only",
+            "network": "explicit_providers_only",
+            "temporary_retention": "delete_on_drop",
+            "xml": "reject_active_references"
+          },
+          "implicit_network_access": false,
+          "isolated_backend_minimum": {
+            "active_content_execution": false,
+            "network": "forbidden",
+            "private_temporary_filesystem": false,
+            "subprocess_limit": 0
+          },
+          "policy_schema_version": "",
+          "secrets_serialized": false,
+          "supported_modes": []
+        },
+        "unsupported_capabilities": []
+      }
+    },
+    "citation-anchor": {
+      "schema_name": "citation-anchor",
+      "schema_version": "grist/citation-anchor/v1",
+      "canonical_sha256": "sha256:e8c11091fd33bfcfd5e21b576444046461a7f582850c0999b8881162ef9ba8cd",
+      "value": {
+        "label": "",
+        "locators": [],
+        "node_ids": [],
+        "normalized_text_hash": "",
+        "schema_version": "grist/citation-anchor/v1",
+        "source": {
+          "display_name": ""
+        },
+        "source_content_hash": {
+          "kind": "raw_sha256",
+          "sha256": ""
+        },
+        "source_identity": {},
+        "target_id": "",
+        "target_kind": "node",
+        "text_normalization": ""
+      }
+    },
+    "citation-anchor-options": {
+      "schema_name": "citation-anchor-options",
+      "schema_version": "grist/citation-anchor-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "citation-source-version": {
+      "schema_name": "citation-source-version",
+      "schema_version": "grist/citation-source-version/v1",
+      "canonical_sha256": "sha256:f7bd345c5dada540b922e6682c6258a9b62177253cb321a6606acde1a62918f6",
+      "value": {
+        "candidates": [],
+        "schema_version": "grist/citation-source-version/v1",
+        "source_identity": {}
+      }
+    },
+    "citation-verification": {
+      "schema_name": "citation-verification",
+      "schema_version": "grist/citation-verification/v1",
+      "canonical_sha256": "sha256:9ce6b8a6cf58be44d1db0bcd02ecbb3154f00f138cb86fa3941f6b63e840f07b",
+      "value": {
+        "method": "source_hash",
+        "original_locators": [],
+        "original_source_content_hash": {
+          "kind": "raw_sha256",
+          "sha256": ""
+        },
+        "outcome": "exact",
+        "schema_version": "grist/citation-verification/v1"
+      }
+    },
+    "citation-verification-options": {
+      "schema_name": "citation-verification-options",
+      "schema_version": "grist/citation-verification-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "cli-detection-report": {
+      "schema_name": "cli-detection-report",
+      "schema_version": "grist/cli-detection-report/v1",
+      "canonical_sha256": "sha256:95acde5df6b8f4acad721ad3d600e09a6456d04951f1c139789ab02f2e250c92",
+      "value": {
+        "detection": {
+          "confidence": 0.0,
+          "content_kind": "markdown",
+          "diagnostics": [],
+          "file_kind": "source",
+          "reasons": []
+        },
+        "identity": {},
+        "request_id": "",
+        "schema_version": "grist/cli-detection-report/v1",
+        "source": {
+          "display_name": ""
+        }
+      }
+    },
+    "cli-text-output-manifest": {
+      "schema_name": "cli-text-output-manifest",
+      "schema_version": "grist/cli-text-output-manifest/v1",
+      "canonical_sha256": "sha256:8d31207976d9c07617d38fe6105aea6d32d91944ff5c4e249046b243f602e09e",
+      "value": {
+        "byte_length": 0,
+        "destination": {
+          "kind": "stdout"
+        },
+        "fidelity": {
+          "losses": [],
+          "mode": "strict",
+          "reconstruction_claim": "normalized_not_byte_round_trip"
+        },
+        "format": "markdown",
+        "media_type": "",
+        "operation": "parse",
+        "options_digest": "",
+        "renderer": "",
+        "renderer_digest": "",
+        "renderer_version": "",
+        "request_id": "",
+        "schema_version": "grist/cli-text-output-manifest/v1",
+        "sha256": "",
+        "source_map": {
+          "entries": [],
+          "generated_length": 0,
+          "generated_unit": "",
+          "schema_version": ""
+        }
+      }
+    },
+    "code": {
+      "schema_name": "code",
+      "schema_version": "grist/code/v1",
+      "canonical_sha256": "sha256:2e23e032d74ea625d2aa7ba1bf96ba9eef09db3ab591718e6569a6cc812cfb8b",
+      "value": {
+        "adapter": {
+          "active_content_execution": false,
+          "capabilities": [],
+          "enabled_feature": "",
+          "grammar": "",
+          "grammar_version": "",
+          "language": "",
+          "network_access": false,
+          "schema_version": ""
+        },
+        "parse_errors": [],
+        "root_kind": "",
+        "schema_version": "grist/code/v1",
+        "syntax_nodes": []
+      }
+    },
+    "code-envelope": {
+      "schema_name": "code-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "code-options": {
+      "schema_name": "code-options",
+      "schema_version": "grist/code-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "columnar": {
+      "schema_name": "columnar",
+      "schema_version": "grist/columnar/v1",
+      "canonical_sha256": "sha256:1b9cdfbdb990a18272e447956eb5b07f88ecd6e6eb1c8d179538dbbdcf556efd",
+      "value": {
+        "batches": [],
+        "complete": false,
+        "diagnostics": [],
+        "dictionaries": [],
+        "format": "arrow_ipc_file",
+        "format_version": "",
+        "metadata": {},
+        "projected_rows": 0,
+        "schema": {
+          "fields": [],
+          "metadata": {}
+        },
+        "schema_version": "grist/columnar/v1"
+      }
+    },
+    "columnar-envelope": {
+      "schema_name": "columnar-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "columnar-options": {
+      "schema_name": "columnar-options",
+      "schema_version": "grist/columnar-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "columnar-stream-event": {
+      "schema_name": "columnar-stream-event",
+      "schema_version": "grist/columnar-stream-event/v1",
+      "canonical_sha256": "sha256:403657438dc3d5b42149f211aa45dd4aad30f540beb063b022c17c3f750fec80",
+      "value": {
+        "event": "schema",
+        "format": "arrow_ipc_file",
+        "schema": {
+          "fields": [],
+          "metadata": {}
+        }
+      }
+    },
+    "compatibility-policy": {
+      "schema_name": "compatibility-policy",
+      "schema_version": "grist/compatibility-policy/v1",
+      "canonical_sha256": "sha256:8f15d6f13999c58be478b3f59279e9190921729818f342a402cda1fc40a286fb",
+      "value": {
+        "release": "patch",
+        "unknown_enum_recovery": false
+      }
+    },
+    "compatibility-report": {
+      "schema_name": "compatibility-report",
+      "schema_version": "grist/compatibility-report/v1",
+      "canonical_sha256": "sha256:e1f1dca0ff39410180a31e38a139f467c63a46071e9dc06a8c594afc31d48d42",
+      "value": {
+        "changes": [],
+        "compatible": false,
+        "current_version": "",
+        "previous_version": "",
+        "requires_new_schema_version": false
+      }
+    },
+    "container-parse-options": {
+      "schema_name": "container-parse-options",
+      "schema_version": "grist/container-parse-options/v1",
+      "canonical_sha256": "sha256:88d69a413cc8e961be05f22c95a0107e39e74561bc7388bf90fd3718e664303f",
+      "value": {
+        "artifact_mode": "inventory_only",
+        "parse_leaf_payloads": false
+      }
+    },
+    "container-traversal": {
+      "schema_name": "container-traversal",
+      "schema_version": "grist/container-traversal/v1",
+      "canonical_sha256": "sha256:50e8a4563038f921d5265c11be85378bbf4cee7b318f5cefb21de542a056e101",
+      "value": {
+        "budget_tree": {
+          "final_usage": {
+            "archive_expansion_ratio": 0.0,
+            "archive_members": 0,
+            "cells": 0,
+            "child_artifacts": 0,
+            "decoded_characters": 0,
+            "input_bytes": 0,
+            "memory_bytes": 0,
+            "nesting_depth": 0,
+            "nodes": 0,
+            "output_bytes": 0,
+            "pages": 0,
+            "parse_millis": 0,
+            "provider_millis": 0,
+            "records": 0,
+            "temporary_storage_bytes": 0
+          },
+          "limits": {},
+          "root": {
+            "allocated": {},
+            "allocation_id": "",
+            "depth": 0,
+            "usage_after": {
+              "archive_expansion_ratio": 0.0,
+              "archive_members": 0,
+              "cells": 0,
+              "child_artifacts": 0,
+              "decoded_characters": 0,
+              "input_bytes": 0,
+              "memory_bytes": 0,
+              "nesting_depth": 0,
+              "nodes": 0,
+              "output_bytes": 0,
+              "pages": 0,
+              "parse_millis": 0,
+              "provider_millis": 0,
+              "records": 0,
+              "temporary_storage_bytes": 0
+            },
+            "usage_before": {
+              "archive_expansion_ratio": 0.0,
+              "archive_members": 0,
+              "cells": 0,
+              "child_artifacts": 0,
+              "decoded_characters": 0,
+              "input_bytes": 0,
+              "memory_bytes": 0,
+              "nesting_depth": 0,
+              "nodes": 0,
+              "output_bytes": 0,
+              "pages": 0,
+              "parse_millis": 0,
+              "provider_millis": 0,
+              "records": 0,
+              "temporary_storage_bytes": 0
+            }
+          }
+        },
+        "container_format": "",
+        "identity": {},
+        "options": {
+          "artifact_mode": "inventory_only",
+          "parse_leaf_payloads": false
+        },
+        "request_id": "",
+        "schema_version": "grist/container-traversal/v1",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "content-identity": {
+      "schema_name": "content-identity",
+      "schema_version": "grist/content-identity/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "corpus-validation-report": {
+      "schema_name": "corpus-validation-report",
+      "schema_version": "grist/corpus-validation-report/v1",
+      "canonical_sha256": "sha256:7b481c8e66d6c7c77b1d60ae5d58f235fb4cb99db3f75fbde25bd39df70e0bb6",
+      "value": {
+        "schema_version": "grist/corpus-validation-report/v1",
+        "violations": []
+      }
+    },
+    "csv": {
+      "schema_name": "csv",
+      "schema_version": "grist/csv/v2",
+      "canonical_sha256": "sha256:84a2947feae265e86948886819843e78c675031c1e0bdc46174c7193c63dbf59",
+      "value": {
+        "column_count": 0,
+        "complete": false,
+        "dialect": {
+          "candidates": [],
+          "delimiter": "auto",
+          "delimiter_text": "",
+          "double_quote": false,
+          "source": "detected"
+        },
+        "has_headers": false,
+        "headers": [],
+        "newline_fidelity": {
+          "cr_count": 0,
+          "crlf_count": 0,
+          "final_record_terminated": false,
+          "lf_count": 0,
+          "mixed": false
+        },
+        "record_count": 0,
+        "rows": [],
+        "schema_version": "grist/csv/v2",
+        "source_record_count": 0
+      }
+    },
+    "csv-envelope": {
+      "schema_name": "csv-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "csv-options": {
+      "schema_name": "csv-options",
+      "schema_version": "grist/csv-options/v2",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "decode-options": {
+      "schema_name": "decode-options",
+      "schema_version": "grist/decode-options/v1",
+      "canonical_sha256": "sha256:e4c82e38b430db8ce39b0a92dfdb30b0e5b666b23f5439997b27511234862aa3",
+      "value": {
+        "context": "auto"
+      }
+    },
+    "decryption-options": {
+      "schema_name": "decryption-options",
+      "schema_version": "grist/decryption-options/v1",
+      "canonical_sha256": "sha256:88cea25bb56aa162bbb11d421e0ad6dc9b8a522f6bcd240175143d75f98cf78f",
+      "value": {
+        "scheme": ""
+      }
+    },
+    "detection-options": {
+      "schema_name": "detection-options",
+      "schema_version": "grist/detection-options/v1",
+      "canonical_sha256": "sha256:c3d55ce1c2190edb54345c2e5d1c0060bad3bf980e656bc3a763692abc8d868f",
+      "value": {
+        "ambiguity_margin": 0.0,
+        "ambiguity_policy": "return_ambiguous",
+        "max_probe_bytes": 0,
+        "minimum_confidence": 0.0
+      }
+    },
+    "diagnostic": {
+      "schema_name": "diagnostic",
+      "schema_version": "grist/diagnostic/v1",
+      "canonical_sha256": "sha256:32618fd54cccdd0242e7522bdbf04c1e55fa8aa0101e68a567d4e74866553193",
+      "value": {
+        "code": "",
+        "message": "",
+        "parser": "",
+        "severity": "info"
+      }
+    },
+    "diagnostic-options": {
+      "schema_name": "diagnostic-options",
+      "schema_version": "grist/diagnostic-options/v1",
+      "canonical_sha256": "sha256:06cef513d7ab0004a9381cdcf54e34d238c492e21fe11c023ff5613713dac31f",
+      "value": {
+        "include_details": false,
+        "include_info": false
+      }
+    },
+    "document-graph": {
+      "schema_name": "document-graph",
+      "schema_version": "grist/document-graph/v2",
+      "canonical_sha256": "sha256:6a3da0eea3c548a4aef9fb451e828364261c3d47d1c076226b3d7fe073a6f942",
+      "value": {
+        "attrs": {},
+        "diagnostics": [],
+        "edges": [],
+        "id": "",
+        "kind": "document",
+        "nodes": [],
+        "schema_version": "grist/document-graph/v2"
+      }
+    },
+    "document-graph-envelope": {
+      "schema_name": "document-graph-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "dynamic-event-explorer-dataset": {
+      "schema_name": "dynamic-event-explorer-dataset",
+      "schema_version": "dynamic-event-explorer/dataset/v1",
+      "canonical_sha256": "sha256:f9978d8eeb306aa3a99c241cc67e9b29067c9df094b455f91599fdc402a36eb6",
+      "value": {
+        "canonical_events": []
+      }
+    },
+    "email": {
+      "schema_name": "email",
+      "schema_version": "grist/email/v1",
+      "canonical_sha256": "sha256:13e0e7d5a1065753b1afef7877b852acbf330e717c8d8f3be586e7a7de5b00de",
+      "value": {
+        "address_fields": [],
+        "authentication": [],
+        "complete": false,
+        "date_fields": [],
+        "diagnostics": [],
+        "encrypted_parts": [],
+        "external_references": [],
+        "headers": [],
+        "mime": {
+          "body_locator": {
+            "components": [
+              {
+                "byte_end": 0,
+                "byte_start": 0,
+                "type": "byte_range"
+              }
+            ],
+            "precision": "exact"
+          },
+          "children": [],
+          "content_type": {
+            "essence": "",
+            "parameters": [],
+            "raw": ""
+          },
+          "encoded_body_bytes": 0,
+          "encoded_body_sha256": "",
+          "encrypted": false,
+          "headers": [],
+          "locator": {
+            "components": [
+              {
+                "byte_end": 0,
+                "byte_start": 0,
+                "type": "byte_range"
+              }
+            ],
+            "precision": "exact"
+          },
+          "path": [],
+          "signed": false,
+          "transfer_encoding": ""
+        },
+        "schema_version": "grist/email/v1",
+        "signed_parts": [],
+        "thread": {
+          "in_reply_to": [],
+          "received": [],
+          "references": []
+        }
+      }
+    },
+    "email-envelope": {
+      "schema_name": "email-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "email-options": {
+      "schema_name": "email-options",
+      "schema_version": "grist/email-options/v1",
+      "canonical_sha256": "sha256:48567eb9a59b9a62ec7f970e723316749d6edfb6d5fc1689f92bb4c213042f1f",
+      "value": {
+        "inline_attachment_bytes": false,
+        "max_decoded_part_bytes": 0,
+        "max_header_bytes": 0,
+        "max_mime_depth": 0,
+        "max_mime_parts": 0,
+        "parse_nested_attachments": false
+      }
+    },
+    "embedded-artifact": {
+      "schema_name": "embedded-artifact",
+      "schema_version": "grist/embedded-artifact/v1",
+      "canonical_sha256": "sha256:88a0f9f2ca8fc1a89a9b74002912880aeb1cef931dbee75ef6ef7cfb0b5bafa1",
+      "value": {
+        "disposition": "attachment",
+        "extraction": {
+          "status": "extracted",
+          "status_code": ""
+        },
+        "identity": {
+          "artifact_id": "",
+          "content": {}
+        },
+        "locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        },
+        "parent": {
+          "identity": {},
+          "relationship": "attachment_of"
+        },
+        "safety": {
+          "classification": "passive"
+        },
+        "schema_version": "grist/embedded-artifact/v1"
+      }
+    },
+    "envelope": {
+      "schema_name": "envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "epub": {
+      "schema_name": "epub",
+      "schema_version": "grist/epub/v1",
+      "canonical_sha256": "sha256:a39ca1d462bd572f6b4328005caa0163123c6bccf3e57e32315856f6e67f00cb",
+      "value": {
+        "chapters": [],
+        "encrypted_resources": [],
+        "footnotes": [],
+        "images": [],
+        "manifest": [],
+        "metadata": [],
+        "navigation": [],
+        "package_locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        },
+        "package_path": "",
+        "resources": [],
+        "rootfiles": [],
+        "schema_version": "grist/epub/v1",
+        "spine": {
+          "items": [],
+          "locator": {
+            "components": [
+              {
+                "byte_end": 0,
+                "byte_start": 0,
+                "type": "byte_range"
+              }
+            ],
+            "precision": "exact"
+          }
+        },
+        "styles": [],
+        "version": "epub2"
+      }
+    },
+    "epub-envelope": {
+      "schema_name": "epub-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "epub-options": {
+      "schema_name": "epub-options",
+      "schema_version": "grist/epub-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "file-ingest": {
+      "schema_name": "file-ingest",
+      "schema_version": "grist/file-ingest/v1",
+      "canonical_sha256": "sha256:c9a974ef11061795a61b21864210e02c81bfb3b883ac1a97f20c8aa877657f01",
+      "value": {
+        "detection": {
+          "confidence": 0.0,
+          "content_kind": "markdown",
+          "diagnostics": [],
+          "file_kind": "source",
+          "reasons": []
+        },
+        "schema_version": "grist/file-ingest/v1",
+        "skipped": false
+      }
+    },
+    "file-ingest-envelope": {
+      "schema_name": "file-ingest-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "file-ingest-options": {
+      "schema_name": "file-ingest-options",
+      "schema_version": "grist/file-ingest-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "fixture-corpus-manifest": {
+      "schema_name": "fixture-corpus-manifest",
+      "schema_version": "grist/fixture-corpus-manifest/v1",
+      "canonical_sha256": "sha256:bb412c96a7298a0d32019e587d1e9a82a05e9f80eb3f6c7b567075d470ee200a",
+      "value": {
+        "formats": {},
+        "policy": {
+          "active_content_execution_allowed": false,
+          "canonicalization": "grist/canonical-json/v1",
+          "checked_in_data_classification": "",
+          "expected_output_policy": "",
+          "implicit_network_allowed": false,
+          "required_classes": [
+            "minimal_valid"
+          ]
+        },
+        "schema_version": "grist/fixture-corpus-manifest/v1"
+      }
+    },
+    "format-reconstruction-envelope": {
+      "schema_name": "format-reconstruction-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "format-reconstruction-result": {
+      "schema_name": "format-reconstruction-result",
+      "schema_version": "grist/format-reconstruction-result/v1",
+      "canonical_sha256": "sha256:909b071f01f790404197225e36851c8c7fd0c338d2dc6aa21ef70c0cc4def50d",
+      "value": {
+        "fidelity_report": {
+          "achieved_fidelity": "lossy",
+          "fixture_evidence": [
+            {
+              "expected_package_sha256": "",
+              "fixture_id": "",
+              "input_sha256": "",
+              "verified_fidelity": "lossy"
+            }
+          ],
+          "format": "",
+          "implementation": "",
+          "implementation_version": "",
+          "media_type": "",
+          "package_profile": "",
+          "requested_fidelity": "lossy",
+          "schema_version": "",
+          "verification": ""
+        },
+        "format": "",
+        "media_type": "",
+        "package_bytes": [],
+        "package_profile": "",
+        "package_sha256": "",
+        "schema_version": "grist/format-reconstruction-result/v1"
+      }
+    },
+    "graph": {
+      "schema_name": "graph",
+      "schema_version": "grist/graph-document/v1",
+      "canonical_sha256": "sha256:c6dcce93c2683b3680fbd9ba3b5dbf50dc05e65d863b394dc09554d97edc1f38",
+      "value": {
+        "directed": false,
+        "edges": [],
+        "nodes": [],
+        "schema_version": "grist/graph-document/v1"
+      }
+    },
+    "graph-envelope": {
+      "schema_name": "graph-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "graph-options": {
+      "schema_name": "graph-options",
+      "schema_version": "grist/graph-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "graph-parse-result": {
+      "schema_name": "graph-parse-result",
+      "schema_version": "grist/graph-parse-result/v1",
+      "canonical_sha256": "sha256:bc2561b9780a7b7b71af86e0761f09be5fb952e79012e2dd20778d012cd0eccc",
+      "value": {
+        "envelope": {
+          "diagnostics": [],
+          "kind": "archive",
+          "operation": "parse",
+          "options_digest": "",
+          "parser": {
+            "name": "",
+            "version": ""
+          },
+          "payload_schema_version": "",
+          "provenance": [],
+          "providers": [],
+          "schema_version": "",
+          "source": {
+            "display_name": ""
+          },
+          "status": "complete"
+        },
+        "source_map": {}
+      }
+    },
+    "graph-source-map": {
+      "schema_name": "graph-source-map",
+      "schema_version": "grist/graph-source-map/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "graph-stream-event": {
+      "schema_name": "graph-stream-event",
+      "schema_version": "grist/graph-stream-event/v1",
+      "canonical_sha256": "sha256:c1b613d59423ffec8098b26b2ac35750ae5287f498e880185da26d3d0f8bbb7f",
+      "value": {
+        "event": "item",
+        "item": {
+          "identity": {},
+          "payload": {
+            "envelope": {
+              "diagnostics": [],
+              "kind": "archive",
+              "operation": "parse",
+              "options_digest": "",
+              "parser": {
+                "name": "",
+                "version": ""
+              },
+              "payload_schema_version": "",
+              "provenance": [],
+              "providers": [],
+              "schema_version": "",
+              "source": {
+                "display_name": ""
+              },
+              "status": "complete"
+            },
+            "source_map": {}
+          },
+          "request_id": "",
+          "sequence": 0
+        }
+      }
+    },
+    "graph-transform-envelope": {
+      "schema_name": "graph-transform-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "graph-transform-options": {
+      "schema_name": "graph-transform-options",
+      "schema_version": "grist/graph-transform-options/v1",
+      "canonical_sha256": "sha256:55e15c45e828a9ffb26d3b30928f39921ace5e9b8e562aa851444f1744e7509c",
+      "value": {
+        "operations": [
+          "identity"
+        ]
+      }
+    },
+    "graph-transform-result": {
+      "schema_name": "graph-transform-result",
+      "schema_version": "grist/graph-transform-result/v1",
+      "canonical_sha256": "sha256:0bbab2398985a28a3d59db1f777973722332740e61d86138cb016adfc6615bd7",
+      "value": {
+        "fidelity": {
+          "lossless": false
+        },
+        "graph": {
+          "attrs": {},
+          "diagnostics": [],
+          "edges": [],
+          "id": "",
+          "kind": "document",
+          "nodes": [],
+          "schema_version": ""
+        },
+        "schema_version": "grist/graph-transform-result/v1",
+        "source_map": {
+          "entries": [],
+          "input_graph_sha256": "",
+          "output_graph_sha256": "",
+          "schema_version": ""
+        }
+      }
+    },
+    "graph-transform-source-map": {
+      "schema_name": "graph-transform-source-map",
+      "schema_version": "grist/graph-transform-source-map/v1",
+      "canonical_sha256": "sha256:58eb47b137038f194875f5f6e3713a26f3b998fa3474271ee1650730fb35996a",
+      "value": {
+        "entries": [],
+        "input_graph_sha256": "",
+        "output_graph_sha256": "",
+        "schema_version": "grist/graph-transform-source-map/v1"
+      }
+    },
+    "html": {
+      "schema_name": "html",
+      "schema_version": "grist/html/v2",
+      "canonical_sha256": "sha256:9571a718cc8c49e16d9c144328cc51ef1994815c799d02403f89f5d7f4a2b3fc",
+      "value": {
+        "active_content": [],
+        "decoded_range": {
+          "byte_end": 0,
+          "byte_start": 0,
+          "end_column": 0,
+          "end_line": 0,
+          "start_column": 0,
+          "start_line": 0
+        },
+        "decoded_text": "",
+        "decoding": {
+          "declarations": [],
+          "decoded_identity": {
+            "byte_length": 0,
+            "encoding": "",
+            "lossy": false,
+            "sha256": ""
+          },
+          "diagnostics": [],
+          "encoding": {
+            "kind": "utf8"
+          },
+          "issues": [],
+          "newlines": {
+            "cr_count": 0,
+            "crlf_count": 0,
+            "final_line_terminated": false,
+            "lf_count": 0,
+            "sequences": []
+          },
+          "raw_identity": {
+            "byte_length": 0,
+            "sha256": ""
+          },
+          "schema_version": ""
+        },
+        "encoding": {
+          "kind": "utf8"
+        },
+        "has_doctype": false,
+        "htmx_attributes": [],
+        "links": [],
+        "locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        },
+        "media": [],
+        "metadata": [],
+        "mode": "auto",
+        "nodes": [],
+        "quirks_mode": "no_quirks",
+        "raw_bytes": [],
+        "raw_range": {
+          "end": 0,
+          "start": 0
+        },
+        "root_element_count": 0,
+        "schema_version": "grist/html/v2",
+        "sections": [],
+        "source_tokens": [],
+        "syntax": "auto",
+        "tables": []
+      }
+    },
+    "html-envelope": {
+      "schema_name": "html-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "html-options": {
+      "schema_name": "html-options",
+      "schema_version": "grist/html-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "icalendar": {
+      "schema_name": "icalendar",
+      "schema_version": "grist/icalendar/v1",
+      "canonical_sha256": "sha256:1d14d6503d8c29877878a66695e22f6ecad066f5a8174e8cf9cd99679c8fe731",
+      "value": {
+        "complete": false,
+        "components": [],
+        "diagnostics": [],
+        "events": [],
+        "external_references": [],
+        "locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        },
+        "properties": [],
+        "schema_version": "grist/icalendar/v1",
+        "time_zones": []
+      }
+    },
+    "icalendar-envelope": {
+      "schema_name": "icalendar-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "icalendar-options": {
+      "schema_name": "icalendar-options",
+      "schema_version": "grist/icalendar-options/v1",
+      "canonical_sha256": "sha256:3b04184d5dc33e2f90f2d497eabcd93af6282040e0c661bc99f6180d01d9ff1d",
+      "value": {
+        "max_components": 0,
+        "max_decoded_attachment_bytes": 0,
+        "max_nesting_depth": 0,
+        "max_properties": 0,
+        "max_unfolded_line_bytes": 0
+      }
+    },
+    "image": {
+      "schema_name": "image",
+      "schema_version": "grist/image/v1",
+      "canonical_sha256": "sha256:58879d6dfa000a98dadfe23e7ab908b2f512e01edf4076d1379ea3cd291385ea",
+      "value": {
+        "active_content": [],
+        "chunks": [],
+        "color": {},
+        "complete": false,
+        "dimensions": {
+          "height": 0,
+          "width": 0
+        },
+        "embedded_text": [],
+        "format": "png",
+        "frames": [],
+        "links": [],
+        "metadata": {
+          "blocks": [],
+          "camera": {
+            "tags": {}
+          }
+        },
+        "orientation": {
+          "mirrored": false,
+          "rotation_degrees": 0
+        },
+        "schema_version": "grist/image/v1"
+      }
+    },
+    "image-envelope": {
+      "schema_name": "image-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "image-options": {
+      "schema_name": "image-options",
+      "schema_version": "grist/image-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "ingest-batch-result": {
+      "schema_name": "ingest-batch-result",
+      "schema_version": "grist/ingest-batch-result/v1",
+      "canonical_sha256": "sha256:ef35a6c1ff18f147f3ad2f93fe9e1873da94f707e61cdd068cc4d631f909bfd2",
+      "value": {
+        "budget_usage": {
+          "archive_expansion_ratio": 0.0,
+          "archive_members": 0,
+          "cells": 0,
+          "child_artifacts": 0,
+          "decoded_characters": 0,
+          "input_bytes": 0,
+          "memory_bytes": 0,
+          "nesting_depth": 0,
+          "nodes": 0,
+          "output_bytes": 0,
+          "pages": 0,
+          "parse_millis": 0,
+          "provider_millis": 0,
+          "records": 0,
+          "temporary_storage_bytes": 0
+        },
+        "diagnostics": [],
+        "items": [],
+        "status": "complete"
+      }
+    },
+    "ingest-stream-event": {
+      "schema_name": "ingest-stream-event",
+      "schema_version": "grist/ingest-stream-event/v1",
+      "canonical_sha256": "sha256:8e184ec450ff8fdb3be1e44f07317c9a61f1508d27bbbefd190b9f1441ef34b5",
+      "value": {
+        "event": "item",
+        "item": {
+          "identity": {},
+          "payload": {
+            "diagnostics": [],
+            "kind": "archive",
+            "operation": "parse",
+            "options_digest": "",
+            "parser": {
+              "name": "",
+              "version": ""
+            },
+            "payload_schema_version": "",
+            "provenance": [],
+            "providers": [],
+            "schema_version": "",
+            "source": {
+              "display_name": ""
+            },
+            "status": "complete"
+          },
+          "request_id": "",
+          "sequence": 0
+        }
+      }
+    },
+    "ipynb": {
+      "schema_name": "ipynb",
+      "schema_version": "grist/ipynb/v1",
+      "canonical_sha256": "sha256:1bb3410a623af6d3f840370a31ac88c79fd352d7a5849e554a428ca560016185",
+      "value": {
+        "cells": [],
+        "complete": false,
+        "diagnostics": [],
+        "locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        },
+        "nbformat": 0,
+        "nbformat_minor": 0,
+        "schema_version": "grist/ipynb/v1"
+      }
+    },
+    "ipynb-envelope": {
+      "schema_name": "ipynb-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "ipynb-options": {
+      "schema_name": "ipynb-options",
+      "schema_version": "grist/ipynb-options/v1",
+      "canonical_sha256": "sha256:1dfd6eb3a508182a871793bddaedd0dfa42cab8d224232db2c2ca4eb606f20aa",
+      "value": {
+        "max_cells": 0,
+        "max_json_depth": 0,
+        "max_mime_entries": 0,
+        "max_outputs_per_cell": 0
+      }
+    },
+    "isolated-backend-options": {
+      "schema_name": "isolated-backend-options",
+      "schema_version": "grist/isolated-backend-options/v1",
+      "canonical_sha256": "sha256:9b7a47b05ac87272816f4b74e0ef9fa326845b3c6267b6bc40fde91e37bd2fd2",
+      "value": {
+        "format": "",
+        "isolation": {
+          "active_content_execution": false,
+          "max_memory_bytes": 0,
+          "max_processes": 0,
+          "max_temporary_storage_bytes": 0,
+          "max_wall_time_millis": 0,
+          "network_access": "denied",
+          "private_temporary_filesystem": false,
+          "read_only_input": false
+        },
+        "output_schema_version": ""
+      }
+    },
+    "javascript-code": {
+      "schema_name": "javascript-code",
+      "schema_version": "grist/javascript-code/v1",
+      "canonical_sha256": "sha256:c20abc9424ce3c44cba33ee52de06df70ad0c8297df1e1cece312a21691240f2",
+      "value": {
+        "assignments": [],
+        "branches": [],
+        "calls": [],
+        "dialect": "java_script",
+        "exports": [],
+        "imports": [],
+        "parse_errors": [],
+        "returns": [],
+        "schema_version": "grist/javascript-code/v1",
+        "symbols": []
+      }
+    },
+    "javascript-code-envelope": {
+      "schema_name": "javascript-code-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "javascript-code-options": {
+      "schema_name": "javascript-code-options",
+      "schema_version": "grist/javascript-code-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "latex": {
+      "schema_name": "latex",
+      "schema_version": "grist/latex/v1",
+      "canonical_sha256": "sha256:7626996f3076117dd591a468921cfc3d39ff5545c82ebe9463df83701ea0fdd8",
+      "value": {
+        "nodes": [],
+        "parse_errors": [],
+        "schema_version": "grist/latex/v1"
+      }
+    },
+    "latex-envelope": {
+      "schema_name": "latex-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "latex-options": {
+      "schema_name": "latex-options",
+      "schema_version": "grist/latex-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "ldgr-projection": {
+      "schema_name": "ldgr-projection",
+      "schema_version": "grist.ldgr_projection.v1",
+      "canonical_sha256": "sha256:67ec83487a8b9179036899e7653a5614ff24c8cd83186aa14943ade6df8382f5",
+      "value": {
+        "machine_blocks": [],
+        "metadata": {
+          "depends_on": [],
+          "extra": {},
+          "id": "",
+          "kind": "spec",
+          "ldgr_doc": 0,
+          "produces": [],
+          "schema": "",
+          "tags": []
+        },
+        "schema_version": "grist.ldgr_projection.v1",
+        "typed": {
+          "document": null,
+          "kind": "spec"
+        }
+      }
+    },
+    "ldgr-projection-envelope": {
+      "schema_name": "ldgr-projection-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "ldgr-projection-options": {
+      "schema_name": "ldgr-projection-options",
+      "schema_version": "grist/ldgr-projection-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "ldgr-projection-render-options": {
+      "schema_name": "ldgr-projection-render-options",
+      "schema_version": "grist/ldgr-projection-render-options/v1",
+      "canonical_sha256": "sha256:fc0271c909bf8bc03a1adcd7bd928d74b341bc90f2d5947926c25c7c178ca5f4",
+      "value": {
+        "include_title": false
+      }
+    },
+    "ldgr-projection-validation-options": {
+      "schema_name": "ldgr-projection-validation-options",
+      "schema_version": "grist/ldgr-projection-validation-options/v1",
+      "canonical_sha256": "sha256:94bc78c86370b0ef9a41bb6113c41110412973822e07143dd0c676d711f4fb97",
+      "value": {
+        "strict": false
+      }
+    },
+    "legacy-limits-options": {
+      "schema_name": "legacy-limits-options",
+      "schema_version": "grist/legacy-limits-options/v1",
+      "canonical_sha256": "sha256:0305e70ca584ee46a1de0df8a78624dcefed69bfbcd8642b538f752550fcf9ec",
+      "value": {
+        "max_file_bytes": 0,
+        "max_model_output_bytes": 0,
+        "max_parse_depth": 0,
+        "max_repo_files": 0
+      }
+    },
+    "manifest": {
+      "schema_name": "manifest",
+      "schema_version": "grist/manifest/v1",
+      "canonical_sha256": "sha256:c784f25d71fbaba7c3988d3dd88f8708698926711a3519956dcea7579324276f",
+      "value": {
+        "active_content_execution": false,
+        "detected_name": "",
+        "format": "cargo_toml",
+        "locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        },
+        "network_access": false,
+        "range": {
+          "byte_end": 0,
+          "byte_start": 0,
+          "end_column": 0,
+          "end_line": 0,
+          "start_column": 0,
+          "start_line": 0
+        },
+        "raw": "",
+        "role": "package_manifest",
+        "schema_version": "grist/manifest/v1",
+        "source": {
+          "display_name": ""
+        },
+        "template_evaluation": false
+      }
+    },
+    "manifest-options": {
+      "schema_name": "manifest-options",
+      "schema_version": "grist/manifest-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "markdown": {
+      "schema_name": "markdown",
+      "schema_version": "grist/markdown/v2",
+      "canonical_sha256": "sha256:85b771d9327f4bf512eed7c9816246b13964e48800d014dc0f8142154f9507a1",
+      "value": {
+        "decoded_range": {
+          "byte_end": 0,
+          "byte_start": 0,
+          "end_column": 0,
+          "end_line": 0,
+          "start_column": 0,
+          "start_line": 0
+        },
+        "decoded_text": "",
+        "decoding": {
+          "declarations": [],
+          "decoded_identity": {
+            "byte_length": 0,
+            "encoding": "",
+            "lossy": false,
+            "sha256": ""
+          },
+          "diagnostics": [],
+          "encoding": {
+            "kind": "utf8"
+          },
+          "issues": [],
+          "newlines": {
+            "cr_count": 0,
+            "crlf_count": 0,
+            "final_line_terminated": false,
+            "lf_count": 0,
+            "sequences": []
+          },
+          "raw_identity": {
+            "byte_length": 0,
+            "sha256": ""
+          },
+          "schema_version": ""
+        },
+        "encoding": {
+          "kind": "utf8"
+        },
+        "locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        },
+        "nodes": [],
+        "raw_bytes": [],
+        "raw_range": {
+          "end": 0,
+          "start": 0
+        },
+        "schema_version": "grist/markdown/v2"
+      }
+    },
+    "markdown-envelope": {
+      "schema_name": "markdown-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "markdown-options": {
+      "schema_name": "markdown-options",
+      "schema_version": "grist/markdown-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "mbox": {
+      "schema_name": "mbox",
+      "schema_version": "grist/mbox/v1",
+      "canonical_sha256": "sha256:e06e6edbc06e2b1702010fd6f5c0b58817a53c9ac21f45d9e03f855eb35a0b42",
+      "value": {
+        "complete": false,
+        "diagnostics": [],
+        "messages": [],
+        "schema_version": "grist/mbox/v1",
+        "thread_evidence": {
+          "links": [],
+          "message_ids": [],
+          "subject_groups": []
+        },
+        "variant": "mboxo"
+      }
+    },
+    "mbox-envelope": {
+      "schema_name": "mbox-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "mbox-options": {
+      "schema_name": "mbox-options",
+      "schema_version": "grist/mbox-options/v1",
+      "canonical_sha256": "sha256:a6a424fe30c7b9d29fa62d0d702216685b7b2f731a267f88377e0be602ea7a16",
+      "value": {
+        "email": {
+          "inline_attachment_bytes": false,
+          "max_decoded_part_bytes": 0,
+          "max_header_bytes": 0,
+          "max_mime_depth": 0,
+          "max_mime_parts": 0,
+          "parse_nested_attachments": false
+        },
+        "honor_content_length": false,
+        "max_messages": 0,
+        "max_separator_bytes": 0,
+        "recover_missing_initial_separator": false,
+        "unescape_from_lines": false
+      }
+    },
+    "mbox-stream-event": {
+      "schema_name": "mbox-stream-event",
+      "schema_version": "grist/mbox-stream-event/v1",
+      "canonical_sha256": "sha256:05b85494688e17d49db961b13481ae1262fe20133da5d410dbc71a0aa0869980",
+      "value": {
+        "event": "item",
+        "item": {
+          "identity": {},
+          "payload": {
+            "decoded_bytes": 0,
+            "decoded_sha256": "",
+            "diagnostics": [],
+            "duplicate_occurrence": 0,
+            "escaped_from_lines": [],
+            "locator": {
+              "components": [
+                {
+                  "byte_end": 0,
+                  "byte_start": 0,
+                  "type": "byte_range"
+                }
+              ],
+              "precision": "exact"
+            },
+            "ordinal": 0,
+            "raw_bytes": 0,
+            "raw_sha256": "",
+            "stable_id": "",
+            "status": "complete"
+          },
+          "request_id": "",
+          "sequence": 0
+        }
+      }
+    },
+    "media": {
+      "schema_name": "media",
+      "schema_version": "grist/media/v1",
+      "canonical_sha256": "sha256:14dbfcdba84aec260222be65a86a99d689d68fac287dc1c9a4ed7eead4c1d739",
+      "value": {
+        "artwork": [],
+        "attachments": [],
+        "chapters": [],
+        "complete": false,
+        "diagnostics": [],
+        "encrypted": false,
+        "format": "mp3",
+        "metadata": [],
+        "schema_version": "grist/media/v1",
+        "streams": [],
+        "subtitle_tracks": [],
+        "technical": {
+          "byte_length": 0
+        }
+      }
+    },
+    "media-envelope": {
+      "schema_name": "media-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "media-options": {
+      "schema_name": "media-options",
+      "schema_version": "grist/media-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "metric-event": {
+      "schema_name": "metric-event",
+      "schema_version": "grist/metric-event/v1",
+      "canonical_sha256": "sha256:c63aeab904254d395e99b3fa16edd807cea8109d43749854a511320e83dbdcf7",
+      "value": {
+        "budget_usage": {
+          "archive_expansion_ratio": 0.0,
+          "archive_members": 0,
+          "cells": 0,
+          "child_artifacts": 0,
+          "decoded_characters": 0,
+          "input_bytes": 0,
+          "memory_bytes": 0,
+          "nesting_depth": 0,
+          "nodes": 0,
+          "output_bytes": 0,
+          "pages": 0,
+          "parse_millis": 0,
+          "provider_millis": 0,
+          "records": 0,
+          "temporary_storage_bytes": 0
+        },
+        "operation": "parse",
+        "phase": "detection",
+        "schema_version": "grist/metric-event/v1",
+        "values": {
+          "cache_hits": 0,
+          "cache_misses": 0,
+          "cells": 0,
+          "children": 0,
+          "completed_units": 0,
+          "input_bytes": 0,
+          "nodes": 0,
+          "pages": 0,
+          "parser_elapsed_micros": 0,
+          "peak_in_flight": 0,
+          "provider_elapsed_micros": 0,
+          "records": 0,
+          "repairs": 0,
+          "warnings": 0
+        }
+      }
+    },
+    "migration-manifest": {
+      "schema_name": "migration-manifest",
+      "schema_version": "grist/schema-migration-manifest/v1",
+      "canonical_sha256": "sha256:0b07a511118b181c98cbbe7971d1a418e534807a18b4ac6fdbb9dc7441305ebf",
+      "value": {
+        "migrations": [],
+        "schema_version": "grist/schema-migration-manifest/v1",
+        "versions": []
+      }
+    },
+    "model-output": {
+      "schema_name": "model-output",
+      "schema_version": "grist/model-output/v1",
+      "canonical_sha256": "sha256:44a369fb0fd1492b201a96f2a60525f18472b9bada11e6232636d96ba32b4fdb",
+      "value": {
+        "candidates": [],
+        "failures": [],
+        "raw_text_sha256": "",
+        "schema_version": "grist/model-output/v1",
+        "status": "empty"
+      }
+    },
+    "model-output-envelope": {
+      "schema_name": "model-output-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "model-output-event": {
+      "schema_name": "model-output-event",
+      "schema_version": "grist/model-output-event/v1",
+      "canonical_sha256": "sha256:2f2ec5a8d1945edcc6849ec31d5916ad29c055628c3d20aa47b61c68dcd58380",
+      "value": {
+        "candidate_id": "",
+        "event": "candidate_started",
+        "grammar": "python_style_command"
+      }
+    },
+    "model-output-event-v2": {
+      "schema_name": "model-output-event-v2",
+      "schema_version": "grist/model-output-event/v2",
+      "canonical_sha256": "sha256:2f2ec5a8d1945edcc6849ec31d5916ad29c055628c3d20aa47b61c68dcd58380",
+      "value": {
+        "candidate_id": "",
+        "event": "candidate_started",
+        "grammar": "python_style_command"
+      }
+    },
+    "model-output-options": {
+      "schema_name": "model-output-options",
+      "schema_version": "grist/model-output-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "ocr-options": {
+      "schema_name": "ocr-options",
+      "schema_version": "grist/ocr-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "odf-word": {
+      "schema_name": "odf-word",
+      "schema_version": "grist/odf-word/v1",
+      "canonical_sha256": "sha256:750b83355b39634069a179078d7411b2a7978635b08494800b470fe7914c6457",
+      "value": {
+        "annotations": [],
+        "body": {
+          "attributes": {},
+          "content": [],
+          "id": "",
+          "kind": "document",
+          "locator": {
+            "components": [
+              {
+                "byte_end": 0,
+                "byte_start": 0,
+                "type": "byte_range"
+              }
+            ],
+            "precision": "exact"
+          },
+          "qualified_name": ""
+        },
+        "drawings": [],
+        "embedded_artifacts": [],
+        "embedded_objects": [],
+        "equations": [],
+        "links": [],
+        "list_styles": [],
+        "manifest": [],
+        "master_pages": [],
+        "metadata": [],
+        "notes": [],
+        "package_kind": "document",
+        "package_media_type": "",
+        "parts": [],
+        "revisions": [],
+        "schema_version": "grist/odf-word/v1",
+        "settings": [],
+        "styles": [],
+        "views": {
+          "accepted": "",
+          "original": "",
+          "rejected": "",
+          "visible": ""
+        }
+      }
+    },
+    "odf-word-envelope": {
+      "schema_name": "odf-word-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "odf-word-options": {
+      "schema_name": "odf-word-options",
+      "schema_version": "grist/odf-word-options/v1",
+      "canonical_sha256": "sha256:58205dfa8b63985c3f1ffe872f2613d078c6d418c91be9d6ea0b0fdbadbd810e",
+      "value": {
+        "inline_embedded_artifact_bytes": false
+      }
+    },
+    "outlook-msg": {
+      "schema_name": "outlook-msg",
+      "schema_version": "grist/outlook-msg/v1",
+      "canonical_sha256": "sha256:ddbb684e29ddeda6907ed3db41373b525693cae93b4cfe017bccf8955d0da873",
+      "value": {
+        "attachments": [],
+        "bodies": [],
+        "complete": false,
+        "compound_file": {
+          "directory_entries": 0,
+          "major_version": 0,
+          "mini_sector_size": 0,
+          "mini_stream_cutoff": 0,
+          "minor_version": 0,
+          "sector_size": 0,
+          "storage_count": 0,
+          "stream_count": 0
+        },
+        "dates": [],
+        "diagnostics": [],
+        "encrypted": false,
+        "named_properties": [],
+        "properties": [],
+        "recipients": [],
+        "schema_version": "grist/outlook-msg/v1",
+        "sender": {},
+        "signed": false,
+        "thread": {
+          "in_reply_to": [],
+          "references": []
+        },
+        "unknown_objects": []
+      }
+    },
+    "outlook-msg-envelope": {
+      "schema_name": "outlook-msg-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "outlook-msg-options": {
+      "schema_name": "outlook-msg-options",
+      "schema_version": "grist/outlook-msg-options/v1",
+      "canonical_sha256": "sha256:d454d68ea263e535f37e2afac7ecdb7bf3b75f76921dfd2508f3555bebadfe67",
+      "value": {
+        "inline_attachment_bytes": false,
+        "inline_property_binary": false,
+        "inline_unknown_streams": false,
+        "max_attachments": 0,
+        "max_chain_sectors": 0,
+        "max_embedded_depth": 0,
+        "max_properties_per_object": 0,
+        "max_recipients": 0,
+        "max_rtf_output_bytes": 0,
+        "parse_embedded_messages": false
+      }
+    },
+    "parallelism-options": {
+      "schema_name": "parallelism-options",
+      "schema_version": "grist/parallelism-options/v1",
+      "canonical_sha256": "sha256:f60198d05bffea0bd3917e1a4d31e021ed26190f7fd013df661bbd314694d32e",
+      "value": {
+        "max_in_flight": 0,
+        "workers": 0
+      }
+    },
+    "parse-options": {
+      "schema_name": "parse-options",
+      "schema_version": "grist/parse-options/v1",
+      "canonical_sha256": "sha256:32bc66ff29ae7c171c7e69819976dad79bb8764c6cf1343bd8425b79d7ed7f99",
+      "value": {
+        "diagnostics": {
+          "include_details": false,
+          "include_info": false
+        },
+        "recovery": "strict",
+        "security": {
+          "active_rendering": "escape",
+          "archive": {
+            "max_path_bytes": 0,
+            "max_path_components": 0
+          },
+          "execution": "preserve_inert",
+          "input_metadata": "caller_directed_only",
+          "network": "explicit_providers_only",
+          "temporary_retention": "delete_on_drop",
+          "xml": "reject_active_references"
+        }
+      }
+    },
+    "parser-conformance-report": {
+      "schema_name": "parser-conformance-report",
+      "schema_version": "grist/parser-conformance-report/v1",
+      "canonical_sha256": "sha256:48f3fd47149dbe7ede7557580cb6541dbd6901dd7778d759bababe3f989dca41",
+      "value": {
+        "eligible_for_promotion": false,
+        "format": "x",
+        "gates": [
+          {
+            "checks": [
+              {
+                "code": "",
+                "message": "",
+                "passed": false
+              }
+            ],
+            "gate": "detection",
+            "gate_number": 0,
+            "status": "passed"
+          },
+          {
+            "checks": [
+              {
+                "code": "",
+                "message": "",
+                "passed": false
+              }
+            ],
+            "gate": "detection",
+            "gate_number": 0,
+            "status": "passed"
+          },
+          {
+            "checks": [
+              {
+                "code": "",
+                "message": "",
+                "passed": false
+              }
+            ],
+            "gate": "detection",
+            "gate_number": 0,
+            "status": "passed"
+          },
+          {
+            "checks": [
+              {
+                "code": "",
+                "message": "",
+                "passed": false
+              }
+            ],
+            "gate": "detection",
+            "gate_number": 0,
+            "status": "passed"
+          },
+          {
+            "checks": [
+              {
+                "code": "",
+                "message": "",
+                "passed": false
+              }
+            ],
+            "gate": "detection",
+            "gate_number": 0,
+            "status": "passed"
+          },
+          {
+            "checks": [
+              {
+                "code": "",
+                "message": "",
+                "passed": false
+              }
+            ],
+            "gate": "detection",
+            "gate_number": 0,
+            "status": "passed"
+          },
+          {
+            "checks": [
+              {
+                "code": "",
+                "message": "",
+                "passed": false
+              }
+            ],
+            "gate": "detection",
+            "gate_number": 0,
+            "status": "passed"
+          },
+          {
+            "checks": [
+              {
+                "code": "",
+                "message": "",
+                "passed": false
+              }
+            ],
+            "gate": "detection",
+            "gate_number": 0,
+            "status": "passed"
+          },
+          {
+            "checks": [
+              {
+                "code": "",
+                "message": "",
+                "passed": false
+              }
+            ],
+            "gate": "detection",
+            "gate_number": 0,
+            "status": "passed"
+          },
+          {
+            "checks": [
+              {
+                "code": "",
+                "message": "",
+                "passed": false
+              }
+            ],
+            "gate": "detection",
+            "gate_number": 0,
+            "status": "passed"
+          },
+          {
+            "checks": [
+              {
+                "code": "",
+                "message": "",
+                "passed": false
+              }
+            ],
+            "gate": "detection",
+            "gate_number": 0,
+            "status": "passed"
+          }
+        ],
+        "harness_version": "x",
+        "parser": {
+          "format": {
+            "artifact_kind": "archive",
+            "display_name": "",
+            "id": ""
+          },
+          "id": "",
+          "options": {
+            "default": null,
+            "schema": {
+              "name": "",
+              "version": ""
+            }
+          },
+          "origin": "built_in",
+          "parser": {
+            "name": "",
+            "version": ""
+          },
+          "payload_schema": {
+            "name": "",
+            "version": ""
+          },
+          "priority": 0
+        },
+        "passed_gate_count": 0,
+        "schema_version": "grist/parser-conformance-report/v1",
+        "suite_digest": "x",
+        "suite_version": "x"
+      }
+    },
+    "pdf": {
+      "schema_name": "pdf",
+      "schema_version": "grist/pdf/v1",
+      "canonical_sha256": "sha256:2cefa09e7bf06d915a901b975d7e6d6e95e3b6309291fb1e9be1bc8455ff5380",
+      "value": {
+        "active_content": [],
+        "catalog": {
+          "locator": {
+            "location": {
+              "byte_end": 0,
+              "byte_start": 0,
+              "kind": "direct"
+            },
+            "object": {
+              "generation": 0,
+              "object_number": 0
+            },
+            "stable_id": ""
+          },
+          "object": {
+            "generation": 0,
+            "object_number": 0
+          },
+          "pages": {
+            "generation": 0,
+            "object_number": 0
+          }
+        },
+        "encryption": {
+          "credential_supplied": false,
+          "encrypted": false
+        },
+        "filters": [],
+        "header": {
+          "binary_marker": false,
+          "byte_offset": 0,
+          "trailing_bytes": 0,
+          "version": ""
+        },
+        "interactive": {
+          "annotations": [],
+          "comments": [],
+          "destinations": [],
+          "embedded_files": [],
+          "layers": [],
+          "links": [],
+          "outlines": [],
+          "relationships": [],
+          "signatures": []
+        },
+        "metadata": {
+          "fields": []
+        },
+        "native_layout": {
+          "fonts": [],
+          "pages": []
+        },
+        "objects": [],
+        "page_labels": [],
+        "page_tree": [],
+        "pages": [],
+        "repairs": [],
+        "schema_version": "grist/pdf/v1",
+        "semantic_structure": {
+          "pages": [],
+          "repeated_regions": [],
+          "structure_tree": {
+            "confidence": 0.0,
+            "element_count": 0,
+            "status": "absent"
+          }
+        },
+        "source": {
+          "display_name": ""
+        },
+        "trailer": {
+          "id": [],
+          "locator": {
+            "location": {
+              "byte_end": 0,
+              "byte_start": 0,
+              "kind": "direct"
+            },
+            "object": {
+              "generation": 0,
+              "object_number": 0
+            },
+            "stable_id": ""
+          },
+          "root": {
+            "generation": 0,
+            "object_number": 0
+          }
+        },
+        "xref": {
+          "entries": [],
+          "repaired": false,
+          "sections": []
+        }
+      }
+    },
+    "pdf-envelope": {
+      "schema_name": "pdf-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "pdf-options": {
+      "schema_name": "pdf-options",
+      "schema_version": "grist/pdf-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "presentation-odf": {
+      "schema_name": "presentation-odf",
+      "schema_version": "grist/presentation-odf/v1",
+      "canonical_sha256": "sha256:c5e6871f2a7b3ecfddc6fbc75ceb1e8381cabae9d7a99d4e0aeffc8019ed23f4",
+      "value": {
+        "embedded_artifacts": [],
+        "manifest": [],
+        "master_pages": [],
+        "metadata": [],
+        "package_kind": "presentation",
+        "package_media_type": "",
+        "page_layouts": [],
+        "parts": [],
+        "raw_elements": [],
+        "schema_version": "grist/presentation-odf/v1",
+        "settings": [],
+        "slides": [],
+        "styles": []
+      }
+    },
+    "presentation-odf-envelope": {
+      "schema_name": "presentation-odf-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "presentation-odf-options": {
+      "schema_name": "presentation-odf-options",
+      "schema_version": "grist/presentation-odf-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "presentation-ooxml": {
+      "schema_name": "presentation-ooxml",
+      "schema_version": "grist/presentation-ooxml/v1",
+      "canonical_sha256": "sha256:0a2d297372f3c2fe0a73d5a89b2e45ef7977923650fac9b558fefe002f7cb384",
+      "value": {
+        "actions": [],
+        "child_artifacts": [],
+        "content_types": {
+          "defaults": [],
+          "locator": {
+            "components": [
+              {
+                "byte_end": 0,
+                "byte_start": 0,
+                "type": "byte_range"
+              }
+            ],
+            "precision": "exact"
+          },
+          "overrides": []
+        },
+        "layouts": [],
+        "macro_projects": [],
+        "main_presentation_locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        },
+        "main_presentation_part": "",
+        "masters": [],
+        "package_kind": "presentation",
+        "package_media_type": "",
+        "parts": [],
+        "properties": {
+          "core": [],
+          "custom": [],
+          "extended": []
+        },
+        "relationships": [],
+        "schema_version": "grist/presentation-ooxml/v1",
+        "slides": [],
+        "themes": []
+      }
+    },
+    "presentation-ooxml-envelope": {
+      "schema_name": "presentation-ooxml-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "presentation-ooxml-options": {
+      "schema_name": "presentation-ooxml-options",
+      "schema_version": "grist/presentation-ooxml-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "provider-recording-catalog": {
+      "schema_name": "provider-recording-catalog",
+      "schema_version": "grist/provider-recording-catalog/v1",
+      "canonical_sha256": "sha256:a37a2669a4e710e73ffbf398f6ae3e5161300d24daea2da6acb93f8febdc2488",
+      "value": {
+        "entries": [
+          {
+            "output_sha256": "",
+            "request": {
+              "configuration_digest": "",
+              "input_identity": {
+                "byte_length": 0,
+                "sha256": ""
+              },
+              "kind": "ocr",
+              "network_access": "denied",
+              "parameters_digest": ""
+            },
+            "request_digest": "",
+            "result": {
+              "kind": "ocr",
+              "result": {
+                "text": ""
+              }
+            }
+          }
+        ],
+        "kind": "ocr",
+        "provider": {
+          "determinism": "guaranteed",
+          "implementation": "",
+          "implementation_version": "",
+          "name": ""
+        },
+        "schema_version": "grist/provider-recording-catalog/v1"
+      }
+    },
+    "provider-request-manifest": {
+      "schema_name": "provider-request-manifest",
+      "schema_version": "grist/provider-request-manifest/v1",
+      "canonical_sha256": "sha256:17cb195093f60a31276c4d70469417fe26a3823ddeb55596ac69dbb030e1e707",
+      "value": {
+        "configuration_digest": "",
+        "input_identity": {
+          "byte_length": 0,
+          "sha256": ""
+        },
+        "kind": "ocr",
+        "network_access": "denied",
+        "parameters_digest": ""
+      }
+    },
+    "provider-response": {
+      "schema_name": "provider-response",
+      "schema_version": "grist/provider-response/v1",
+      "canonical_sha256": "sha256:44ba77d58077b13095ec678e7713f51ac5843a3b8ed1c4402fb48e0512a6f259",
+      "value": {
+        "metadata": {
+          "configuration_digest": "",
+          "input_identity": {
+            "byte_length": 0,
+            "sha256": ""
+          },
+          "kind": "ocr",
+          "network_access": "denied",
+          "provider": {
+            "determinism": "guaranteed",
+            "implementation": "",
+            "implementation_version": "",
+            "name": ""
+          },
+          "recorded": false,
+          "request_digest": ""
+        },
+        "outcome": {
+          "result": {
+            "kind": "ocr",
+            "result": {
+              "text": ""
+            }
+          },
+          "status": "succeeded"
+        },
+        "schema_version": "grist/provider-response/v1"
+      }
+    },
+    "python-code": {
+      "schema_name": "python-code",
+      "schema_version": "grist/python-code/v1",
+      "canonical_sha256": "sha256:996924988f37649930a27197d010daf41804e320cb004f2cc7f7dcaf6df8df11",
+      "value": {
+        "assignments": [],
+        "branches": [],
+        "calls": [],
+        "imports": [],
+        "parse_errors": [],
+        "returns": [],
+        "schema_version": "grist/python-code/v1",
+        "symbols": []
+      }
+    },
+    "python-code-envelope": {
+      "schema_name": "python-code-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "python-code-options": {
+      "schema_name": "python-code-options",
+      "schema_version": "grist/python-code-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "quarto": {
+      "schema_name": "quarto",
+      "schema_version": "grist/markdown/v2",
+      "canonical_sha256": "sha256:85b771d9327f4bf512eed7c9816246b13964e48800d014dc0f8142154f9507a1",
+      "value": {
+        "decoded_range": {
+          "byte_end": 0,
+          "byte_start": 0,
+          "end_column": 0,
+          "end_line": 0,
+          "start_column": 0,
+          "start_line": 0
+        },
+        "decoded_text": "",
+        "decoding": {
+          "declarations": [],
+          "decoded_identity": {
+            "byte_length": 0,
+            "encoding": "",
+            "lossy": false,
+            "sha256": ""
+          },
+          "diagnostics": [],
+          "encoding": {
+            "kind": "utf8"
+          },
+          "issues": [],
+          "newlines": {
+            "cr_count": 0,
+            "crlf_count": 0,
+            "final_line_terminated": false,
+            "lf_count": 0,
+            "sequences": []
+          },
+          "raw_identity": {
+            "byte_length": 0,
+            "sha256": ""
+          },
+          "schema_version": ""
+        },
+        "encoding": {
+          "kind": "utf8"
+        },
+        "locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        },
+        "nodes": [],
+        "raw_bytes": [],
+        "raw_range": {
+          "end": 0,
+          "start": 0
+        },
+        "schema_version": "grist/markdown/v2"
+      }
+    },
+    "quarto-envelope": {
+      "schema_name": "quarto-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "quarto-options": {
+      "schema_name": "quarto-options",
+      "schema_version": "grist/quarto-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "r_markdown": {
+      "schema_name": "r_markdown",
+      "schema_version": "grist/markdown/v2",
+      "canonical_sha256": "sha256:85b771d9327f4bf512eed7c9816246b13964e48800d014dc0f8142154f9507a1",
+      "value": {
+        "decoded_range": {
+          "byte_end": 0,
+          "byte_start": 0,
+          "end_column": 0,
+          "end_line": 0,
+          "start_column": 0,
+          "start_line": 0
+        },
+        "decoded_text": "",
+        "decoding": {
+          "declarations": [],
+          "decoded_identity": {
+            "byte_length": 0,
+            "encoding": "",
+            "lossy": false,
+            "sha256": ""
+          },
+          "diagnostics": [],
+          "encoding": {
+            "kind": "utf8"
+          },
+          "issues": [],
+          "newlines": {
+            "cr_count": 0,
+            "crlf_count": 0,
+            "final_line_terminated": false,
+            "lf_count": 0,
+            "sequences": []
+          },
+          "raw_identity": {
+            "byte_length": 0,
+            "sha256": ""
+          },
+          "schema_version": ""
+        },
+        "encoding": {
+          "kind": "utf8"
+        },
+        "locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        },
+        "nodes": [],
+        "raw_bytes": [],
+        "raw_range": {
+          "end": 0,
+          "start": 0
+        },
+        "schema_version": "grist/markdown/v2"
+      }
+    },
+    "r_markdown-envelope": {
+      "schema_name": "r_markdown-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "r_markdown-options": {
+      "schema_name": "r_markdown-options",
+      "schema_version": "grist/r-markdown-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "reconstruction-fidelity-report": {
+      "schema_name": "reconstruction-fidelity-report",
+      "schema_version": "grist/reconstruction-fidelity-report/v1",
+      "canonical_sha256": "sha256:9c5c78ddbdc923e4692a3765567185a8365e87dbd671d6957d161602da53796d",
+      "value": {
+        "achieved_fidelity": "lossy",
+        "fixture_evidence": [
+          {
+            "expected_package_sha256": "",
+            "fixture_id": "",
+            "input_sha256": "",
+            "verified_fidelity": "lossy"
+          }
+        ],
+        "format": "",
+        "implementation": "",
+        "implementation_version": "",
+        "media_type": "",
+        "package_profile": "",
+        "requested_fidelity": "lossy",
+        "schema_version": "grist/reconstruction-fidelity-report/v1",
+        "verification": ""
+      }
+    },
+    "reconstruction-options": {
+      "schema_name": "reconstruction-options",
+      "schema_version": "grist/reconstruction-options/v1",
+      "canonical_sha256": "sha256:bb38d4deafbd8f2ec78be23fa2b0b5506daad4ab08f69c77089a8f1e67891516",
+      "value": {
+        "required_fidelity": "lossy"
+      }
+    },
+    "registry-snapshot": {
+      "schema_name": "registry-snapshot",
+      "schema_version": "grist/registry-snapshot/v1",
+      "canonical_sha256": "sha256:619848120bd56d8723f680f9b3d40b0b20b6b0f57cae8b946129d724b6e01bf7",
+      "value": {
+        "parsers": [],
+        "providers": [],
+        "unavailable_parsers": []
+      }
+    },
+    "render-options": {
+      "schema_name": "render-options",
+      "schema_version": "grist/render-options/v1",
+      "canonical_sha256": "sha256:914d4d5484d9ab3d4302631be5b8d500721b2440a3e9b6389a2c877818665132",
+      "value": {
+        "fidelity": "strict"
+      }
+    },
+    "render-result": {
+      "schema_name": "render-result",
+      "schema_version": "grist/render-result/v1",
+      "canonical_sha256": "sha256:c32fe3c5c53824c74a92bd7b4d4c6099f93c9f18930788b9c00cadd37efacb4d",
+      "value": {
+        "content": "",
+        "diagnostics": [],
+        "fidelity": {
+          "losses": [],
+          "mode": "strict",
+          "reconstruction_claim": "normalized_not_byte_round_trip"
+        },
+        "format": "markdown",
+        "media_type": "",
+        "options_digest": "",
+        "renderer": "",
+        "renderer_digest": "",
+        "renderer_version": "",
+        "schema_version": "grist/render-result/v1",
+        "source_map": {
+          "entries": [],
+          "generated_length": 0,
+          "generated_unit": "",
+          "schema_version": ""
+        }
+      }
+    },
+    "render-source-map": {
+      "schema_name": "render-source-map",
+      "schema_version": "grist/render-source-map/v1",
+      "canonical_sha256": "sha256:56040e2c651d1791bb418f0d433255f6b52058d79a51545881829d7d28852873",
+      "value": {
+        "entries": [],
+        "generated_length": 0,
+        "generated_unit": "",
+        "schema_version": "grist/render-source-map/v1"
+      }
+    },
+    "rendered-summary": {
+      "schema_name": "rendered-summary",
+      "schema_version": "grist/rendered-summary/v1",
+      "canonical_sha256": "sha256:13830819996cc19c3977d4589c824a3d0e9e61e42baf24655a69d22c63c607e5",
+      "value": {
+        "diagnostics": [],
+        "schema_version": "grist/rendered-summary/v1",
+        "sections": [],
+        "source_schema_version": "",
+        "tables": [],
+        "title": ""
+      }
+    },
+    "repo-ingest": {
+      "schema_name": "repo-ingest",
+      "schema_version": "grist/repo-ingest/v1",
+      "canonical_sha256": "sha256:8f13d8fafe66e61e092378f93cf9005d700e7fa51308105a3339b89df841231c",
+      "value": {
+        "artifacts": [],
+        "detected_languages": [],
+        "files": [],
+        "ignored": [],
+        "lockfile_paths": [],
+        "manifest_paths": [],
+        "options": {
+          "honor_ignore": false,
+          "include_ignored": false,
+          "inline_artifacts": false,
+          "max_file_bytes": 0,
+          "max_repo_files": 0
+        },
+        "root": "",
+        "schema_version": "grist/repo-ingest/v1",
+        "skipped": [],
+        "test_hints": [],
+        "unsupported": []
+      }
+    },
+    "repo-ingest-envelope": {
+      "schema_name": "repo-ingest-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "repo-ingest-options": {
+      "schema_name": "repo-ingest-options",
+      "schema_version": "grist/repo-ingest-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "resource-budget": {
+      "schema_name": "resource-budget",
+      "schema_version": "grist/resource-budget/v1",
+      "canonical_sha256": "sha256:4e2dce8eb93d0d03ca0b32a36fcb01d38c56b33f710a686f4930c929d47e13f2",
+      "value": {
+        "selection": "profile",
+        "value": "untrusted_service_v1"
+      }
+    },
+    "restructured-text": {
+      "schema_name": "restructured-text",
+      "schema_version": "grist/restructured-text/v1",
+      "canonical_sha256": "sha256:722ad01d36bacf2623ec6b3512349daa05086c6b3bc879d5ffa4671a871e5b1a",
+      "value": {
+        "decoded_range": {
+          "byte_end": 0,
+          "byte_start": 0,
+          "end_column": 0,
+          "end_line": 0,
+          "start_column": 0,
+          "start_line": 0
+        },
+        "decoded_text": "",
+        "decoding": {
+          "declarations": [],
+          "decoded_identity": {
+            "byte_length": 0,
+            "encoding": "",
+            "lossy": false,
+            "sha256": ""
+          },
+          "diagnostics": [],
+          "encoding": {
+            "kind": "utf8"
+          },
+          "issues": [],
+          "newlines": {
+            "cr_count": 0,
+            "crlf_count": 0,
+            "final_line_terminated": false,
+            "lf_count": 0,
+            "sequences": []
+          },
+          "raw_identity": {
+            "byte_length": 0,
+            "sha256": ""
+          },
+          "schema_version": ""
+        },
+        "encoding": {
+          "kind": "utf8"
+        },
+        "locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        },
+        "nodes": [],
+        "raw_bytes": [],
+        "raw_range": {
+          "end": 0,
+          "start": 0
+        },
+        "schema_version": "grist/restructured-text/v1"
+      }
+    },
+    "restructured-text-envelope": {
+      "schema_name": "restructured-text-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "restructured-text-options": {
+      "schema_name": "restructured-text-options",
+      "schema_version": "grist/restructured-text-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "rtf": {
+      "schema_name": "rtf",
+      "schema_version": "grist/rtf/v1",
+      "canonical_sha256": "sha256:1e6a79c98f277207563fad01c0f408426a0d0735fa6d3fec6dbd8d4a1774b7ed",
+      "value": {
+        "ansi_code_page": 0,
+        "charset": "ansi",
+        "colors": [],
+        "comments": [],
+        "destinations": [],
+        "embedded_artifacts": [],
+        "fields": [],
+        "fonts": [],
+        "images": [],
+        "list_items": [],
+        "list_overrides": [],
+        "lists": [],
+        "metadata": {},
+        "objects": [],
+        "paragraphs": [],
+        "revisions": [],
+        "root": {
+          "closed": false,
+          "contents": [],
+          "id": "",
+          "ignorable": false,
+          "locator": {
+            "components": [
+              {
+                "byte_end": 0,
+                "byte_start": 0,
+                "type": "byte_range"
+              }
+            ],
+            "precision": "exact"
+          }
+        },
+        "rtf_version": 0,
+        "schema_version": "grist/rtf/v1",
+        "styles": [],
+        "tables": [],
+        "unknown_controls": [],
+        "views": {
+          "accepted": "",
+          "original": "",
+          "rejected": "",
+          "visible": ""
+        }
+      }
+    },
+    "rtf-envelope": {
+      "schema_name": "rtf-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "rtf-options": {
+      "schema_name": "rtf-options",
+      "schema_version": "grist/rtf-options/v1",
+      "canonical_sha256": "sha256:85ba208bf6cc002de5dbf721a120f921b76d442345a22ff053a91c45467cceaa",
+      "value": {
+        "inline_embedded_artifact_bytes": false,
+        "retain_raw_source_bytes": false
+      }
+    },
+    "rust-code": {
+      "schema_name": "rust-code",
+      "schema_version": "grist/rust-code/v1",
+      "canonical_sha256": "sha256:38a4f803da0fb32189d2478a842f868d3da3828047b2e462bdd543df0908fb71",
+      "value": {
+        "imports": [],
+        "parse_errors": [],
+        "schema_version": "grist/rust-code/v1",
+        "symbols": []
+      }
+    },
+    "rust-code-envelope": {
+      "schema_name": "rust-code-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "rust-code-options": {
+      "schema_name": "rust-code-options",
+      "schema_version": "grist/rust-code-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "schema-catalog": {
+      "schema_name": "schema-catalog",
+      "schema_version": "grist/schema-catalog/v1",
+      "canonical_sha256": "sha256:e563c3159f7ee2314c5277b946fb10faa471feb6ec286caef3b55f2f519036a9",
+      "value": {
+        "schema_version": "grist/schema-catalog/v1",
+        "schemas": []
+      }
+    },
+    "schema-options": {
+      "schema_name": "schema-options",
+      "schema_version": "grist/schema-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "schema-validation": {
+      "schema_name": "schema-validation",
+      "schema_version": "grist/schema-validation/v1",
+      "canonical_sha256": "sha256:7d6cdf008b82d1fdf8896a4f6ac061c8c0eb4d8b703e37305a5b1e363c83884f",
+      "value": {
+        "issues": [],
+        "schema_name": "",
+        "schema_version": "grist/schema-validation/v1",
+        "target_schema_version": "",
+        "valid": false
+      }
+    },
+    "security-policy": {
+      "schema_name": "security-policy",
+      "schema_version": "grist/security-policy/v1",
+      "canonical_sha256": "sha256:1706fc839817e782f66e76d60015b63b3b7357f7c4930b480b4404d769662b18",
+      "value": {
+        "active_rendering": "escape",
+        "archive": {
+          "max_path_bytes": 0,
+          "max_path_components": 0
+        },
+        "execution": "preserve_inert",
+        "input_metadata": "caller_directed_only",
+        "network": "explicit_providers_only",
+        "temporary_retention": "delete_on_drop",
+        "xml": "reject_active_references"
+      }
+    },
+    "segment": {
+      "schema_name": "segment",
+      "schema_version": "grist/segment/v1",
+      "canonical_sha256": "sha256:bcf0ad5b674a23b892a79f61466618924683c76ba0b1951c5e515b6f15cd6bcc",
+      "value": {
+        "context": {},
+        "document_identity": {},
+        "id": "",
+        "locators": [],
+        "node_ids": [],
+        "options_digest": "",
+        "renderer": "",
+        "renderer_version": "",
+        "schema_version": "grist/segment/v1",
+        "size": 0,
+        "source_identity": {},
+        "text": ""
+      }
+    },
+    "segment-collection": {
+      "schema_name": "segment-collection",
+      "schema_version": "grist/segment-collection/v1",
+      "canonical_sha256": "sha256:b3f7f0b0e75d63aba6260034ce34d5514a8870863ae1b8e680e1f09f64b0e446",
+      "value": {
+        "document_graph_schema_version": "",
+        "options": {},
+        "options_digest": "",
+        "schema_version": "grist/segment-collection/v1",
+        "segments": []
+      }
+    },
+    "segment-envelope": {
+      "schema_name": "segment-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "segment-event": {
+      "schema_name": "segment-event",
+      "schema_version": "grist/segment-event/v1",
+      "canonical_sha256": "sha256:42d648d9a4fd3ff19f5900eea3a1acba47d933ac6163c38a5366a5f724772538",
+      "value": {
+        "event": "segment",
+        "segment": {
+          "context": {},
+          "document_identity": {},
+          "id": "",
+          "locators": [],
+          "node_ids": [],
+          "options_digest": "",
+          "renderer": "",
+          "renderer_version": "",
+          "schema_version": "",
+          "size": 0,
+          "source_identity": {},
+          "text": ""
+        },
+        "sequence": 0
+      }
+    },
+    "segment-options": {
+      "schema_name": "segment-options",
+      "schema_version": "grist/segment-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "serialization": {
+      "schema_name": "serialization",
+      "schema_version": "grist/structured-text/v2",
+      "canonical_sha256": "sha256:a9f4132342df219c0631ad8adf97a31a75f5b6dbe17628f2f0865e84cbf14df8",
+      "value": {
+        "aliases": [],
+        "complete": false,
+        "documents": [],
+        "duplicate_keys": [],
+        "format": "json",
+        "jsonl_records": [],
+        "ordering": "source",
+        "raw_unknowns": [],
+        "records": [],
+        "schema_version": "grist/structured-text/v2"
+      }
+    },
+    "serialization-envelope": {
+      "schema_name": "serialization-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "serialization-options": {
+      "schema_name": "serialization-options",
+      "schema_version": "grist/structured-text-options/v2",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "source-locator": {
+      "schema_name": "source-locator",
+      "schema_version": "grist/source-locator/v1",
+      "canonical_sha256": "sha256:17b0d1cbfec0df16ac2017fe107931b0e4c29d19c23ad858a6cafee2036d7e1c",
+      "value": {
+        "components": [
+          {
+            "byte_end": 0,
+            "byte_start": 0,
+            "type": "byte_range"
+          }
+        ],
+        "precision": "exact"
+      }
+    },
+    "source-options": {
+      "schema_name": "source-options",
+      "schema_version": "grist/source-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "spreadsheet-odf": {
+      "schema_name": "spreadsheet-odf",
+      "schema_version": "grist/spreadsheet-odf/v1",
+      "canonical_sha256": "sha256:8d54fdda3e14faccdc67057244b11f7651b4f00e0a2f825a709cff7d076bff8d",
+      "value": {
+        "calculation": {
+          "formulas_calculated_by_grist": false
+        },
+        "manifest": [],
+        "metadata": [],
+        "named_ranges": [],
+        "package_kind": "workbook",
+        "package_media_type": "",
+        "panes": [],
+        "parts": [],
+        "raw_elements": [],
+        "schema_version": "grist/spreadsheet-odf/v1",
+        "sheets": [],
+        "styles": [],
+        "workbook_locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        }
+      }
+    },
+    "spreadsheet-odf-envelope": {
+      "schema_name": "spreadsheet-odf-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "spreadsheet-odf-options": {
+      "schema_name": "spreadsheet-odf-options",
+      "schema_version": "grist/spreadsheet-odf-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "spreadsheet-ooxml": {
+      "schema_name": "spreadsheet-ooxml",
+      "schema_version": "grist/spreadsheet-ooxml/v1",
+      "canonical_sha256": "sha256:844be4216abb743a5d3811b805643b065e54fadab9ceae1c05359ab722e403a1",
+      "value": {
+        "calculation": {
+          "formulas_calculated_by_grist": false
+        },
+        "date_system": "excel1900",
+        "macro_projects": [],
+        "named_ranges": [],
+        "package_kind": "workbook",
+        "package_media_type": "",
+        "parts": [],
+        "properties": [],
+        "relationships": [],
+        "schema_version": "grist/spreadsheet-ooxml/v1",
+        "sheets": [],
+        "styles": {
+          "borders": [],
+          "cell_formats": [],
+          "fills": [],
+          "fonts": [],
+          "number_formats": {}
+        },
+        "workbook_locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        },
+        "workbook_part": ""
+      }
+    },
+    "spreadsheet-ooxml-envelope": {
+      "schema_name": "spreadsheet-ooxml-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "spreadsheet-ooxml-options": {
+      "schema_name": "spreadsheet-ooxml-options",
+      "schema_version": "grist/spreadsheet-ooxml-options/v1",
+      "canonical_sha256": "sha256:49f06d7a109492f297b760632ad09f4fdaa253b60e1d648182e24df3c7a05182",
+      "value": {
+        "include_parts": false
+      }
+    },
+    "sqlite": {
+      "schema_name": "sqlite",
+      "schema_version": "grist/sqlite/v1",
+      "canonical_sha256": "sha256:3297c3457af9c552eb0a75c6b76cf21ab61421ffcb5a99ed0998e5a0fa8f3f14",
+      "value": {
+        "complete": false,
+        "diagnostics": [],
+        "header": {
+          "application_id": 0,
+          "header_page_count": 0,
+          "page_count": 0,
+          "page_size": 0,
+          "read_version": "legacy",
+          "schema_cookie": 0,
+          "schema_format": 0,
+          "sqlite_version_number": 0,
+          "text_encoding": "utf8",
+          "usable_page_size": 0,
+          "user_version": 0,
+          "write_version": "legacy"
+        },
+        "indexes": [],
+        "record_sets": [],
+        "schema": [],
+        "schema_version": "grist/sqlite/v1",
+        "tables": [],
+        "views": []
+      }
+    },
+    "sqlite-envelope": {
+      "schema_name": "sqlite-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "sqlite-options": {
+      "schema_name": "sqlite-options",
+      "schema_version": "grist/sqlite-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "stream-event": {
+      "schema_name": "stream-event",
+      "schema_version": "grist/stream-event/v1",
+      "canonical_sha256": "sha256:19883066eda2af9d167e10bc1eb92f3203badeff7bc06457ed30f85e57f8e2d8",
+      "value": {
+        "event": "item",
+        "item": {
+          "identity": {},
+          "payload": null,
+          "request_id": "",
+          "sequence": 0
+        }
+      }
+    },
+    "structured-binary": {
+      "schema_name": "structured-binary",
+      "schema_version": "grist/structured-binary/v1",
+      "canonical_sha256": "sha256:d4dbfb10f15f4e4992588f65d5abd24a96290be4da429b8ee61d18504399943b",
+      "value": {
+        "complete": false,
+        "diagnostics": [],
+        "extensions": [],
+        "format": "cbor",
+        "records": [],
+        "schema_identity": {
+          "identity_kind": "cbor",
+          "self_described": false,
+          "specification": ""
+        },
+        "schema_version": "grist/structured-binary/v1",
+        "tags": [],
+        "unknown_fields": []
+      }
+    },
+    "structured-binary-envelope": {
+      "schema_name": "structured-binary-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "structured-binary-options": {
+      "schema_name": "structured-binary-options",
+      "schema_version": "grist/structured-binary-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "subtitle": {
+      "schema_name": "subtitle",
+      "schema_version": "grist/subtitle/v1",
+      "canonical_sha256": "sha256:49398ec98abaade112e78e090606ac09713108267ec67827d152be5b4448894b",
+      "value": {
+        "complete": false,
+        "cues": [],
+        "decoded_range": {
+          "byte_end": 0,
+          "byte_start": 0,
+          "end_column": 0,
+          "end_line": 0,
+          "start_column": 0,
+          "start_line": 0
+        },
+        "decoded_text": "",
+        "decoding": {
+          "declarations": [],
+          "decoded_identity": {
+            "byte_length": 0,
+            "encoding": "",
+            "lossy": false,
+            "sha256": ""
+          },
+          "diagnostics": [],
+          "encoding": {
+            "kind": "utf8"
+          },
+          "issues": [],
+          "newlines": {
+            "cr_count": 0,
+            "crlf_count": 0,
+            "final_line_terminated": false,
+            "lf_count": 0,
+            "sequences": []
+          },
+          "raw_identity": {
+            "byte_length": 0,
+            "sha256": ""
+          },
+          "schema_version": ""
+        },
+        "diagnostics": [],
+        "encoding": {
+          "kind": "utf8"
+        },
+        "format": "srt",
+        "locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        },
+        "raw_bytes": [],
+        "raw_range": {
+          "end": 0,
+          "start": 0
+        },
+        "regions": [],
+        "schema_version": "grist/subtitle/v1",
+        "styles": [],
+        "tracks": [],
+        "transcript": {
+          "entries": [],
+          "text": ""
+        }
+      }
+    },
+    "subtitle-envelope": {
+      "schema_name": "subtitle-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "subtitle-options": {
+      "schema_name": "subtitle-options",
+      "schema_version": "grist/subtitle-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "summary-options": {
+      "schema_name": "summary-options",
+      "schema_version": "grist/summary-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "text": {
+      "schema_name": "text",
+      "schema_version": "grist/text/v2",
+      "canonical_sha256": "sha256:c661222e37f6ffc6a3387a239541fc42164e297ebaf990bb376533f67811c458",
+      "value": {
+        "blocks": [],
+        "decoded_range": {
+          "byte_end": 0,
+          "byte_start": 0,
+          "end_column": 0,
+          "end_line": 0,
+          "start_column": 0,
+          "start_line": 0
+        },
+        "decoded_text": "",
+        "decoding": {
+          "declarations": [],
+          "decoded_identity": {
+            "byte_length": 0,
+            "encoding": "",
+            "lossy": false,
+            "sha256": ""
+          },
+          "diagnostics": [],
+          "encoding": {
+            "kind": "utf8"
+          },
+          "issues": [],
+          "newlines": {
+            "cr_count": 0,
+            "crlf_count": 0,
+            "final_line_terminated": false,
+            "lf_count": 0,
+            "sequences": []
+          },
+          "raw_identity": {
+            "byte_length": 0,
+            "sha256": ""
+          },
+          "schema_version": ""
+        },
+        "encoding": {
+          "kind": "utf8"
+        },
+        "locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        },
+        "raw_bytes": [],
+        "raw_range": {
+          "end": 0,
+          "start": 0
+        },
+        "schema_version": "grist/text/v2"
+      }
+    },
+    "text-decode": {
+      "schema_name": "text-decode",
+      "schema_version": "grist/text-decode/v1",
+      "canonical_sha256": "sha256:a673185b21026b5fdb2d975a4d8822efb5d60086f42f5b7739a365637c906553",
+      "value": {
+        "declarations": [],
+        "decoded_identity": {
+          "byte_length": 0,
+          "encoding": "",
+          "lossy": false,
+          "sha256": ""
+        },
+        "diagnostics": [],
+        "encoding": {
+          "kind": "utf8"
+        },
+        "issues": [],
+        "newlines": {
+          "cr_count": 0,
+          "crlf_count": 0,
+          "final_line_terminated": false,
+          "lf_count": 0,
+          "sequences": []
+        },
+        "raw_identity": {
+          "byte_length": 0,
+          "sha256": ""
+        },
+        "schema_version": "grist/text-decode/v1"
+      }
+    },
+    "text-envelope": {
+      "schema_name": "text-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "text-options": {
+      "schema_name": "text-options",
+      "schema_version": "grist/text-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "transcription-options": {
+      "schema_name": "transcription-options",
+      "schema_version": "grist/transcription-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "transform-options": {
+      "schema_name": "transform-options",
+      "schema_version": "grist/transform-options/v1",
+      "canonical_sha256": "sha256:960d8d8f8ac85d975e8f77d2f76628613fb3e73a1c1a909df93491012b5d2a0c",
+      "value": {
+        "allow_lossy": false,
+        "allow_raw_fallback": false,
+        "fail_on_warning": false
+      }
+    },
+    "tree-sitter-language-adapter": {
+      "schema_name": "tree-sitter-language-adapter",
+      "schema_version": "grist/tree-sitter-language-adapter/v1",
+      "canonical_sha256": "sha256:f145116bdbda2dad90856d1e6029fe14b3b4027f9d9ecee3767def90f72fa4af",
+      "value": {
+        "active_content_execution": false,
+        "capabilities": [],
+        "enabled_feature": "",
+        "grammar": "",
+        "grammar_version": "",
+        "language": "",
+        "network_access": false,
+        "schema_version": "grist/tree-sitter-language-adapter/v1"
+      }
+    },
+    "typescript-code": {
+      "schema_name": "typescript-code",
+      "schema_version": "grist/typescript-code/v1",
+      "canonical_sha256": "sha256:9e2fbf8176f327544330b6fc352882f97bb4b41d3bcfe34aa751592a45a45a81",
+      "value": {
+        "assignments": [],
+        "branches": [],
+        "calls": [],
+        "dialect": "typescript",
+        "exports": [],
+        "imports": [],
+        "parse_errors": [],
+        "returns": [],
+        "schema_version": "grist/typescript-code/v1",
+        "symbols": []
+      }
+    },
+    "typescript-code-envelope": {
+      "schema_name": "typescript-code-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "typescript-code-options": {
+      "schema_name": "typescript-code-options",
+      "schema_version": "grist/typescript-code-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "unknown-enum-document": {
+      "schema_name": "unknown-enum-document",
+      "schema_version": "grist/unknown-enum-document/v1",
+      "canonical_sha256": "sha256:f0695992436a6fe22d2f671180883ce4940e7e466389db0cea5e5beddb339974",
+      "value": {
+        "unknown_values": [],
+        "value": null
+      }
+    },
+    "vcard": {
+      "schema_name": "vcard",
+      "schema_version": "grist/vcard/v1",
+      "canonical_sha256": "sha256:292eb3ca26f68a5c335943327058aa944c141790e19475cf9e6ece2912428741",
+      "value": {
+        "cards": [],
+        "complete": false,
+        "diagnostics": [],
+        "external_references": [],
+        "locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        },
+        "schema_version": "grist/vcard/v1"
+      }
+    },
+    "vcard-envelope": {
+      "schema_name": "vcard-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "vcard-options": {
+      "schema_name": "vcard-options",
+      "schema_version": "grist/vcard-options/v1",
+      "canonical_sha256": "sha256:9fc0c7107359f5ad36d5a0d4a7709b4e04be23e9721d8363cbf62da4ce70b979",
+      "value": {
+        "max_cards": 0,
+        "max_decoded_attachment_bytes": 0,
+        "max_properties": 0,
+        "max_unfolded_line_bytes": 0
+      }
+    },
+    "word-ooxml": {
+      "schema_name": "word-ooxml",
+      "schema_version": "grist/word-ooxml/v1",
+      "canonical_sha256": "sha256:d655e9b3a2f50d04dbbfa4a86ec6f9cf87888efdd9d97d41ce496eb72e1bead4",
+      "value": {
+        "child_artifacts": [],
+        "content_types": {
+          "defaults": [],
+          "locator": {
+            "components": [
+              {
+                "byte_end": 0,
+                "byte_start": 0,
+                "type": "byte_range"
+              }
+            ],
+            "precision": "exact"
+          },
+          "overrides": []
+        },
+        "macro_projects": [],
+        "main_document_locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        },
+        "main_document_part": "",
+        "package_kind": "document",
+        "package_media_type": "",
+        "parts": [],
+        "properties": {
+          "core": [],
+          "custom": [],
+          "extended": []
+        },
+        "relationships": [],
+        "schema_version": "grist/word-ooxml/v1"
+      }
+    },
+    "word-ooxml-envelope": {
+      "schema_name": "word-ooxml-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "word-ooxml-options": {
+      "schema_name": "word-ooxml-options",
+      "schema_version": "grist/word-ooxml-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    },
+    "xml": {
+      "schema_name": "xml",
+      "schema_version": "grist/xml/v1",
+      "canonical_sha256": "sha256:e9c39b0d7414da15b910fdd46e0ca33bdbff57c81ecdadac9522e3f014231f40",
+      "value": {
+        "decoded_range": {
+          "byte_end": 0,
+          "byte_start": 0,
+          "end_column": 0,
+          "end_line": 0,
+          "start_column": 0,
+          "start_line": 0
+        },
+        "decoded_text": "",
+        "decoding": {
+          "declarations": [],
+          "decoded_identity": {
+            "byte_length": 0,
+            "encoding": "",
+            "lossy": false,
+            "sha256": ""
+          },
+          "diagnostics": [],
+          "encoding": {
+            "kind": "utf8"
+          },
+          "issues": [],
+          "newlines": {
+            "cr_count": 0,
+            "crlf_count": 0,
+            "final_line_terminated": false,
+            "lf_count": 0,
+            "sequences": []
+          },
+          "raw_identity": {
+            "byte_length": 0,
+            "sha256": ""
+          },
+          "schema_version": ""
+        },
+        "dialect": "auto",
+        "encoding": {
+          "kind": "utf8"
+        },
+        "entities": [],
+        "links": [],
+        "locator": {
+          "components": [
+            {
+              "byte_end": 0,
+              "byte_start": 0,
+              "type": "byte_range"
+            }
+          ],
+          "precision": "exact"
+        },
+        "media": [],
+        "metadata": [],
+        "nodes": [],
+        "raw_bytes": [],
+        "raw_range": {
+          "end": 0,
+          "start": 0
+        },
+        "root_element_ids": [],
+        "schema_version": "grist/xml/v1",
+        "sections": [],
+        "security_findings": [],
+        "tables": [],
+        "well_formed": false
+      }
+    },
+    "xml-envelope": {
+      "schema_name": "xml-envelope",
+      "schema_version": "grist/envelope/v2",
+      "canonical_sha256": "sha256:13fe381cc0721c00b7091ccfee26e43e8467e927469c01638960e8f8416285ca",
+      "value": {
+        "diagnostics": [],
+        "kind": "archive",
+        "operation": "parse",
+        "options_digest": "",
+        "parser": {
+          "name": "",
+          "version": ""
+        },
+        "payload_schema_version": "",
+        "provenance": [],
+        "providers": [],
+        "schema_version": "grist/envelope/v2",
+        "source": {
+          "display_name": ""
+        },
+        "status": "complete"
+      }
+    },
+    "xml-options": {
+      "schema_name": "xml-options",
+      "schema_version": "grist/xml-options/v1",
+      "canonical_sha256": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "value": {}
+    }
+  }
+}

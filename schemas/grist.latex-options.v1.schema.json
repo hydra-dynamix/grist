@@ -1,0 +1,100 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "LatexDetailMode": {
+      "enum": [
+        "semantic",
+        "semantic_with_syntax"
+      ],
+      "type": "string"
+    }
+  },
+  "properties": {
+    "allowed_roots": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "detail": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/LatexDetailMode"
+        }
+      ],
+      "default": "semantic"
+    },
+    "detect_roots": {
+      "default": true,
+      "type": "boolean"
+    },
+    "encoding": {
+      "default": null,
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "max_expanded_characters": {
+      "default": 4194304,
+      "format": "uint64",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_include_bytes": {
+      "default": 8388608,
+      "format": "uint64",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_include_depth": {
+      "default": 16,
+      "format": "uint16",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_macro_depth": {
+      "default": 32,
+      "format": "uint16",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_macro_expansions": {
+      "default": 10000,
+      "format": "uint32",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_project_bytes": {
+      "default": 67108864,
+      "format": "uint64",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_project_files": {
+      "default": 4096,
+      "format": "uint32",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "project_root": {
+      "default": null,
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "resolve_includes": {
+      "default": true,
+      "type": "boolean"
+    },
+    "retain_comments": {
+      "default": true,
+      "type": "boolean"
+    }
+  },
+  "title": "LatexOptions",
+  "type": "object"
+}

@@ -2,7 +2,7 @@
 
 `DocumentGraph` is Grist's normalized projection layer for moving between parser-specific documents, cross-format renderers, graph-oriented code consumers, and semantic passes.
 
-It is intentionally **not** a replacement for parser-specific payloads. `MarkdownDocument`, `LatexDocument`, `PythonFile`, `RustFile`, `TypeScriptFile`, and the other parser outputs remain the authoritative detailed parse contracts. `DocumentGraph` is the shared IR used when a downstream workflow needs a common graph over document structure, code facts, references, transforms, or semantic obligations.
+It is intentionally **not** a replacement for parser-specific payloads. `MarkdownDocument`, `LatexDocument`, `BibliographyDocument`, `PythonFile`, `RustFile`, `TypeScriptFile`, and the other parser outputs remain the authoritative detailed parse contracts. `DocumentGraph` is the shared IR used when a downstream workflow needs a common graph over document structure, code facts, references, transforms, or semantic obligations.
 
 ## Contract
 
@@ -25,19 +25,115 @@ grist schema emit document-graph
 grist schema emit document-graph-envelope
 ```
 
+The current payload contract is `grist/document-graph/v2`. Version 2 adds the
+complete cross-format node/relation vocabulary and provenance-bearing relation
+evidence. Nodes carry cross-format `SourceLocator` values alongside legacy text
+ranges, and parser details are retained in namespaced extensions.
+
+`DocumentGraph::migrate_to_v2` accepts the v1 wire shape, derives exact text
+locators from retained ranges, copies flat parser attributes into their
+`grist.<format>` namespace, retains raw/unknown node content, and preserves the
+legacy fields. The checked-in v1 schema remains the historical compatibility
+contract; newly emitted graphs and the schema registry use v2.
+
+## Stable graph identity
+
+GraphIdGenerator is the only node/edge identity algorithm used by format
+projections. Its compatibility boundary is
+grist/document-graph-identity/v1. IDs are domain-separated SHA-256 digests of
+canonical JSON containing:
+
+- the source identity supplied by the projection context (or the canonical
+  ContentIdentity digest when using GraphIdGenerator::from_content_identity);
+- authoritative payload schema version;
+- complete parser/backend version metadata;
+- semantic structural path;
+- a parser-native ID when one exists; otherwise an exact/approximate locator;
+- for edges, the source ID, relation, target ID, and relation occurrence locator.
+
+A real parser-native ID outranks source coordinates, so locator movement from an
+unrelated edit does not change that node ID. Native IDs must come from the
+format itself, such as an OOXML object ID, notebook cell ID, message ID, or
+stable database key. Parser sequence counters and byte offsets are not native
+IDs.
+
+When a format has no stable native identity, IDs use the structural path and
+locator. They are deterministic for the same source and parser inputs, but an
+insertion that moves or renumbers the construct can change the ID. Current
+Markdown, LaTeX, and tree-sitter code payloads expose generated sequence/range
+identities rather than format-native IDs, so their projections intentionally
+use this locator-backed tier. Consumers needing relocation across such edits
+must use citation relocation/content matching rather than assuming an ID is
+permanent.
+
+DocumentEdge.id identifies one relation occurrence. Duplicate node or edge IDs
+are contract errors; merging never silently drops either occurrence.
+
+## Canonical order and parallel merge
+
+DocumentGraph::finalize_projection assigns source-scoped edge IDs, checks
+collisions, and canonicalizes all output collections. Node order is the
+lexicographic structural ancestry order formed from parent, ordinal, locator,
+and stable ID. Edges follow canonical source-node rank, relation, target rank,
+evidence, and edge ID. Diagnostics are ordered by canonical JSON bytes. Maps
+already use lexicographically ordered keys.
+
+Independent page, sheet, slide, member, or file workers return
+DocumentGraphFragment values. DocumentGraph::merge_parallel concatenates
+completed fragments, rejects identity collisions, and restores canonical order.
+Worker completion order and fragment insertion order therefore do not affect
+canonical serialized bytes.
+
+Projection implementations obtain one identity generator from
+DocumentGraphContext, create addresses with ProjectionAddress, merge any
+parallel fragments, and call finalize_projection before returning the graph.
+
+## Provenance and inference
+
+Every relation serializes one tagged evidence shape:
+
+- `explicit` contains the `SourceLocator` where the relation is stated by the source;
+- `inferred` contains a named rule, bounded confidence in `[0, 1]`, and optional evidence locators.
+
+Text projections continue to populate `range` for v1 consumers, but `locator`
+and relation evidence are the v2 authority. `validate_contract` rejects invalid
+namespaces, missing raw content, invalid locators, and unnamed inference rules.
+
+## Parser authority and extensions
+
+`DocumentGraph` is always a projection. `projection` names the authoritative
+typed payload kind and schema version plus the projection rule; it does not copy
+or replace that payload. Common fields remain in `attrs`. Parser-format details
+are additionally retained in `extensions` under a namespace such as
+`grist.markdown`, `grist.latex`, or `grist.python`.
+
+`raw`, `raw_block`, `raw_inline`, `unknown`, and extension node kinds carry a
+`RawNodeContent` value with the originating namespace, original construct kind,
+and JSON payload. This is the no-silent-loss route for constructs that do not
+have a normalized counterpart.
+
 ## Existing projections
 
 Current parser payloads that project into `DocumentGraph`:
 
 - Markdown: headings, paragraphs, text, links, code fences, tables, table rows/cells, frontmatter.
 - LaTeX: sections, paragraphs, formatting commands, inline/block math, labels, refs, citations, environments, comments, raw unknown commands.
+- Bibliography: entries and fields, exact source values, retained strings/comments/raw constructs, and uniquely resolved crossref relations. Effective inherited fields remain authoritative payload data in the `grist.bibliography` extension.
 - Python: symbols, imports, calls, assignments, returns, branches, containment, inheritance.
 - Rust: symbols, imports, containment.
 - TypeScript/TSX/JSX: symbols, imports, exports, calls, assignments, returns, branches, containment.
 
 ## Rendering and transforms
 
-Current renderers:
+The normalized renderer is:
+
+- `render_document_graph(&DocumentGraph, RenderFormat, &RenderOptions) -> Result<RenderResult, RenderError>`
+
+It supports Markdown, LaTeX, safe HTML, plain text, and canonical JSON with
+explicit strict, raw-fallback, or lossy fidelity and gap-free source maps. See
+[`normalized-rendering.md`](normalized-rendering.md).
+
+String-only compatibility renderers remain available:
 
 - `render_markdown(&DocumentGraph, TransformOptions) -> Result<String, TransformError>`
 - `render_latex(&DocumentGraph, TransformOptions) -> Result<String, TransformError>`

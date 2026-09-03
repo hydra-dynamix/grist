@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "FidelityMode": {
+      "description": "Fidelity is always explicit; there is no implicit lossy mode.",
+      "enum": [
+        "strict",
+        "raw_fallback",
+        "lossy"
+      ],
+      "type": "string"
+    }
+  },
+  "properties": {
+    "fidelity": {
+      "$ref": "#/definitions/FidelityMode"
+    }
+  },
+  "required": [
+    "fidelity"
+  ],
+  "title": "RenderOptions",
+  "type": "object"
+}

@@ -1,0 +1,356 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "AggregateContentIdentity": {
+      "description": "Content identity for a compound input.\n\nMembers are sorted by member index, then path and identity fields. `sha256` hashes canonical JSON v1 of `schema_version`, `canonicalization`, and the sorted `members` array. Summary fields and the digest itself are excluded.",
+      "properties": {
+        "canonicalization": {
+          "$ref": "#/definitions/CanonicalJsonVersion"
+        },
+        "manifest_byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "member_count": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "members": {
+          "items": {
+            "$ref": "#/definitions/AggregateMemberIdentity"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "total_byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "canonicalization",
+        "manifest_byte_length",
+        "member_count",
+        "members",
+        "schema_version",
+        "sha256",
+        "total_byte_length"
+      ],
+      "type": "object"
+    },
+    "AggregateMemberIdentity": {
+      "description": "Stable member summary used in a compound-input aggregate manifest.",
+      "properties": {
+        "aggregate_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "canonical_payload_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "decoded_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "format": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/FormatIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "member_index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "member_path": {
+          "type": "string"
+        },
+        "raw_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "byte_length",
+        "member_path"
+      ],
+      "type": "object"
+    },
+    "CanonicalJsonVersion": {
+      "description": "Canonical JSON compatibility boundary.\n\nNew algorithms require new enum variants. Changing `V1` would change payload and aggregate identities and is an incompatible change.",
+      "enum": [
+        "grist/canonical-json/v1"
+      ],
+      "type": "string"
+    },
+    "CanonicalPayloadIdentity": {
+      "description": "SHA-256 of the exact canonical JSON bytes of an authoritative payload.",
+      "properties": {
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "canonicalization": {
+          "$ref": "#/definitions/CanonicalJsonVersion"
+        },
+        "payload_schema_version": {
+          "$ref": "#/definitions/SchemaVersion"
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "byte_length",
+        "canonicalization",
+        "payload_schema_version",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "DecodedContentIdentity": {
+      "description": "SHA-256 of decoded text's UTF-8 bytes, including replacements when lossy.\n\nEncoding, loss state, and diagnostics are metadata outside the hashed bytes.",
+      "properties": {
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "encoding": {
+          "type": "string"
+        },
+        "lossy": {
+          "type": "boolean"
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "byte_length",
+        "encoding",
+        "lossy",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "DetectionCandidate": {
+      "description": "A ranked format candidate with all evidence retained.",
+      "properties": {
+        "confidence": {
+          "format": "float",
+          "type": "number"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/definitions/DetectionEvidence"
+          },
+          "type": "array"
+        },
+        "identity": {
+          "$ref": "#/definitions/FormatIdentity"
+        },
+        "parser_availability": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/ParserAvailability"
+            }
+          ],
+          "default": "unregistered"
+        },
+        "parser_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rank": {
+          "description": "One-based rank; lower ranks are preferred.",
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "confidence",
+        "evidence",
+        "identity",
+        "rank"
+      ],
+      "type": "object"
+    },
+    "DetectionEvidence": {
+      "description": "One retained reason for a ranked detection candidate.",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/DetectionEvidenceKind"
+        }
+      },
+      "required": [
+        "description",
+        "kind"
+      ],
+      "type": "object"
+    },
+    "DetectionEvidenceKind": {
+      "description": "Signal family that contributed to a detection candidate.",
+      "enum": [
+        "magic_bytes",
+        "declared_media_type",
+        "extension",
+        "filename",
+        "container_manifest",
+        "charset",
+        "structure",
+        "shebang",
+        "grammar_probe",
+        "fallback"
+      ],
+      "type": "string"
+    },
+    "FormatIdentity": {
+      "description": "Detected parser-format name paired with an Internet media type when known.",
+      "properties": {
+        "format": {
+          "type": "string"
+        },
+        "media_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "format"
+      ],
+      "type": "object"
+    },
+    "ParserAvailability": {
+      "description": "Whether a ranked candidate can be interpreted by the active registry.",
+      "enum": [
+        "available",
+        "unavailable",
+        "unregistered"
+      ],
+      "type": "string"
+    },
+    "RawContentIdentity": {
+      "description": "SHA-256 of exactly the original input bytes, without a prefix or suffix.",
+      "properties": {
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "byte_length",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "SchemaVersion": {
+      "type": "string"
+    }
+  },
+  "description": "Complete singular or compound content identity retained by an envelope.",
+  "properties": {
+    "aggregate": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/AggregateContentIdentity"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "canonical_payload": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/CanonicalPayloadIdentity"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "decoded": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/DecodedContentIdentity"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "detection_candidates": {
+      "default": [],
+      "items": {
+        "$ref": "#/definitions/DetectionCandidate"
+      },
+      "type": "array"
+    },
+    "format": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/FormatIdentity"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "raw": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/RawContentIdentity"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "title": "ContentIdentity",
+  "type": "object"
+}

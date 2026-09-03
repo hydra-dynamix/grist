@@ -1,0 +1,8 @@
+schema_version: grist/graph-document/v1
+directed: true
+attrs: &shared_attrs
+  reviewed: true
+nodes:
+  - id: node-a
+    attrs: *shared_attrs
+edges: []

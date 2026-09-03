@@ -1,0 +1,229 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "PackageByteRange": {
+      "properties": {
+        "byte_end": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "byte_start": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "byte_end",
+        "byte_start"
+      ],
+      "type": "object"
+    },
+    "ReconstructionDifference": {
+      "properties": {
+        "affected_node_ids": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "affected_package_parts": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "$ref": "#/definitions/ReconstructionDifferenceKind"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "message"
+      ],
+      "type": "object"
+    },
+    "ReconstructionDifferenceKind": {
+      "enum": [
+        "content",
+        "structure",
+        "formatting",
+        "metadata",
+        "ordering",
+        "packaging"
+      ],
+      "type": "string"
+    },
+    "ReconstructionFidelity": {
+      "enum": [
+        "lossy",
+        "semantic_equivalent",
+        "package_equivalent",
+        "byte_identical"
+      ],
+      "type": "string"
+    },
+    "ReconstructionFidelityReport": {
+      "properties": {
+        "achieved_fidelity": {
+          "$ref": "#/definitions/ReconstructionFidelity"
+        },
+        "differences": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/ReconstructionDifference"
+          },
+          "type": "array"
+        },
+        "fixture_evidence": {
+          "items": {
+            "$ref": "#/definitions/ReconstructionFixtureEvidence"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "format": {
+          "type": "string"
+        },
+        "implementation": {
+          "type": "string"
+        },
+        "implementation_version": {
+          "type": "string"
+        },
+        "media_type": {
+          "type": "string"
+        },
+        "package_profile": {
+          "type": "string"
+        },
+        "requested_fidelity": {
+          "$ref": "#/definitions/ReconstructionFidelity"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "verification": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "achieved_fidelity",
+        "fixture_evidence",
+        "format",
+        "implementation",
+        "implementation_version",
+        "media_type",
+        "package_profile",
+        "requested_fidelity",
+        "schema_version",
+        "verification"
+      ],
+      "type": "object"
+    },
+    "ReconstructionFixtureEvidence": {
+      "properties": {
+        "expected_package_sha256": {
+          "type": "string"
+        },
+        "fixture_id": {
+          "type": "string"
+        },
+        "input_sha256": {
+          "type": "string"
+        },
+        "verified_fidelity": {
+          "$ref": "#/definitions/ReconstructionFidelity"
+        }
+      },
+      "required": [
+        "expected_package_sha256",
+        "fixture_id",
+        "input_sha256",
+        "verified_fidelity"
+      ],
+      "type": "object"
+    },
+    "ReconstructionSourceMapEntry": {
+      "properties": {
+        "generated": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PackageByteRange"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "package_part": {
+          "type": "string"
+        },
+        "source_node_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "package_part",
+        "source_node_ids"
+      ],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "fidelity_report": {
+      "$ref": "#/definitions/ReconstructionFidelityReport"
+    },
+    "format": {
+      "type": "string"
+    },
+    "media_type": {
+      "type": "string"
+    },
+    "package_bytes": {
+      "items": {
+        "format": "uint8",
+        "minimum": 0.0,
+        "type": "integer"
+      },
+      "type": "array"
+    },
+    "package_profile": {
+      "type": "string"
+    },
+    "package_sha256": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "source_map": {
+      "default": [],
+      "items": {
+        "$ref": "#/definitions/ReconstructionSourceMapEntry"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "fidelity_report",
+    "format",
+    "media_type",
+    "package_bytes",
+    "package_profile",
+    "package_sha256",
+    "schema_version"
+  ],
+  "title": "ReconstructionResult",
+  "type": "object"
+}

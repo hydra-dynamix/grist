@@ -42,7 +42,9 @@ pub enum SummaryProfile {
     DynamicEventDataset,
 }
 
-#[derive(Debug, Clone, Default)]
+#[cfg_attr(feature = "schemas", derive(JsonSchema))]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[serde(default, deny_unknown_fields)]
 pub struct SummaryOptions {
     pub profile: Option<SummaryProfile>,
     pub source_diagnostics: Vec<Diagnostic>,
@@ -81,7 +83,7 @@ pub fn summarize_serialization_payload(
             ));
             RenderedSummary {
                 schema_version: RENDERED_SUMMARY_V1.to_string(),
-                source_schema_version: SchemaVersion::SERIALIZATION_V1.to_string(),
+                source_schema_version: SchemaVersion::STRUCTURED_TEXT_V2.to_string(),
                 title: "Serialization Summary".into(),
                 profile: profile_name(profile.as_ref()).map(str::to_string),
                 sections: vec![SummarySection {
@@ -148,7 +150,7 @@ fn summarize_generic_json(value: &Value, diagnostics: Vec<Diagnostic>) -> Render
 
     RenderedSummary {
         schema_version: RENDERED_SUMMARY_V1.to_string(),
-        source_schema_version: SchemaVersion::SERIALIZATION_V1.to_string(),
+        source_schema_version: SchemaVersion::STRUCTURED_TEXT_V2.to_string(),
         title: infer_title(value).unwrap_or_else(|| "Serialization Summary".into()),
         profile: None,
         sections,
@@ -594,6 +596,7 @@ impl ValueStats {
     }
 }
 
+#[cfg(feature = "serialization")]
 fn profile_name(profile: Option<&SummaryProfile>) -> Option<&'static str> {
     match profile {
         Some(SummaryProfile::DynamicEventDataset) => Some("dynamic-event-dataset"),

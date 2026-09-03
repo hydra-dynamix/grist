@@ -1,0 +1,960 @@
+{
+  "schema_version": "grist/fixture-corpus-manifest/v1",
+  "policy": {
+    "required_classes": [
+      "minimal_valid",
+      "representative_real_world",
+      "maximum_complexity",
+      "empty",
+      "truncated",
+      "malformed",
+      "adversarial",
+      "encrypted",
+      "oversized",
+      "deeply_nested",
+      "mixed_encoding",
+      "invalid_text",
+      "nested_attachments",
+      "nested_containers",
+      "unsupported_construct",
+      "provider_recording",
+      "malicious_active_content",
+      "downstream_regression"
+    ],
+    "expected_output_policy": "grist/expected-output-policy/v1",
+    "canonicalization": "grist/canonical-json/v1",
+    "checked_in_data_classification": "public",
+    "active_content_execution_allowed": false,
+    "implicit_network_allowed": false
+  },
+  "formats": {
+    "container": {
+      "format": "container",
+      "cases": [
+        {
+          "id": "container-deeply-nested",
+          "classes": [
+            "deeply_nested",
+            "nested_attachments",
+            "nested_containers"
+          ],
+          "input": {
+            "path": "generated/container/deeply-nested.zip",
+            "byte_length": 1108,
+            "sha256": "sha256:2e38788a4f13420ea48992977635d2b6b9f959c6147a0f7a0afc3edcd4182d16",
+            "media_type": "application/zip"
+          },
+          "provenance": {
+            "origin": "synthetic",
+            "source": "fixtures/builders/recipes.v1.json#container-deeply-nested",
+            "license": {
+              "expression": "Apache-2.0",
+              "redistribution": "permitted"
+            }
+          },
+          "handling": {
+            "storage": "checked_in",
+            "data_classification": "public",
+            "inert_only": true,
+            "execution_allowed": false,
+            "network_allowed": false
+          },
+          "builder": {
+            "kind": "nested_container",
+            "command": [
+              "python",
+              "scripts/fixture_corpus.py",
+              "build"
+            ],
+            "generator_version": "grist-fixture-builder/1",
+            "seed": "grist-corpus-v1",
+            "recipe_path": "builders/recipes.v1.json"
+          },
+          "expected": []
+        }
+      ]
+    },
+    "control": {
+      "format": "control",
+      "cases": [
+        {
+          "id": "control-encrypted-sentinel",
+          "classes": [
+            "encrypted"
+          ],
+          "input": {
+            "path": "generated/control/encrypted-sentinel.bin",
+            "byte_length": 33,
+            "sha256": "sha256:dc0944dd6d90a1db9723ed7764cdeced50be861a173a85812a25f75b0d1d08b2",
+            "media_type": "application/octet-stream"
+          },
+          "provenance": {
+            "origin": "synthetic",
+            "source": "fixtures/builders/recipes.v1.json#encrypted-sentinel",
+            "license": {
+              "expression": "Apache-2.0",
+              "redistribution": "permitted"
+            }
+          },
+          "handling": {
+            "storage": "checked_in",
+            "data_classification": "public",
+            "inert_only": true,
+            "execution_allowed": false,
+            "network_allowed": false
+          },
+          "builder": {
+            "kind": "synthetic_bytes",
+            "command": [
+              "python",
+              "scripts/fixture_corpus.py",
+              "build"
+            ],
+            "generator_version": "grist-fixture-builder/1",
+            "seed": "grist-corpus-v1",
+            "recipe_path": "builders/recipes.v1.json"
+          },
+          "expected": []
+        }
+      ]
+    },
+    "html": {
+      "format": "html",
+      "cases": [
+        {
+          "id": "html-maximum-complexity",
+          "classes": ["minimal_valid", "representative_real_world", "maximum_complexity", "unsupported_construct"],
+          "input": {
+            "path": "generated/html/maximum-complexity.html",
+            "byte_length": 884,
+            "sha256": "sha256:2db228d9b9c6649f7796c5021799904fa130fd1599ceea62024e68fd02be122a",
+            "media_type": "text/html"
+          },
+          "provenance": {
+            "origin": "synthetic",
+            "source": "fixtures/builders/recipes.v1.json#html-maximum-complexity",
+            "license": {"expression": "Apache-2.0", "redistribution": "permitted"}
+          },
+          "handling": {
+            "storage": "checked_in",
+            "data_classification": "public",
+            "inert_only": true,
+            "execution_allowed": false,
+            "network_allowed": false
+          },
+          "builder": {
+            "kind": "maximum_complexity",
+            "command": ["python", "scripts/fixture_corpus.py", "build"],
+            "generator_version": "grist-fixture-builder/1",
+            "seed": "grist-corpus-v1",
+            "recipe_path": "builders/recipes.v1.json"
+          },
+          "expected": []
+        },
+        {
+          "id": "html-malformed-adversarial",
+          "classes": ["malformed", "truncated", "adversarial", "malicious_active_content"],
+          "input": {
+            "path": "generated/html/malformed-adversarial.html",
+            "byte_length": 265,
+            "sha256": "sha256:eb2829b2e47cc79e6ba0bffbf9bd3c68f023caaee04d077c4c3a7dafb88debf8",
+            "media_type": "text/html"
+          },
+          "provenance": {
+            "origin": "synthetic",
+            "source": "fixtures/builders/recipes.v1.json#html-malformed-adversarial",
+            "license": {"expression": "Apache-2.0", "redistribution": "permitted"}
+          },
+          "handling": {
+            "storage": "checked_in",
+            "data_classification": "public",
+            "inert_only": true,
+            "execution_allowed": false,
+            "network_allowed": false
+          },
+          "builder": {
+            "kind": "synthetic_bytes",
+            "command": ["python", "scripts/fixture_corpus.py", "build"],
+            "generator_version": "grist-fixture-builder/1",
+            "seed": "grist-corpus-v1",
+            "recipe_path": "builders/recipes.v1.json"
+          },
+          "expected": []
+        },
+        {
+          "id": "html-downstream-regression",
+          "classes": ["downstream_regression", "mixed_encoding"],
+          "input": {
+            "path": "generated/html/downstream-regression.xhtml",
+            "byte_length": 263,
+            "sha256": "sha256:46825e020d53bf0cc7f841175aca7aa8ba47d32eb7a1912ff122c7183a370f30",
+            "media_type": "application/xhtml+xml"
+          },
+          "provenance": {
+            "origin": "synthetic",
+            "source": "fixtures/builders/recipes.v1.json#html-downstream-regression",
+            "license": {"expression": "Apache-2.0", "redistribution": "permitted"}
+          },
+          "handling": {
+            "storage": "checked_in",
+            "data_classification": "public",
+            "inert_only": true,
+            "execution_allowed": false,
+            "network_allowed": false
+          },
+          "builder": {
+            "kind": "synthetic_bytes",
+            "command": ["python", "scripts/fixture_corpus.py", "build"],
+            "generator_version": "grist-fixture-builder/1",
+            "seed": "grist-corpus-v1",
+            "recipe_path": "builders/recipes.v1.json"
+          },
+          "expected": []
+        },
+        {
+          "id": "html-malicious-active-content",
+          "classes": [
+            "adversarial",
+            "malicious_active_content"
+          ],
+          "input": {
+            "path": "generated/html/malicious-active-content.html",
+            "byte_length": 276,
+            "sha256": "sha256:c90348f7aef168aa0d8346640d9901f9eb401b7832ab440681c086f74fec9592",
+            "media_type": "text/html"
+          },
+          "provenance": {
+            "origin": "malicious",
+            "source": "fixtures/builders/recipes.v1.json#malicious-active-content",
+            "license": {
+              "expression": "Apache-2.0",
+              "redistribution": "permitted"
+            }
+          },
+          "handling": {
+            "storage": "checked_in",
+            "data_classification": "public",
+            "inert_only": true,
+            "execution_allowed": false,
+            "network_allowed": false
+          },
+          "builder": {
+            "kind": "synthetic_bytes",
+            "command": [
+              "python",
+              "scripts/fixture_corpus.py",
+              "build"
+            ],
+            "generator_version": "grist-fixture-builder/1",
+            "seed": "grist-corpus-v1",
+            "recipe_path": "builders/recipes.v1.json"
+          },
+          "expected": []
+        }
+      ]
+    },
+    "xml": {
+      "format": "xml",
+      "cases": [
+        {
+          "id": "xml-maximum-complexity",
+          "classes": ["minimal_valid", "representative_real_world", "maximum_complexity", "unsupported_construct"],
+          "input": {"path": "generated/xml/maximum-complexity.nxml", "byte_length": 1017, "sha256": "sha256:9ce6eb1f5ac55e6b466d8483d09b5ac939cfbb17bfbd8b02df63ee11ba7610e0", "media_type": "application/jats+xml"},
+          "provenance": {"origin": "synthetic", "source": "fixtures/builders/recipes.v1.json#xml-maximum-complexity", "license": {"expression": "Apache-2.0", "redistribution": "permitted"}},
+          "handling": {"storage": "checked_in", "data_classification": "public", "inert_only": true, "execution_allowed": false, "network_allowed": false},
+          "builder": {"kind": "maximum_complexity", "command": ["python", "scripts/fixture_corpus.py", "build"], "generator_version": "grist-fixture-builder/1", "seed": "grist-corpus-v1", "recipe_path": "builders/recipes.v1.json"},
+          "expected": []
+        },
+        {
+          "id": "xml-malformed-adversarial",
+          "classes": ["malformed", "truncated", "adversarial", "malicious_active_content"],
+          "input": {"path": "generated/xml/malformed-adversarial.xml", "byte_length": 406, "sha256": "sha256:52dea06d7e666ccd7fbe14319a76134ee2e94f7fdf81f284ff9a44e655adc42a", "media_type": "application/xml"},
+          "provenance": {"origin": "malicious", "source": "fixtures/builders/recipes.v1.json#xml-malformed-adversarial", "license": {"expression": "Apache-2.0", "redistribution": "permitted"}},
+          "handling": {"storage": "checked_in", "data_classification": "public", "inert_only": true, "execution_allowed": false, "network_allowed": false},
+          "builder": {"kind": "synthetic_bytes", "command": ["python", "scripts/fixture_corpus.py", "build"], "generator_version": "grist-fixture-builder/1", "seed": "grist-corpus-v1", "recipe_path": "builders/recipes.v1.json"},
+          "expected": []
+        },
+        {
+          "id": "xml-downstream-regression",
+          "classes": ["downstream_regression"],
+          "input": {"path": "generated/xml/downstream-regression.xml", "byte_length": 201, "sha256": "sha256:9b0089d252174024528c82126e68268f34cd1e739821a973590e07b5a3f92ee1", "media_type": "application/xml"},
+          "provenance": {"origin": "synthetic", "source": "fixtures/builders/recipes.v1.json#xml-downstream-regression", "license": {"expression": "Apache-2.0", "redistribution": "permitted"}},
+          "handling": {"storage": "checked_in", "data_classification": "public", "inert_only": true, "execution_allowed": false, "network_allowed": false},
+          "builder": {"kind": "synthetic_bytes", "command": ["python", "scripts/fixture_corpus.py", "build"], "generator_version": "grist-fixture-builder/1", "seed": "grist-corpus-v1", "recipe_path": "builders/recipes.v1.json"},
+          "expected": []
+        }
+      ]
+    },    "provider": {
+      "format": "provider",
+      "cases": [
+        {
+          "id": "provider-ocr-baseline",
+          "classes": [
+            "provider_recording"
+          ],
+          "input": {
+            "path": "generated/provider/ocr-baseline.v1.json",
+            "byte_length": 1138,
+            "sha256": "sha256:1588ec18a4b9dac09258782549703f29d7fcf8a10636dd43b17c60aacddce3f0",
+            "media_type": "application/json"
+          },
+          "provenance": {
+            "origin": "provider_recording",
+            "source": "sanitized synthetic OCR contract recording",
+            "license": {
+              "expression": "Apache-2.0",
+              "redistribution": "permitted"
+            }
+          },
+          "handling": {
+            "storage": "checked_in",
+            "data_classification": "public",
+            "inert_only": true,
+            "execution_allowed": false,
+            "network_allowed": false
+          },
+          "builder": {
+            "kind": "provider_recording",
+            "command": [
+              "python",
+              "scripts/fixture_corpus.py",
+              "build"
+            ],
+            "generator_version": "grist-fixture-builder/1",
+            "seed": "grist-corpus-v1",
+            "recipe_path": "builders/recipes.v1.json"
+          },
+          "expected": []
+        },
+        {
+          "id": "provider-transcription-baseline",
+          "classes": [
+            "provider_recording"
+          ],
+          "input": {
+            "path": "generated/provider/transcription-baseline.v1.json",
+            "byte_length": 1116,
+            "sha256": "sha256:c8ef9c1b19a421003518efe314cf99a335ceef6807847dd1bb954310fbc16b71",
+            "media_type": "application/json"
+          },
+          "provenance": {
+            "origin": "provider_recording",
+            "source": "sanitized synthetic transcription contract recording",
+            "license": {
+              "expression": "Apache-2.0",
+              "redistribution": "permitted"
+            }
+          },
+          "handling": {
+            "storage": "checked_in",
+            "data_classification": "public",
+            "inert_only": true,
+            "execution_allowed": false,
+            "network_allowed": false
+          },
+          "builder": {
+            "kind": "provider_recording",
+            "command": [
+              "python",
+              "scripts/fixture_corpus.py",
+              "build"
+            ],
+            "generator_version": "grist-fixture-builder/1",
+            "seed": "grist-corpus-v1",
+            "recipe_path": "builders/recipes.v1.json"
+          },
+          "expected": []
+        }
+      ]
+    },
+    "structured-text": {
+      "format": "structured-text",
+      "cases": [
+        {
+          "id": "structured-text-truncated-json",
+          "classes": [
+            "truncated",
+            "malformed"
+          ],
+          "input": {
+            "path": "generated/structured/truncated.json",
+            "byte_length": 34,
+            "sha256": "sha256:7dd4db99ba4ba27b5f7e3c7badc79407e7be33ecd6b6eba2fc2ad83ef5a1ebbf",
+            "media_type": "application/json"
+          },
+          "provenance": {
+            "origin": "synthetic",
+            "source": "fixtures/builders/recipes.v1.json#truncated-json",
+            "license": {
+              "expression": "Apache-2.0",
+              "redistribution": "permitted"
+            }
+          },
+          "handling": {
+            "storage": "checked_in",
+            "data_classification": "public",
+            "inert_only": true,
+            "execution_allowed": false,
+            "network_allowed": false
+          },
+          "builder": {
+            "kind": "synthetic_bytes",
+            "command": [
+              "python",
+              "scripts/fixture_corpus.py",
+              "build"
+            ],
+            "generator_version": "grist-fixture-builder/1",
+            "seed": "grist-corpus-v1",
+            "recipe_path": "builders/recipes.v1.json"
+          },
+          "expected": []
+        }
+      ]
+    },
+    "text": {
+      "format": "text",
+      "cases": [
+        {
+          "id": "text-plain-universal",
+          "classes": [
+            "minimal_valid",
+            "representative_real_world",
+            "adversarial",
+            "unsupported_construct",
+            "malicious_active_content",
+            "downstream_regression"
+          ],
+          "input": {
+            "path": "generated/text/plain-universal.txt",
+            "byte_length": 141,
+            "sha256": "sha256:920c96cb391853027c761d970796abd8ad1d2931fe16149e1e7623a21703a115",
+            "media_type": "text/plain"
+          },
+          "provenance": {
+            "origin": "synthetic",
+            "source": "run-39 format-plain-text universal contract fixture",
+            "license": {
+              "expression": "Apache-2.0",
+              "redistribution": "permitted"
+            }
+          },
+          "handling": {
+            "storage": "checked_in",
+            "data_classification": "public",
+            "inert_only": true,
+            "execution_allowed": false,
+            "network_allowed": false
+          },
+          "expected": []
+        },
+        {
+          "id": "text-mixed-invalid",
+          "classes": [
+            "mixed_encoding",
+            "invalid_text",
+            "malformed"
+          ],
+          "input": {
+            "path": "generated/text/mixed-invalid.bin",
+            "byte_length": 42,
+            "sha256": "sha256:50f14fd159520bd178b5e0f6c70dbba8c636e9f0617724309a5f3d2c50eb3550",
+            "media_type": "application/octet-stream"
+          },
+          "provenance": {
+            "origin": "synthetic",
+            "source": "fixtures/builders/recipes.v1.json#mixed-invalid",
+            "license": {
+              "expression": "Apache-2.0",
+              "redistribution": "permitted"
+            }
+          },
+          "handling": {
+            "storage": "checked_in",
+            "data_classification": "public",
+            "inert_only": true,
+            "execution_allowed": false,
+            "network_allowed": false
+          },
+          "builder": {
+            "kind": "synthetic_bytes",
+            "command": [
+              "python",
+              "scripts/fixture_corpus.py",
+              "build"
+            ],
+            "generator_version": "grist-fixture-builder/1",
+            "seed": "grist-corpus-v1",
+            "recipe_path": "builders/recipes.v1.json"
+          },
+          "expected": []
+        },
+        {
+          "id": "text-oversized",
+          "classes": [
+            "oversized"
+          ],
+          "input": {
+            "path": "generated/text/oversized.txt",
+            "byte_length": 66560,
+            "sha256": "sha256:e7f250420f3bde52f7f8e95c87d5781e53f74d8cd69a5d8afdf3de1cb263aa4a",
+            "media_type": "text/plain"
+          },
+          "provenance": {
+            "origin": "synthetic",
+            "source": "fixtures/builders/recipes.v1.json#oversized",
+            "license": {
+              "expression": "Apache-2.0",
+              "redistribution": "permitted"
+            }
+          },
+          "handling": {
+            "storage": "checked_in",
+            "data_classification": "public",
+            "inert_only": true,
+            "execution_allowed": false,
+            "network_allowed": false
+          },
+          "builder": {
+            "kind": "synthetic_bytes",
+            "command": [
+              "python",
+              "scripts/fixture_corpus.py",
+              "build"
+            ],
+            "generator_version": "grist-fixture-builder/1",
+            "seed": "grist-corpus-v1",
+            "recipe_path": "builders/recipes.v1.json"
+          },
+          "expected": []
+        }
+      ]
+    },
+    "markdown": {
+      "format": "markdown",
+      "cases": [
+        {
+          "id": "markdown-maximum-complexity",
+          "classes": [
+            "minimal_valid",
+            "representative_real_world",
+            "maximum_complexity",
+            "unsupported_construct"
+          ],
+          "input": {
+            "path": "generated/markdown/maximum-complexity.md",
+            "byte_length": 491,
+            "sha256": "sha256:4694d8c059d7136b10e15abfb4dd308b9bb644b48d686adf5500e88b30e39bb8",
+            "media_type": "text/markdown"
+          },
+          "provenance": {
+            "origin": "synthetic",
+            "source": "fixtures/builders/recipes.v1.json#markdown-maximum-complexity",
+            "license": {
+              "expression": "Apache-2.0",
+              "redistribution": "permitted"
+            }
+          },
+          "handling": {
+            "storage": "checked_in",
+            "data_classification": "public",
+            "inert_only": true,
+            "execution_allowed": false,
+            "network_allowed": false
+          },
+          "builder": {
+            "kind": "maximum_complexity",
+            "command": [
+              "python",
+              "scripts/fixture_corpus.py",
+              "build"
+            ],
+            "generator_version": "grist-fixture-builder/1",
+            "seed": "grist-corpus-v1",
+            "recipe_path": "builders/recipes.v1.json"
+          },
+          "expected": [
+            {
+              "surface": "fixture-summary",
+              "path": "expected/markdown-maximum-complexity/fixture-summary.json",
+              "schema_version": "grist/fixture-summary/v1",
+              "canonicalization": "grist/canonical-json/v1",
+              "byte_length": 189,
+              "sha256": "sha256:c08a0f0ffdcc2dfe561de1ad72ae4c2d9c52e7cdc8797ef5f987570f73c45c85",
+              "canonical_sha256": "sha256:90e10a83a42dde6ed4e577fb4300b2a29c47fd9bda8f396ac1bed3bea4552aff",
+              "normalization": [
+                {
+                  "kind": "exact"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "markdown-malformed-truncated",
+          "classes": [
+            "malformed",
+            "truncated"
+          ],
+          "input": {
+            "path": "generated/markdown/malformed-truncated.md",
+            "byte_length": 65,
+            "sha256": "sha256:3d0a1eb6c215f289e452c90ec298f3bc232f6fcc79a4afda859377f9fc116ad1",
+            "media_type": "text/markdown"
+          },
+          "provenance": {
+            "origin": "synthetic",
+            "source": "fixtures/builders/recipes.v1.json#markdown-malformed-truncated",
+            "license": {
+              "expression": "Apache-2.0",
+              "redistribution": "permitted"
+            }
+          },
+          "handling": {
+            "storage": "checked_in",
+            "data_classification": "public",
+            "inert_only": true,
+            "execution_allowed": false,
+            "network_allowed": false
+          },
+          "builder": {
+            "kind": "synthetic_bytes",
+            "command": [
+              "python",
+              "scripts/fixture_corpus.py",
+              "build"
+            ],
+            "generator_version": "grist-fixture-builder/1",
+            "seed": "grist-corpus-v1",
+            "recipe_path": "builders/recipes.v1.json"
+          },
+          "expected": []
+        },
+        {
+          "id": "markdown-adversarial-nesting",
+          "classes": [
+            "adversarial",
+            "deeply_nested"
+          ],
+          "input": {
+            "path": "generated/markdown/adversarial-nesting.md",
+            "byte_length": 199,
+            "sha256": "sha256:95133f3db770ae9f5fe7be75cd60944838e24a134cbecd6fe6e4bd9018734ae4",
+            "media_type": "text/markdown"
+          },
+          "provenance": {
+            "origin": "synthetic",
+            "source": "fixtures/builders/recipes.v1.json#markdown-adversarial-nesting",
+            "license": {
+              "expression": "Apache-2.0",
+              "redistribution": "permitted"
+            }
+          },
+          "handling": {
+            "storage": "checked_in",
+            "data_classification": "public",
+            "inert_only": true,
+            "execution_allowed": false,
+            "network_allowed": false
+          },
+          "builder": {
+            "kind": "synthetic_bytes",
+            "command": [
+              "python",
+              "scripts/fixture_corpus.py",
+              "build"
+            ],
+            "generator_version": "grist-fixture-builder/1",
+            "seed": "grist-corpus-v1",
+            "recipe_path": "builders/recipes.v1.json"
+          },
+          "expected": []
+        },
+        {
+          "id": "markdown-malicious-active-content",
+          "classes": [
+            "malicious_active_content"
+          ],
+          "input": {
+            "path": "generated/markdown/malicious-active-content.md",
+            "byte_length": 134,
+            "sha256": "sha256:ce68c9f0c20c33eecce11d95324942f16d284e0bd04d6cec9d8566513d4d2377",
+            "media_type": "text/markdown"
+          },
+          "provenance": {
+            "origin": "synthetic",
+            "source": "fixtures/builders/recipes.v1.json#markdown-malicious-active-content",
+            "license": {
+              "expression": "Apache-2.0",
+              "redistribution": "permitted"
+            }
+          },
+          "handling": {
+            "storage": "checked_in",
+            "data_classification": "public",
+            "inert_only": true,
+            "execution_allowed": false,
+            "network_allowed": false
+          },
+          "builder": {
+            "kind": "synthetic_bytes",
+            "command": [
+              "python",
+              "scripts/fixture_corpus.py",
+              "build"
+            ],
+            "generator_version": "grist-fixture-builder/1",
+            "seed": "grist-corpus-v1",
+            "recipe_path": "builders/recipes.v1.json"
+          },
+          "expected": []
+        },
+        {
+          "id": "markdown-downstream-regression",
+          "classes": [
+            "downstream_regression"
+          ],
+          "input": {
+            "path": "generated/markdown/downstream-regression.md",
+            "byte_length": 111,
+            "sha256": "sha256:54189ce9d6020750fc314ed36b53e742c9c200a6179ae1d6bdcc40107b002800",
+            "media_type": "text/markdown"
+          },
+          "provenance": {
+            "origin": "synthetic",
+            "source": "fixtures/builders/recipes.v1.json#markdown-downstream-regression",
+            "license": {
+              "expression": "Apache-2.0",
+              "redistribution": "permitted"
+            }
+          },
+          "handling": {
+            "storage": "checked_in",
+            "data_classification": "public",
+            "inert_only": true,
+            "execution_allowed": false,
+            "network_allowed": false
+          },
+          "builder": {
+            "kind": "synthetic_bytes",
+            "command": [
+              "python",
+              "scripts/fixture_corpus.py",
+              "build"
+            ],
+            "generator_version": "grist-fixture-builder/1",
+            "seed": "grist-corpus-v1",
+            "recipe_path": "builders/recipes.v1.json"
+          },
+          "expected": []
+        }
+      ]
+    },
+    "restructured-text": {
+      "format": "restructured-text",
+      "cases": [
+        {
+          "id": "restructured-text-maximum-complexity",
+          "classes": [
+            "minimal_valid",
+            "representative_real_world",
+            "maximum_complexity",
+            "unsupported_construct"
+          ],
+          "input": {
+            "path": "generated/restructured_text/maximum-complexity.rst",
+            "byte_length": 594,
+            "sha256": "sha256:48e1415dbe38fed8175785025a4a8a3fb7ade19053c6bd42984bfc8f66671092",
+            "media_type": "text/x-rst"
+          },
+          "provenance": {
+            "origin": "synthetic",
+            "source": "fixtures/builders/recipes.v1.json#restructured-text-maximum-complexity",
+            "license": {
+              "expression": "Apache-2.0",
+              "redistribution": "permitted"
+            }
+          },
+          "handling": {
+            "storage": "checked_in",
+            "data_classification": "public",
+            "inert_only": true,
+            "execution_allowed": false,
+            "network_allowed": false
+          },
+          "builder": {
+            "kind": "maximum_complexity",
+            "command": ["python", "scripts/fixture_corpus.py", "build"],
+            "generator_version": "grist-fixture-builder/1",
+            "seed": "grist-corpus-v1",
+            "recipe_path": "builders/recipes.v1.json"
+          },
+          "expected": []
+        },
+        {
+          "id": "restructured-text-malformed-adversarial",
+          "classes": ["malformed", "truncated", "adversarial", "malicious_active_content"],
+          "input": {
+            "path": "generated/restructured_text/malformed-adversarial.rst",
+            "byte_length": 239,
+            "sha256": "sha256:42996a6d18da2b0a39b0114cb4e646650ee6bdda1efc74319931b0e6d9701bdb",
+            "media_type": "text/x-rst"
+          },
+          "provenance": {
+            "origin": "synthetic",
+            "source": "fixtures/builders/recipes.v1.json#restructured-text-malformed-adversarial",
+            "license": {"expression": "Apache-2.0", "redistribution": "permitted"}
+          },
+          "handling": {
+            "storage": "checked_in",
+            "data_classification": "public",
+            "inert_only": true,
+            "execution_allowed": false,
+            "network_allowed": false
+          },
+          "builder": {
+            "kind": "synthetic_bytes",
+            "command": ["python", "scripts/fixture_corpus.py", "build"],
+            "generator_version": "grist-fixture-builder/1",
+            "seed": "grist-corpus-v1",
+            "recipe_path": "builders/recipes.v1.json"
+          },
+          "expected": []
+        },
+        {
+          "id": "restructured-text-downstream-regression",
+          "classes": ["downstream_regression"],
+          "input": {
+            "path": "generated/restructured_text/downstream-regression.rst",
+            "byte_length": 163,
+            "sha256": "sha256:e3ec68502bbb5b479f7b43bdf1423c9c6674fad6db1b7ddd78eb006a3017a75d",
+            "media_type": "text/x-rst"
+          },
+          "provenance": {
+            "origin": "synthetic",
+            "source": "fixtures/builders/recipes.v1.json#restructured-text-downstream-regression",
+            "license": {"expression": "Apache-2.0", "redistribution": "permitted"}
+          },
+          "handling": {
+            "storage": "checked_in",
+            "data_classification": "public",
+            "inert_only": true,
+            "execution_allowed": false,
+            "network_allowed": false
+          },
+          "builder": {
+            "kind": "synthetic_bytes",
+            "command": ["python", "scripts/fixture_corpus.py", "build"],
+            "generator_version": "grist-fixture-builder/1",
+            "seed": "grist-corpus-v1",
+            "recipe_path": "builders/recipes.v1.json"
+          },
+          "expected": []
+        }
+      ]
+    },
+    "asciidoc": {
+      "format": "asciidoc",
+      "cases": [
+        {
+          "id": "asciidoc-maximum-complexity",
+          "classes": [
+            "minimal_valid",
+            "representative_real_world",
+            "maximum_complexity",
+            "unsupported_construct"
+          ],
+          "input": {
+            "path": "generated/asciidoc/maximum-complexity.adoc",
+            "byte_length": 454,
+            "sha256": "sha256:a8943dcb0b8edac9f8d07e7dfbb34594b666a5b9a30d84cbbf971f7d76af5709",
+            "media_type": "text/asciidoc"
+          },
+          "provenance": {
+            "origin": "synthetic",
+            "source": "fixtures/builders/recipes.v1.json#asciidoc-maximum-complexity",
+            "license": {
+              "expression": "Apache-2.0",
+              "redistribution": "permitted"
+            }
+          },
+          "handling": {
+            "storage": "checked_in",
+            "data_classification": "public",
+            "inert_only": true,
+            "execution_allowed": false,
+            "network_allowed": false
+          },
+          "builder": {
+            "kind": "maximum_complexity",
+            "command": ["python", "scripts/fixture_corpus.py", "build"],
+            "generator_version": "grist-fixture-builder/1",
+            "seed": "grist-corpus-v1",
+            "recipe_path": "builders/recipes.v1.json"
+          },
+          "expected": []
+        },
+        {
+          "id": "asciidoc-malformed-adversarial",
+          "classes": ["malformed", "truncated", "adversarial", "malicious_active_content"],
+          "input": {
+            "path": "generated/asciidoc/malformed-adversarial.adoc",
+            "byte_length": 215,
+            "sha256": "sha256:615617af8da17e3fa59bf7e4f306f6ae066b75c30c149e740997b7efb2137f07",
+            "media_type": "text/asciidoc"
+          },
+          "provenance": {
+            "origin": "synthetic",
+            "source": "fixtures/builders/recipes.v1.json#asciidoc-malformed-adversarial",
+            "license": {"expression": "Apache-2.0", "redistribution": "permitted"}
+          },
+          "handling": {
+            "storage": "checked_in",
+            "data_classification": "public",
+            "inert_only": true,
+            "execution_allowed": false,
+            "network_allowed": false
+          },
+          "builder": {
+            "kind": "synthetic_bytes",
+            "command": ["python", "scripts/fixture_corpus.py", "build"],
+            "generator_version": "grist-fixture-builder/1",
+            "seed": "grist-corpus-v1",
+            "recipe_path": "builders/recipes.v1.json"
+          },
+          "expected": []
+        },
+        {
+          "id": "asciidoc-downstream-regression",
+          "classes": ["downstream_regression"],
+          "input": {
+            "path": "generated/asciidoc/downstream-regression.adoc",
+            "byte_length": 171,
+            "sha256": "sha256:f53f3c9fa650f0e47da9a58c3a460c4d701ea88bcf86b52bed0093fdaac0e317",
+            "media_type": "text/asciidoc"
+          },
+          "provenance": {
+            "origin": "synthetic",
+            "source": "fixtures/builders/recipes.v1.json#asciidoc-downstream-regression",
+            "license": {"expression": "Apache-2.0", "redistribution": "permitted"}
+          },
+          "handling": {
+            "storage": "checked_in",
+            "data_classification": "public",
+            "inert_only": true,
+            "execution_allowed": false,
+            "network_allowed": false
+          },
+          "builder": {
+            "kind": "synthetic_bytes",
+            "command": ["python", "scripts/fixture_corpus.py", "build"],
+            "generator_version": "grist-fixture-builder/1",
+            "seed": "grist-corpus-v1",
+            "recipe_path": "builders/recipes.v1.json"
+          },
+          "expected": []
+        }
+      ]
+    }
+  }
+}

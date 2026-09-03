@@ -1,9 +1,7 @@
 #[cfg(feature = "cli")]
 use clap::{Parser, Subcommand, ValueEnum};
 #[cfg(feature = "cli")]
-use grist::core::{Diagnostic, SourceInfo};
-#[cfg(feature = "cli")]
-use grist::document_graph::ToDocumentGraph;
+use grist::core::{Diagnostic, RequestId, SourceInfo};
 #[cfg(feature = "cli")]
 use grist::ingest::{FileIngestOptions, RepoIngestOptions};
 #[cfg(feature = "cli")]
@@ -26,7 +24,29 @@ struct Cli {
 #[cfg(feature = "cli")]
 #[derive(Subcommand)]
 enum Command {
+    /// Detect one input and retain ranked ambiguity evidence.
+    Detect {
+        /// Input path or `-` for stdin.
+        input: String,
+        /// Filename hint, especially for stdin.
+        #[arg(long)]
+        filename: Option<String>,
+        /// Declared MIME type hint.
+        #[arg(long)]
+        mime: Option<String>,
+        /// Explicit format-kind hint.
+        #[arg(long)]
+        kind: Option<String>,
+        /// Stable caller correlation ID.
+        #[arg(long, default_value = "request-000000")]
+        request_id: String,
+    },
     /// Parse one input into a typed Grist JSON envelope.
+    ///
+    /// Named subcommands expose common formats. Every other enabled registry
+    /// format uses `grist parse <FORMAT> <INPUT>`; run
+    /// `grist parse <FORMAT> --help` for its generic options and
+    /// `grist capabilities` for the compiled format manifest.
     Parse {
         #[command(subcommand)]
         command: ParseCommand,
@@ -36,24 +56,75 @@ enum Command {
         #[command(subcommand)]
         command: IngestCommand,
     },
+    /// Detect, parse, and return one universal inspection envelope.
+    Inspect {
+        /// Input path or `-` for stdin.
+        input: String,
+        /// Filename hint, especially for stdin.
+        #[arg(long)]
+        filename: Option<String>,
+        /// Declared MIME type hint.
+        #[arg(long)]
+        mime: Option<String>,
+        /// Explicit format-kind hint.
+        #[arg(long)]
+        kind: Option<String>,
+        /// Stable caller correlation ID.
+        #[arg(long, default_value = "request-000000")]
+        request_id: String,
+    },
     /// List or emit checked-in public JSON Schema contracts.
     Schema {
         #[command(subcommand)]
         command: SchemaCommand,
     },
     /// Render parsed artifacts into stable inspection JSON such as rendered summaries.
+    ///
+    /// DocumentGraph inputs accept either `grist render graph <INPUT> --to
+    /// <TARGET>` or the shorthand `grist render <INPUT> --to <TARGET>`.
     Render {
         #[command(subcommand)]
         command: RenderCommand,
     },
     /// Validate inputs against stable Grist-supported contracts.
+    ///
+    /// Use `grist validate input <INPUT> --schema <SCHEMA>` or the equivalent
+    /// shorthand `grist validate <INPUT> --schema <SCHEMA>`.
     Validate {
         #[command(subcommand)]
         command: ValidateCommand,
     },
-    /// Convert supported inputs through DocumentGraph and render graph/Markdown/LaTeX.
+    /// Segment a source or DocumentGraph with a versioned options file.
+    Segment {
+        /// Source or graph path, or `-` for stdin.
+        input: String,
+        /// JSON, YAML, or TOML SegmentOptions file.
+        #[arg(long)]
+        config: PathBuf,
+        /// Treat input as an already serialized DocumentGraph.
+        #[arg(long)]
+        graph: bool,
+        /// Filename hint, especially for stdin.
+        #[arg(long)]
+        filename: Option<String>,
+        /// Declared MIME type hint.
+        #[arg(long)]
+        mime: Option<String>,
+        /// Explicit source format hint.
+        #[arg(long)]
+        kind: Option<String>,
+        /// Stable caller correlation ID.
+        #[arg(long, default_value = "request-000000")]
+        request_id: String,
+        /// Emit a documented NDJSON SegmentEvent stream.
+        #[arg(long)]
+        stream: bool,
+    },
+    /// Report the complete compiled feature and capability manifest.
+    Capabilities,
+    /// Parse registry-supported inputs through DocumentGraph and emit graph, Markdown, LaTeX, HTML, or text.
     Transform {
-        /// Positional paths: INPUT [OUTPUT], or OUTPUT when --file supplies INPUT. Input kind is inferred from extension: .md, .tex, .py, .rs, .ts, .tsx, .jsx.
+        /// Positional paths: INPUT [OUTPUT], or OUTPUT when --file supplies INPUT. Input format is selected by the built-in parser registry from extension and content evidence.
         #[arg(value_name = "PATH", num_args = 0..=2)]
         paths: Vec<String>,
         /// Input path as a named flag, equivalent to the positional INPUT.
@@ -62,6 +133,15 @@ enum Command {
         /// Output path. If omitted, output is written to stdout.
         #[arg(short, long, value_name = "OUTPUT")]
         output: Option<PathBuf>,
+        /// Write the normalized text fidelity/source-map manifest to this path.
+        #[arg(long, value_name = "MANIFEST")]
+        manifest: Option<PathBuf>,
+        /// Explicit fidelity policy for normalized text targets.
+        #[arg(long, value_enum, default_value_t = FidelityArg::Strict)]
+        fidelity: FidelityArg,
+        /// Stable correlation ID included in text-output manifests.
+        #[arg(long, default_value = "request-000000")]
+        request_id: String,
         /// Target representation to emit.
         #[arg(long, value_enum)]
         to: TransformTargetArg,
@@ -74,6 +154,28 @@ enum Command {
 #[cfg(feature = "cli")]
 #[derive(Subcommand)]
 enum ParseCommand {
+    /// Detect and parse through the built-in parser registry.
+    Auto {
+        /// Input path or `-` for stdin.
+        input: String,
+        /// Filename hint, especially for stdin.
+        #[arg(long)]
+        filename: Option<String>,
+        /// Declared MIME type hint.
+        #[arg(long)]
+        mime: Option<String>,
+        /// Explicit format-kind hint.
+        #[arg(long)]
+        kind: Option<String>,
+        /// Stable caller correlation ID.
+        #[arg(long, default_value = "request-000000")]
+        request_id: String,
+    },
+    /// Parse plain text through the registry.
+    Text {
+        /// Input path or `-` for stdin.
+        input: String,
+    },
     /// Parse Markdown headings, paragraphs, links, fences, tables, and frontmatter.
     Markdown {
         /// Input path or `-` for stdin.
@@ -96,17 +198,34 @@ enum ParseCommand {
         #[arg(long, value_enum, default_value_t = HtmlModeArg::Auto)]
         mode: HtmlModeArg,
     },
+    /// Parse XML or JATS as inert namespace-aware structure.
+    Xml {
+        /// Input path or `-` for stdin.
+        input: String,
+        /// XML dialect selection.
+        #[arg(long, value_enum, default_value_t = XmlDialectArg::Auto)]
+        dialect: XmlDialectArg,
+    },
     /// Parse CSV data.
+    #[command(alias = "tsv")]
     Csv {
         /// Input path or `-` for stdin.
         input: String,
         /// CSV delimiter.
-        #[arg(long, value_enum, default_value_t = CsvDelimiterArg::Comma)]
+        #[arg(long, value_enum, default_value_t = CsvDelimiterArg::Auto)]
         delimiter: CsvDelimiterArg,
         /// Treat the first row as data instead of headers.
         #[arg(long)]
         no_headers: bool,
     },
+    /// Parse an OOXML workbook without calculating formulas.
+    Xlsx { input: String },
+    /// Parse a macro-enabled OOXML workbook and quarantine VBA projects.
+    Xlsm { input: String },
+    /// Parse an OpenDocument workbook without calculating formulas.
+    Ods { input: String },
+    /// Parse an OpenDocument spreadsheet template without calculating formulas.
+    Ots { input: String },
     /// Parse Rust code with tree-sitter.
     Rust {
         /// Input path or `-` for stdin.
@@ -123,6 +242,18 @@ enum ParseCommand {
         #[arg(long, value_enum, default_value_t = PythonDetailArg::Semantic)]
         detail: PythonDetailArg,
     },
+    /// Parse JavaScript or JSX code with tree-sitter-javascript.
+    #[command(name = "javascript", alias = "js")]
+    JavaScript {
+        /// Input path or `-` for stdin.
+        input: String,
+        /// JavaScript parser dialect.
+        #[arg(long, value_enum, default_value_t = JavaScriptDialectArg::JavaScript)]
+        dialect: JavaScriptDialectArg,
+        /// Semantic/syntax detail level.
+        #[arg(long, value_enum, default_value_t = JavaScriptDetailArg::Semantic)]
+        detail: JavaScriptDetailArg,
+    },
     /// Parse LaTeX documents, preserving unknown commands as raw nodes.
     Latex {
         /// Input path or `-` for stdin.
@@ -130,8 +261,14 @@ enum ParseCommand {
         /// Semantic/syntax detail level.
         #[arg(long, value_enum, default_value_t = LatexDetailArg::Semantic)]
         detail: LatexDetailArg,
+        /// Canonical filesystem boundary for local input/include resolution.
+        #[arg(long = "project-root")]
+        project_roots: Vec<PathBuf>,
+        /// Retain input/include commands as references without opening files.
+        #[arg(long)]
+        no_resolve_includes: bool,
     },
-    /// Parse TypeScript, TSX, or JSX code with tree-sitter.
+    /// Parse TypeScript, JavaScript, TSX, or JSX code with tree-sitter.
     #[command(name = "typescript", alias = "ts")]
     TypeScript {
         /// Input path or `-` for stdin.
@@ -154,6 +291,28 @@ enum ParseCommand {
         #[arg(long)]
         schema: Option<PathBuf>,
     },
+    /// Parse CBOR values or CBOR sequences with exact byte locators.
+    Cbor {
+        /// Input path or stdin marker.
+        input: String,
+    },
+    /// Parse MessagePack objects or concatenated streams with extension retention.
+    #[command(name = "messagepack", alias = "msgpack")]
+    MessagePack {
+        /// Input path or stdin marker.
+        input: String,
+    },
+    /// Parse Protocol Buffers using a serialized FileDescriptorSet.
+    Protobuf {
+        /// Binary message input path or stdin marker.
+        input: String,
+        /// Serialized google.protobuf.FileDescriptorSet path.
+        #[arg(long)]
+        descriptor: PathBuf,
+        /// Fully-qualified message name in the descriptor set.
+        #[arg(long)]
+        message: String,
+    },
     /// Parse model-output text, repair candidate JSON/tool calls, and optionally validate.
     ModelOutput {
         /// Input path or `-` for stdin.
@@ -171,9 +330,18 @@ enum ParseCommand {
         #[arg(long)]
         python_style: bool,
         /// Emit only the selected JSON value instead of the full envelope.
-        #[arg(long)]
+        #[arg(long, conflicts_with = "stream")]
         json_value: bool,
+        /// Emit incremental model-output events as NDJSON.
+        #[arg(long)]
+        stream: bool,
+        /// Maximum bytes retained by the incremental parser.
+        #[arg(long, requires = "stream")]
+        max_buffer_bytes: Option<usize>,
     },
+    /// Route any enabled registry format without adding CLI parser logic.
+    #[command(external_subcommand)]
+    External(Vec<String>),
 }
 
 #[cfg(feature = "cli")]
@@ -186,7 +354,10 @@ enum IngestCommand {
         /// Filename hint for stdin detection.
         #[arg(long)]
         filename: Option<PathBuf>,
-        /// Reserved explicit kind override.
+        /// Declared MIME type hint.
+        #[arg(long)]
+        mime: Option<String>,
+        /// Explicit kind hint.
         #[arg(long)]
         kind: Option<String>,
     },
@@ -207,11 +378,63 @@ enum IngestCommand {
         #[arg(long)]
         external_artifact_dir: Option<PathBuf>,
     },
+    /// Traverse an archive/container through the shared recursion controller.
+    Archive {
+        /// Input path or `-` for stdin.
+        input: String,
+        /// Filename hint, especially for stdin.
+        #[arg(long)]
+        filename: Option<String>,
+        /// Declared MIME type hint.
+        #[arg(long)]
+        mime: Option<String>,
+        /// Explicit container format hint.
+        #[arg(long)]
+        kind: Option<String>,
+        /// Stable caller correlation ID.
+        #[arg(long, default_value = "request-000000")]
+        request_id: String,
+        /// Inventory members without parsing leaf payloads.
+        #[arg(long)]
+        inventory_only: bool,
+    },
+    /// Ingest many inputs in stable caller order.
+    Batch {
+        /// Input paths. At most one may be `-`.
+        #[arg(required = true)]
+        inputs: Vec<String>,
+        /// Explicit parser format or `auto`.
+        #[arg(long, default_value = "auto")]
+        format: String,
+        /// Request IDs in input order. Defaults are deterministic by sequence.
+        #[arg(long = "request-id")]
+        request_ids: Vec<String>,
+        /// Collect the stream into one JSON batch result instead of NDJSON.
+        #[arg(long)]
+        collect: bool,
+    },
 }
 
 #[cfg(feature = "cli")]
 #[derive(Subcommand)]
 enum RenderCommand {
+    /// Render a DocumentGraph with a fidelity report and complete source map.
+    Graph {
+        /// DocumentGraph JSON path or `-` for stdin.
+        input: String,
+        /// Normalized target format.
+        #[arg(long, value_enum)]
+        to: RenderTargetArg,
+        /// Explicit fidelity policy.
+        #[arg(long, value_enum, default_value_t = FidelityArg::Strict)]
+        fidelity: FidelityArg,
+        /// Write raw text here and emit only its manifest to stdout.
+        #[arg(long)]
+        text_output: Option<PathBuf>,
+        /// Stable caller correlation ID for raw-output manifests.
+        #[arg(long, default_value = "request-000000")]
+        request_id: String,
+    },
     /// Parse JSON and emit a structured rendered-summary JSON document.
     #[command(name = "json-summary")]
     JsonSummary {
@@ -239,11 +462,22 @@ enum RenderCommand {
         #[arg(long, value_enum)]
         profile: Option<SummaryProfileArg>,
     },
+    /// Render a DocumentGraph using the normative `render <graph-path> --to` form.
+    #[command(external_subcommand)]
+    External(Vec<String>),
 }
 
 #[cfg(feature = "cli")]
 #[derive(Subcommand)]
 enum ValidateCommand {
+    /// Validate a JSON value against a named or filesystem JSON Schema.
+    Input {
+        /// Input path or `-` for stdin.
+        input: String,
+        /// Registered schema name or schema file path.
+        #[arg(long)]
+        schema: String,
+    },
     /// Parse JSON and validate it against a JSON Schema file.
     Json {
         /// Input path or `-` for stdin.
@@ -252,6 +486,9 @@ enum ValidateCommand {
         #[arg(long)]
         schema: PathBuf,
     },
+    /// Validate using the normative `validate <path> --schema` form.
+    #[command(external_subcommand)]
+    External(Vec<String>),
 }
 
 #[cfg(feature = "cli")]
@@ -273,7 +510,16 @@ enum HtmlModeArg {
 
 #[cfg(feature = "cli")]
 #[derive(Debug, Clone, Copy, ValueEnum)]
+enum XmlDialectArg {
+    Auto,
+    Xml,
+    Jats,
+}
+
+#[cfg(feature = "cli")]
+#[derive(Debug, Clone, Copy, ValueEnum)]
 enum CsvDelimiterArg {
+    Auto,
     Comma,
     Tab,
     Semicolon,
@@ -298,8 +544,24 @@ enum PythonDetailArg {
 
 #[cfg(feature = "cli")]
 #[derive(Debug, Clone, Copy, ValueEnum)]
+enum JavaScriptDialectArg {
+    JavaScript,
+    Jsx,
+}
+
+#[cfg(feature = "cli")]
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum JavaScriptDetailArg {
+    Semantic,
+    SemanticWithSyntax,
+    SyntaxDebug,
+}
+
+#[cfg(feature = "cli")]
+#[derive(Debug, Clone, Copy, ValueEnum)]
 enum TypeScriptDialectArg {
     TypeScript,
+    JavaScript,
     Tsx,
     Jsx,
 }
@@ -331,6 +593,26 @@ enum TransformTargetArg {
     Graph,
     Markdown,
     Latex,
+    Html,
+    Text,
+}
+
+#[cfg(feature = "cli")]
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum RenderTargetArg {
+    Markdown,
+    Latex,
+    Html,
+    Text,
+    Json,
+}
+
+#[cfg(feature = "cli")]
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum FidelityArg {
+    Strict,
+    RawFallback,
+    Lossy,
 }
 
 #[cfg(feature = "cli")]
@@ -348,177 +630,267 @@ enum SchemaCommand {
 #[cfg(feature = "cli")]
 fn main() {
     if let Err(err) = run() {
-        let diagnostic = Diagnostic::error("grist.cli", "cli.error", err.to_string());
-        println!("{}", serde_json::to_string_pretty(&diagnostic).unwrap());
+        // A streaming command has already emitted its exactly-once terminal
+        // NDJSON event. Preserve that terminal as the final stdout record while
+        // still communicating hard failure through the process status.
+        if err.downcast_ref::<ModelOutputStreamExit>().is_none() {
+            let diagnostic = Diagnostic::error("grist.cli", "cli.error", err.to_string());
+            println!("{}", serde_json::to_string_pretty(&diagnostic).unwrap());
+        }
         std::process::exit(1);
     }
 }
 
 #[cfg(feature = "cli")]
+#[derive(Debug)]
+struct ModelOutputStreamExit(grist::core::OperationStatus);
+
+#[cfg(feature = "cli")]
+impl std::fmt::Display for ModelOutputStreamExit {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            formatter,
+            "model-output stream terminated with status {:?}",
+            self.0
+        )
+    }
+}
+
+#[cfg(feature = "cli")]
+impl std::error::Error for ModelOutputStreamExit {}
+
+#[cfg(feature = "cli")]
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
     match cli.command {
+        Command::Detect {
+            input,
+            filename,
+            mime,
+            kind,
+            request_id,
+        } => {
+            let report = grist::cli::detect_input(
+                &input,
+                &input_hints(filename, mime, kind),
+                parse_request_id(request_id)?,
+            )?;
+            print_json(&report)?;
+        }
         Command::Parse { command } => match command {
+            ParseCommand::Auto {
+                input,
+                filename,
+                mime,
+                kind,
+                request_id,
+            } => {
+                let envelope = grist::cli::parse_input(
+                    "auto",
+                    &input,
+                    &input_hints(filename, mime, kind),
+                    parse_request_id(request_id)?,
+                    None,
+                )?;
+                print_json(&envelope)?;
+            }
+            ParseCommand::Text { input } => {
+                print_json(&parse_registry(&input, "text", None)?)?;
+            }
             ParseCommand::Markdown { input } => {
-                let (text, source) = read_text_input(&input, None)?;
-                #[cfg(feature = "markdown")]
-                print_json(&grist::markdown::parse_markdown(&text, source))?;
-                #[cfg(not(feature = "markdown"))]
-                print_json(&Diagnostic::error(
-                    "grist.cli",
-                    "feature.disabled",
-                    "markdown feature is disabled",
-                ))?;
+                print_json(&parse_registry(&input, "markdown", None)?)?;
             }
             ParseCommand::LdgrProjection { input, strict } => {
-                let (text, source) = read_text_input(&input, None)?;
-                #[cfg(feature = "ldgr-projection")]
-                print_json(&grist::ldgr_projection::parse_ldgr_projection(
-                    &text,
-                    source,
-                    grist::ldgr_projection::LdgrProjectionOptions {
-                        strict,
-                        ..Default::default()
-                    },
-                ))?;
-                #[cfg(not(feature = "ldgr-projection"))]
-                print_json(&Diagnostic::error(
-                    "grist.cli",
-                    "feature.disabled",
-                    "ldgr-projection feature is disabled",
-                ))?;
+                let options = grist::ldgr_projection::LdgrProjectionOptions {
+                    strict,
+                    ..Default::default()
+                };
+                print_json(&parse_registry(
+                    &input,
+                    "ldgr_projection",
+                    Some(serde_json::to_value(options)?),
+                )?)?;
             }
             ParseCommand::Html { input, mode } => {
-                let (text, source) = read_text_input(&input, None)?;
-                #[cfg(feature = "html")]
-                print_json(&grist::html::parse_html(
-                    &text,
-                    source,
-                    &grist::html::HtmlOptions { mode: mode.into() },
-                ))?;
-                #[cfg(not(feature = "html"))]
-                print_json(&Diagnostic::error(
-                    "grist.cli",
-                    "feature.disabled",
-                    "html feature is disabled",
-                ))?;
+                let options = grist::html::HtmlOptions {
+                    mode: mode.into(),
+                    ..Default::default()
+                };
+                print_json(&parse_registry(
+                    &input,
+                    "html",
+                    Some(serde_json::to_value(options)?),
+                )?)?;
+            }
+            ParseCommand::Xml { input, dialect } => {
+                let options = grist::xml::XmlOptions {
+                    dialect: dialect.into(),
+                    ..Default::default()
+                };
+                print_json(&parse_registry(
+                    &input,
+                    "xml",
+                    Some(serde_json::to_value(options)?),
+                )?)?;
             }
             ParseCommand::Csv {
                 input,
                 delimiter,
                 no_headers,
             } => {
-                let (text, source) = read_text_input(&input, None)?;
-                #[cfg(feature = "csv")]
-                print_json(&grist::csv::parse_csv(
-                    &text,
-                    source,
-                    &grist::csv::CsvOptions {
-                        delimiter: delimiter.into(),
-                        has_headers: !no_headers,
-                    },
-                ))?;
-                #[cfg(not(feature = "csv"))]
-                print_json(&Diagnostic::error(
-                    "grist.cli",
-                    "feature.disabled",
-                    "csv feature is disabled",
-                ))?;
+                let options = grist::csv::CsvOptions {
+                    delimiter: delimiter.into(),
+                    has_headers: !no_headers,
+                    ..Default::default()
+                };
+                print_json(&parse_registry(
+                    &input,
+                    "csv",
+                    Some(serde_json::to_value(options)?),
+                )?)?;
+            }
+            ParseCommand::Xlsx { input } => {
+                print_json(&parse_registry(&input, "xlsx", None)?)?;
+            }
+            ParseCommand::Xlsm { input } => {
+                print_json(&parse_registry(&input, "xlsm", None)?)?;
+            }
+            ParseCommand::Ods { input } => {
+                print_json(&parse_registry(&input, "ods", None)?)?;
+            }
+            ParseCommand::Ots { input } => {
+                print_json(&parse_registry(&input, "ots", None)?)?;
             }
             ParseCommand::Rust { input, detail } => {
-                let (text, source) = read_text_input(&input, None)?;
-                #[cfg(feature = "rust")]
-                print_json(&grist::rust::parse_rust(
-                    &text,
-                    source,
-                    &grist::rust::RustIngestOptions {
-                        detail: detail.into(),
-                    },
-                ))?;
-                #[cfg(not(feature = "rust"))]
-                print_json(&Diagnostic::error(
-                    "grist.cli",
-                    "feature.disabled",
-                    "rust feature is disabled",
-                ))?;
+                let options = grist::rust::RustIngestOptions {
+                    detail: detail.into(),
+                };
+                print_json(&parse_registry(
+                    &input,
+                    "rust",
+                    Some(serde_json::to_value(options)?),
+                )?)?;
             }
             ParseCommand::Python { input, detail } => {
-                let (text, source) = read_text_input(&input, None)?;
-                #[cfg(feature = "python")]
-                print_json(&grist::python::parse_python(
-                    &text,
-                    source,
-                    &grist::python::PythonIngestOptions {
-                        detail: detail.into(),
-                    },
-                ))?;
-                #[cfg(not(feature = "python"))]
-                print_json(&Diagnostic::error(
-                    "grist.cli",
-                    "feature.disabled",
-                    "python feature is disabled",
-                ))?;
+                let options = grist::python::PythonIngestOptions {
+                    detail: detail.into(),
+                };
+                print_json(&parse_registry(
+                    &input,
+                    "python",
+                    Some(serde_json::to_value(options)?),
+                )?)?;
             }
-            ParseCommand::Latex { input, detail } => {
-                let (text, source) = read_text_input(&input, None)?;
-                #[cfg(feature = "latex")]
-                print_json(&grist::latex::parse_latex(
-                    &text,
-                    source,
-                    &grist::latex::LatexOptions {
-                        detail: detail.into(),
-                    },
-                ))?;
-                #[cfg(not(feature = "latex"))]
-                print_json(&Diagnostic::error(
-                    "grist.cli",
-                    "feature.disabled",
-                    "latex feature is disabled",
-                ))?;
+            ParseCommand::JavaScript {
+                input,
+                dialect,
+                detail,
+            } => {
+                let options = grist::javascript::JavaScriptIngestOptions {
+                    dialect: dialect.into(),
+                    detail: detail.into(),
+                };
+                let format = if options.dialect == grist::javascript::JavaScriptDialect::Jsx {
+                    "jsx"
+                } else {
+                    "javascript"
+                };
+                print_json(&parse_registry(
+                    &input,
+                    format,
+                    Some(serde_json::to_value(options)?),
+                )?)?;
+            }
+            ParseCommand::Latex {
+                input,
+                detail,
+                project_roots,
+                no_resolve_includes,
+            } => {
+                let options = grist::latex::LatexOptions {
+                    detail: detail.into(),
+                    allowed_roots: project_roots,
+                    resolve_includes: !no_resolve_includes,
+                    ..Default::default()
+                };
+                print_json(&parse_registry(
+                    &input,
+                    "latex",
+                    Some(serde_json::to_value(options)?),
+                )?)?;
             }
             ParseCommand::TypeScript {
                 input,
                 dialect,
                 detail,
             } => {
-                let (text, source) = read_text_input(&input, None)?;
-                #[cfg(feature = "typescript")]
-                print_json(&grist::typescript::parse_typescript(
-                    &text,
-                    source,
-                    &grist::typescript::TypeScriptIngestOptions {
-                        dialect: dialect.into(),
-                        detail: detail.into(),
-                    },
-                ))?;
-                #[cfg(not(feature = "typescript"))]
-                print_json(&Diagnostic::error(
-                    "grist.cli",
-                    "feature.disabled",
-                    "typescript feature is disabled",
-                ))?;
+                let options = grist::typescript::TypeScriptIngestOptions {
+                    dialect: dialect.into(),
+                    detail: detail.into(),
+                };
+                print_json(&parse_registry(
+                    &input,
+                    "typescript",
+                    Some(serde_json::to_value(options)?),
+                )?)?;
             }
             ParseCommand::Json {
                 input,
                 format,
                 schema,
             } => {
-                let (text, source) = read_text_input(&input, None)?;
-                #[cfg(feature = "serialization")]
-                print_json(&grist::serialization::parse_serialization_with_options(
-                    &text,
-                    format.into(),
-                    source,
-                    &grist::serialization::SerializationOptions {
-                        schema: load_json_value_optional(schema.as_ref())?,
-                    },
-                ))?;
-                #[cfg(not(feature = "serialization"))]
-                print_json(&Diagnostic::error(
-                    "grist.cli",
-                    "feature.disabled",
-                    "serialization feature is disabled",
-                ))?;
+                let parser_format = match format {
+                    SerializationFormatArg::Json => "json",
+                    SerializationFormatArg::Jsonl => "jsonl",
+                    SerializationFormatArg::Yaml => "yaml",
+                    SerializationFormatArg::Toml => "toml",
+                };
+                let options = grist::serialization::SerializationOptions {
+                    schema: load_json_value_optional(schema.as_ref())?,
+                    ..Default::default()
+                };
+                print_json(&parse_registry(
+                    &input,
+                    parser_format,
+                    Some(serde_json::to_value(options)?),
+                )?)?;
+            }
+            ParseCommand::Cbor { input } => {
+                print_json(&parse_registry(
+                    &input,
+                    "cbor",
+                    Some(serde_json::to_value(
+                        grist::structured_binary::StructuredBinaryOptions::default(),
+                    )?),
+                )?)?;
+            }
+            ParseCommand::MessagePack { input } => {
+                print_json(&parse_registry(
+                    &input,
+                    "messagepack",
+                    Some(serde_json::to_value(
+                        grist::structured_binary::StructuredBinaryOptions::default(),
+                    )?),
+                )?)?;
+            }
+            ParseCommand::Protobuf {
+                input,
+                descriptor,
+                message,
+            } => {
+                let options = grist::structured_binary::StructuredBinaryOptions {
+                    protobuf: Some(grist::structured_binary::ProtobufDecodeOptions {
+                        descriptor_set: std::fs::read(descriptor)?,
+                        message_name: message,
+                        preserve_unknown_fields: true,
+                    }),
+                    ..Default::default()
+                };
+                print_json(&parse_registry(
+                    &input,
+                    "protobuf",
+                    Some(serde_json::to_value(options)?),
+                )?)?;
             }
             ParseCommand::ModelOutput {
                 input,
@@ -527,56 +899,74 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 strip_think_blocks,
                 python_style,
                 json_value,
+                stream,
+                max_buffer_bytes,
             } => {
-                let (text, source) = read_text_input(&input, None)?;
-                #[cfg(feature = "model-output")]
-                {
-                    let options = grist::model_output::ModelOutputOptions {
-                        schema: load_json_value_optional(schema.as_ref())?,
-                        strip_think_blocks,
-                        parse_python_style_commands: python_style,
-                        aliases: if let Some(rules_path) = rules.as_ref() {
-                            load_alias_rules(rules_path)?
-                        } else {
-                            Default::default()
-                        },
-                        ..Default::default()
-                    };
-                    let report = grist::model_output::parse_model_output(&text, source, &options);
+                let options = grist::model_output::ModelOutputOptions {
+                    schema: load_json_value_optional(schema.as_ref())?,
+                    strip_think_blocks,
+                    parse_python_style_commands: python_style,
+                    aliases: if let Some(rules_path) = rules.as_ref() {
+                        load_alias_rules(rules_path)?
+                    } else {
+                        Default::default()
+                    },
+                    ..Default::default()
+                };
+                if stream {
+                    stream_model_output_cli(&input, options, max_buffer_bytes)?;
+                } else {
+                    let report = parse_registry(
+                        &input,
+                        "model_output",
+                        Some(serde_json::to_value(options)?),
+                    )?;
                     if json_value {
-                        let value = report
+                        let payload = report
                             .payload
-                            .selected_candidate_id
                             .as_ref()
-                            .and_then(|selected_id| {
-                                report
-                                    .payload
-                                    .candidates
-                                    .iter()
-                                    .find(|candidate| candidate.id == *selected_id)
-                            })
-                            .and_then(|candidate| candidate.value.as_ref())
-                            .ok_or_else(|| "no selected model-output JSON value".to_string())?;
-                        print_json(value)?;
+                            .ok_or("model-output operation produced no payload")?;
+                        print_json(selected_model_output_json_value(payload)?)?;
                     } else {
                         print_json(&report)?;
                     }
                 }
-                #[cfg(not(feature = "model-output"))]
-                print_json(&Diagnostic::error(
-                    "grist.cli",
-                    "feature.disabled",
-                    "model-output feature is disabled",
-                ))?;
+            }
+            ParseCommand::External(args) => {
+                if !print_external_parse_help(&args)? {
+                    let (format, input, hints, request_id, options) = parse_external_parse(args)?;
+                    print_json(&grist::cli::parse_input(
+                        &format,
+                        &input,
+                        &hints,
+                        parse_request_id(request_id)?,
+                        options,
+                    )?)?;
+                }
             }
         },
         Command::Ingest { command } => match command {
             IngestCommand::File {
                 input,
                 filename,
-                kind: _,
+                mime,
+                kind,
             } => {
-                if input == "-" {
+                if mime.is_some() || kind.is_some() {
+                    let envelope = grist::cli::parse_input(
+                        "auto",
+                        &input,
+                        &input_hints(
+                            filename.map(|path| path.to_string_lossy().to_string()),
+                            mime,
+                            kind,
+                        ),
+                        RequestId::new("request-000000")?,
+                        None,
+                    )?
+                    .with_operation(grist::core::OperationKind::Ingest);
+                    print_json(&envelope)?;
+                } else if input == "-" {
                     let mut bytes = Vec::new();
                     std::io::stdin().read_to_end(&mut bytes)?;
                     let source = SourceInfo::stdin(
@@ -614,7 +1004,112 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 };
                 print_json(&grist::ingest::ingest_repo(&path, &options)?)?;
             }
+            IngestCommand::Archive {
+                input,
+                filename,
+                mime,
+                kind,
+                request_id,
+                inventory_only,
+            } => {
+                let hints = input_hints(filename, mime, kind.clone());
+                let (bytes, source) = grist::cli::read_input_bytes(&input, &hints)?;
+                let container_format = kind
+                    .or_else(|| {
+                        infer_archive_format(
+                            &source.display_name,
+                            source.declared_mime_type.as_deref(),
+                        )
+                    })
+                    .ok_or(
+                        "archive ingestion requires --kind or a recognized filename extension",
+                    )?;
+                let ingestor = grist::ingest::Ingestor::builtin()?;
+                let decoders = grist::archive::builtin_decoder_registry()?;
+                let mode = if inventory_only {
+                    grist::container::ContainerArtifactMode::InventoryOnly
+                } else {
+                    grist::container::ContainerArtifactMode::InlinePayload
+                };
+                let request = grist::container::ContainerParseRequest::new(
+                    parse_request_id(request_id)?,
+                    bytes,
+                    source,
+                    container_format,
+                    grist::container::ContainerParseOptions::new(mode),
+                    grist::cli::default_budget(),
+                );
+                let traversal = grist::container::ContainerRecursor::new(&ingestor, &decoders)
+                    .parse(request, None)?;
+                print_json(&traversal)?;
+            }
+            IngestCommand::Batch {
+                inputs,
+                format,
+                request_ids,
+                collect,
+            } => {
+                if inputs.iter().filter(|input| input.as_str() == "-").count() > 1 {
+                    return Err("batch input may contain stdin at most once".into());
+                }
+                if !request_ids.is_empty() && request_ids.len() != inputs.len() {
+                    return Err("--request-id count must match the number of inputs".into());
+                }
+                let mut requests = Vec::with_capacity(inputs.len());
+                for (sequence, input) in inputs.into_iter().enumerate() {
+                    let request_id = request_ids
+                        .get(sequence)
+                        .cloned()
+                        .unwrap_or_else(|| format!("request-{sequence:06}"));
+                    let (bytes, source) =
+                        grist::cli::read_input_bytes(&input, &grist::cli::InputHints::default())?;
+                    let mut request = grist::core::ParseRequest::new(
+                        parse_request_id(request_id)?,
+                        grist::core::Input::bytes(bytes),
+                        source,
+                        grist::cli::default_budget(),
+                        grist::core::ProviderSet::none(),
+                    );
+                    if format != "auto" {
+                        request = request
+                            .with_format_hint(grist::core::FormatHint::exact(format.clone()));
+                    }
+                    requests.push(request);
+                }
+                let ingestor = grist::ingest::Ingestor::builtin()?;
+                let cancellation = grist::core::CancellationToken::new();
+                if collect {
+                    print_json(&ingestor.batch(
+                        requests,
+                        grist::cli::default_budget(),
+                        cancellation,
+                    )?)?;
+                } else {
+                    for event in
+                        ingestor.stream(requests, grist::cli::default_budget(), cancellation)?
+                    {
+                        print_json(&event)?;
+                    }
+                }
+            }
         },
+        Command::Inspect {
+            input,
+            filename,
+            mime,
+            kind,
+            request_id,
+        } => {
+            let envelope = grist::cli::parse_input(
+                "auto",
+                &input,
+                &input_hints(filename, mime, kind),
+                parse_request_id(request_id)?,
+                None,
+            )?
+            .with_operation(grist::core::OperationKind::Ingest);
+            print_json(&envelope)?;
+        }
         Command::Schema { command } => match command {
             SchemaCommand::List => print_json(&grist::schema::list_schemas())?,
             SchemaCommand::Emit { name } => {
@@ -628,6 +1123,13 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
         },
         Command::Render { command } => match command {
+            RenderCommand::Graph {
+                input,
+                to,
+                fidelity,
+                text_output,
+                request_id,
+            } => render_graph_cli(input, to, fidelity, text_output, request_id)?,
             RenderCommand::JsonSummary {
                 input,
                 schema,
@@ -651,8 +1153,13 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     render_serialization_summary(&input, format, schema.as_ref(), profile)?;
                 print_json(&summary)?;
             }
+            RenderCommand::External(args) => {
+                let (input, to, fidelity, text_output, request_id) = parse_external_render(args)?;
+                render_graph_cli(input, to, fidelity, text_output, request_id)?;
+            }
         },
         Command::Validate { command } => match command {
+            ValidateCommand::Input { input, schema } => validate_cli(&input, &schema)?,
             ValidateCommand::Json { input, schema } => {
                 let (text, source) = read_text_input(&input, None)?;
                 print_json(&grist::serialization::parse_serialization_with_options(
@@ -661,37 +1168,136 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     source,
                     &grist::serialization::SerializationOptions {
                         schema: Some(load_json_value(&schema)?),
+                        ..Default::default()
                     },
                 ))?;
             }
+            ValidateCommand::External(args) => {
+                let (input, schema) = parse_external_validate(args)?;
+                validate_cli(&input, &schema)?;
+            }
         },
+        Command::Segment {
+            input,
+            config,
+            graph,
+            filename,
+            mime,
+            kind,
+            request_id,
+            stream,
+        } => {
+            let request_id = parse_request_id(request_id)?;
+            let hints = input_hints(filename, mime, kind);
+            let (graph_value, source_identity, source) = if graph {
+                grist::cli::graph_input(&input, &hints)?
+            } else {
+                parse_source_graph(&input, &hints, request_id.clone())?
+            };
+            let options: grist::segment::SegmentOptions = load_typed_file(&config)?;
+            let document_identity = grist::core::ContentIdentity::default()
+                .with_canonical_payload(graph_value.schema_version.as_str(), &graph_value)?;
+            let collection = grist::segment::segment_document_graph(
+                &graph_value,
+                &source_identity,
+                &document_identity,
+                &options,
+                None,
+            )?;
+            if stream {
+                for (sequence, segment) in collection.segments.iter().cloned().enumerate() {
+                    print_json(&grist::segment::SegmentEvent::Segment {
+                        sequence: u64::try_from(sequence).unwrap_or(u64::MAX),
+                        segment: Box::new(segment),
+                    })?;
+                }
+                for diagnostic in &collection.diagnostics {
+                    print_json(&grist::segment::SegmentEvent::Diagnostic {
+                        diagnostic: Box::new(diagnostic.clone()),
+                    })?;
+                }
+                print_json(&grist::segment::SegmentEvent::Terminal {
+                    segment_count: u64::try_from(collection.segments.len()).unwrap_or(u64::MAX),
+                    diagnostics: collection.diagnostics.clone(),
+                })?;
+            } else {
+                let envelope = grist::core::Envelope::complete(
+                    grist::core::OperationKind::Segment,
+                    grist::core::ArtifactKind::SegmentCollection,
+                    source,
+                    grist::core::ParserInfo::new("grist.segment.structural"),
+                    collection.options_digest.clone(),
+                    grist::core::SchemaVersion::SEGMENT_COLLECTION_V1,
+                    collection,
+                )
+                .with_identity(source_identity)
+                .with_canonical_payload_identity()?;
+                print_json(&envelope)?;
+            }
+        }
+        Command::Capabilities => print_json(&grist::cli::capabilities()?)?,
         Command::Transform {
             paths,
             file,
             output,
+            manifest,
+            fidelity,
+            request_id,
             to,
             extract_obligations,
         } => {
             let (input, output_path) = resolve_transform_paths(paths, file, output)?;
-            let mut graph = parse_input_to_document_graph(&input)?;
-            if extract_obligations {
-                grist::document_graph::extract_conditional_obligations(&mut graph);
-            }
+            let graph = parse_input_to_document_graph(&input)?;
+            let operations = if extract_obligations {
+                vec![grist::transform::NormalizedGraphOperation::ExtractConditionalObligations]
+            } else {
+                vec![grist::transform::NormalizedGraphOperation::Identity]
+            };
+            let transformed = grist::transform::transform_document_graph(
+                &graph,
+                &grist::transform::GraphTransformOptions { operations },
+            )?;
+            let transform_result = transformed
+                .payload
+                .as_ref()
+                .ok_or("complete graph transform did not return a payload")?;
             match to {
-                TransformTargetArg::Graph => write_json_output(&graph, output_path.as_ref())?,
-                TransformTargetArg::Markdown => {
-                    let rendered = grist::document_graph::render_markdown(
-                        &graph,
-                        grist::document_graph::TransformOptions::default(),
-                    )?;
-                    write_text_output(&rendered, output_path.as_ref())?;
+                TransformTargetArg::Graph => {
+                    if manifest.is_some() {
+                        return Err("--manifest is only valid for text transform targets".into());
+                    }
+                    write_json_output(&transformed, output_path.as_ref())?;
                 }
-                TransformTargetArg::Latex => {
-                    let rendered = grist::document_graph::render_latex(
-                        &graph,
-                        grist::document_graph::TransformOptions::default(),
+                target => {
+                    let format = match target {
+                        TransformTargetArg::Markdown => grist::render::RenderFormat::Markdown,
+                        TransformTargetArg::Latex => grist::render::RenderFormat::Latex,
+                        TransformTargetArg::Html => grist::render::RenderFormat::Html,
+                        TransformTargetArg::Text => grist::render::RenderFormat::PlainText,
+                        TransformTargetArg::Graph => unreachable!(),
+                    };
+                    let rendered = grist::render::render_document_graph(
+                        &transform_result.graph,
+                        format,
+                        &grist::render::RenderOptions::new(fidelity.into()),
                     )?;
-                    write_text_output(&rendered, output_path.as_ref())?;
+                    write_text_output(&rendered.content, output_path.as_ref())?;
+                    if let Some(manifest_path) = manifest.as_ref() {
+                        let destination = output_path.as_ref().map_or(
+                            grist::cli::OutputDestination::Stdout,
+                            |path| grist::cli::OutputDestination::Path {
+                                path: grist::cli::path_label(path),
+                            },
+                        );
+                        let output_manifest = grist::cli::output_manifest(
+                            parse_request_id(request_id)?,
+                            grist::core::OperationKind::Transform,
+                            destination,
+                            &rendered,
+                            Some(&transform_result.source_map),
+                        );
+                        write_json_output(&output_manifest, Some(manifest_path))?;
+                    }
                 }
             }
         }
@@ -713,10 +1319,15 @@ fn render_serialization_summary(
         source,
         &grist::serialization::SerializationOptions {
             schema: load_json_value_optional(schema)?,
+            ..Default::default()
         },
     );
+    let payload = envelope
+        .payload
+        .as_ref()
+        .ok_or("serialization operation produced no payload")?;
     Ok(grist::summary::summarize_serialization_payload(
-        &envelope.payload,
+        payload,
         envelope.diagnostics,
         profile.map(Into::into),
     ))
@@ -726,61 +1337,333 @@ fn render_serialization_summary(
 fn parse_input_to_document_graph(
     input: &str,
 ) -> Result<grist::document_graph::DocumentGraph, Box<dyn std::error::Error>> {
-    let (text, source) = read_text_input(input, None)?;
-    let extension = if input == "-" {
-        String::new()
-    } else {
-        PathBuf::from(input)
-            .extension()
-            .and_then(|ext| ext.to_str())
-            .unwrap_or_default()
-            .to_ascii_lowercase()
-    };
-    let context = grist::document_graph::DocumentGraphContext::new(format!("graph:{input}"));
-    match extension.as_str() {
-        "md" | "markdown" => Ok(grist::markdown::parse_markdown(&text, source)
-            .payload
-            .to_document_graph(context)?),
-        "tex" | "latex" => Ok(grist::latex::parse_latex(
-            &text,
-            source,
-            &grist::latex::LatexOptions::default(),
-        )
-        .payload
-        .to_document_graph(context)?),
-        "py" | "pyi" => Ok(grist::python::parse_python(
-            &text,
-            source,
-            &grist::python::PythonIngestOptions::default(),
-        )
-        .payload
-        .to_document_graph(context)?),
-        "rs" => Ok(grist::rust::parse_rust(
-            &text,
-            source,
-            &grist::rust::RustIngestOptions::default(),
-        )
-        .payload
-        .to_document_graph(context)?),
-        "ts" | "mts" | "cts" | "tsx" | "jsx" => Ok(grist::typescript::parse_typescript(
-            &text,
-            source,
-            &grist::typescript::TypeScriptIngestOptions {
-                dialect: match extension.as_str() {
-                    "tsx" => grist::typescript::TypeScriptDialect::Tsx,
-                    "jsx" => grist::typescript::TypeScriptDialect::Jsx,
-                    _ => grist::typescript::TypeScriptDialect::TypeScript,
-                },
-                ..Default::default()
-            },
-        )
-        .payload
-        .to_document_graph(context)?),
-        _ => Err(format!(
-            "cannot infer transform source kind for `{input}`; use a supported extension (.md, .tex, .py, .rs, .ts, .tsx, .jsx)"
-        )
-        .into()),
+    let normalized_input = input.replace('\\', "/").to_ascii_lowercase();
+    let graph_filename = normalized_input.ends_with(".graph.json")
+        || normalized_input.ends_with(".graph.yaml")
+        || normalized_input.ends_with(".graph.yml");
+    if graph_filename {
+        return Ok(grist::cli::graph_input(input, &grist::cli::InputHints::default())?.0);
     }
+    let envelope = parse_registry(input, "auto", None)?;
+    grist::cli::project_envelope_to_graph(&envelope, format!("graph:{input}"))
+}
+
+#[cfg(feature = "cli")]
+fn parse_registry(
+    input: &str,
+    format: &str,
+    options: Option<serde_json::Value>,
+) -> Result<grist::core::Envelope<serde_json::Value>, Box<dyn std::error::Error>> {
+    grist::cli::parse_input(
+        format,
+        input,
+        &grist::cli::InputHints::default(),
+        RequestId::new("request-000000")?,
+        options,
+    )
+}
+
+#[cfg(feature = "cli")]
+fn input_hints(
+    filename: Option<String>,
+    media_type: Option<String>,
+    kind: Option<String>,
+) -> grist::cli::InputHints {
+    grist::cli::InputHints {
+        filename,
+        media_type,
+        kind,
+    }
+}
+
+#[cfg(feature = "cli")]
+fn parse_request_id(value: String) -> Result<RequestId, Box<dyn std::error::Error>> {
+    Ok(RequestId::new(value)?)
+}
+
+#[cfg(feature = "cli")]
+fn infer_archive_format(display_name: &str, media_type: Option<&str>) -> Option<String> {
+    let from_media_type = match media_type.map(|value| value.split(';').next().unwrap_or(value)) {
+        Some("application/zip") => Some("zip"),
+        Some("application/x-tar") => Some("tar"),
+        Some("application/gzip" | "application/x-gzip") => Some("gzip"),
+        Some("application/x-bzip2") => Some("bzip2"),
+        Some("application/x-xz") => Some("xz"),
+        Some("application/zstd") => Some("zstd"),
+        Some("application/x-7z-compressed") => Some("7z"),
+        _ => None,
+    };
+    if let Some(format) = from_media_type {
+        return Some(format.to_string());
+    }
+    let lower = display_name.to_ascii_lowercase();
+    [
+        (".tar.gz", "gzip"),
+        (".tgz", "gzip"),
+        (".tar.bz2", "bzip2"),
+        (".tar.xz", "xz"),
+        (".tar.zst", "zstd"),
+        (".zip", "zip"),
+        (".tar", "tar"),
+        (".gz", "gzip"),
+        (".bz2", "bzip2"),
+        (".xz", "xz"),
+        (".zst", "zstd"),
+        (".7z", "7z"),
+    ]
+    .into_iter()
+    .find_map(|(suffix, format)| lower.ends_with(suffix).then(|| format.to_string()))
+}
+
+#[cfg(feature = "cli")]
+fn parse_source_graph(
+    input: &str,
+    hints: &grist::cli::InputHints,
+    request_id: RequestId,
+) -> Result<
+    (
+        grist::document_graph::DocumentGraph,
+        grist::core::ContentIdentity,
+        SourceInfo,
+    ),
+    Box<dyn std::error::Error>,
+> {
+    let envelope = grist::cli::parse_input("auto", input, hints, request_id, None)?;
+    let identity = envelope
+        .identity
+        .clone()
+        .ok_or("parse operation did not retain source identity")?;
+    let source = envelope.source.clone();
+    let graph = grist::cli::project_envelope_to_graph(&envelope, format!("graph:{input}"))?;
+    Ok((graph, identity, source))
+}
+
+#[cfg(feature = "cli")]
+fn load_typed_file<T: serde::de::DeserializeOwned>(
+    path: &PathBuf,
+) -> Result<T, Box<dyn std::error::Error>> {
+    Ok(serde_json::from_value(load_json_value(path)?)?)
+}
+
+#[cfg(feature = "cli")]
+fn render_graph_cli(
+    input: String,
+    to: RenderTargetArg,
+    fidelity: FidelityArg,
+    text_output: Option<PathBuf>,
+    request_id: String,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let (graph, _, _) = grist::cli::graph_input(&input, &grist::cli::InputHints::default())?;
+    let result = grist::render::render_document_graph(
+        &graph,
+        to.into(),
+        &grist::render::RenderOptions::new(fidelity.into()),
+    )?;
+    if let Some(path) = text_output {
+        std::fs::write(&path, &result.content)?;
+        let manifest = grist::cli::output_manifest(
+            parse_request_id(request_id)?,
+            grist::core::OperationKind::Render,
+            grist::cli::OutputDestination::Path {
+                path: grist::cli::path_label(&path),
+            },
+            &result,
+            None,
+        );
+        print_json(&manifest)?;
+    } else {
+        print_json(&result)?;
+    }
+    Ok(())
+}
+
+#[cfg(feature = "cli")]
+type ExternalParseArgs = (
+    String,
+    String,
+    grist::cli::InputHints,
+    String,
+    Option<serde_json::Value>,
+);
+
+#[cfg(feature = "cli")]
+fn print_external_parse_help(args: &[String]) -> Result<bool, Box<dyn std::error::Error>> {
+    let Some(format) = args.first() else {
+        return Ok(false);
+    };
+    if !args[1..]
+        .iter()
+        .any(|argument| argument == "--help" || argument == "-h")
+    {
+        return Ok(false);
+    }
+
+    let registry = grist::registry::builtin_parser_registry()?;
+    let descriptor = match registry.select_format(format) {
+        grist::registry::ParserSelection::Available(descriptor) => descriptor,
+        grist::registry::ParserSelection::Unsupported { format, .. } => {
+            return Err(format!(
+                "unsupported parser format `{format}`; run `grist capabilities` to list compiled formats"
+            )
+            .into());
+        }
+    };
+    let aliases = join_registry_values(&descriptor.format.aliases);
+    let extensions = join_registry_values(&descriptor.format.extensions);
+    let media_types = join_registry_values(&descriptor.format.media_types);
+    println!(
+        "Parse {} through the built-in parser registry\n\nUsage: grist parse {} [OPTIONS] <INPUT>\n\nArguments:\n  <INPUT>  Input path or `-` for stdin\n\nOptions:\n      --filename <FILENAME>      Filename hint, especially for stdin\n      --mime <MIME>              Declared MIME type hint\n      --kind <KIND>              Explicit format-kind hint\n      --request-id <REQUEST_ID>  Stable caller correlation ID [default: request-000000]\n      --options <OPTIONS>        JSON, YAML, or TOML parser-options file\n  -h, --help                     Print help\n\nRegistry:\n  Canonical format: {}\n  Aliases: {}\n  Extensions: {}\n  Media types: {}\n  Payload schema: {} ({})\n  Options schema: {} ({})\n\nRun `grist capabilities` for the complete compiled format manifest.",
+        descriptor.format.display_name,
+        format,
+        descriptor.format.id,
+        aliases,
+        extensions,
+        media_types,
+        descriptor.payload_schema.name,
+        descriptor.payload_schema.version,
+        descriptor.options.schema.name,
+        descriptor.options.schema.version,
+    );
+    Ok(true)
+}
+
+#[cfg(feature = "cli")]
+fn join_registry_values(values: &std::collections::BTreeSet<String>) -> String {
+    if values.is_empty() {
+        "(none)".to_string()
+    } else {
+        values.iter().cloned().collect::<Vec<_>>().join(", ")
+    }
+}
+
+#[cfg(feature = "cli")]
+fn parse_external_parse(
+    args: Vec<String>,
+) -> Result<ExternalParseArgs, Box<dyn std::error::Error>> {
+    let mut values = args.into_iter();
+    let format = values.next().ok_or("parse requires a format")?;
+    let input = values.next().ok_or("parse requires an input")?;
+    let mut hints = grist::cli::InputHints::default();
+    let mut request_id = "request-000000".to_string();
+    let mut options = None;
+    while let Some(argument) = values.next() {
+        let value = values
+            .next()
+            .ok_or_else(|| format!("{argument} requires a value"))?;
+        match argument.as_str() {
+            "--filename" => hints.filename = Some(value),
+            "--mime" => hints.media_type = Some(value),
+            "--kind" => hints.kind = Some(value),
+            "--request-id" => request_id = value,
+            "--options" => options = Some(load_json_value(&PathBuf::from(value))?),
+            _ => return Err(format!("unknown parse option `{argument}`").into()),
+        }
+    }
+    Ok((format, input, hints, request_id, options))
+}
+
+#[cfg(feature = "cli")]
+type ExternalRenderArgs = (
+    String,
+    RenderTargetArg,
+    FidelityArg,
+    Option<PathBuf>,
+    String,
+);
+
+#[cfg(feature = "cli")]
+fn parse_external_render(
+    args: Vec<String>,
+) -> Result<ExternalRenderArgs, Box<dyn std::error::Error>> {
+    let mut values = args.into_iter();
+    let input = values.next().ok_or("render requires a graph input")?;
+    let mut to = None;
+    let mut fidelity = FidelityArg::Strict;
+    let mut text_output = None;
+    let mut request_id = "request-000000".to_string();
+    while let Some(argument) = values.next() {
+        let value = values
+            .next()
+            .ok_or_else(|| format!("{argument} requires a value"))?;
+        match argument.as_str() {
+            "--to" => {
+                to = Some(match value.as_str() {
+                    "markdown" => RenderTargetArg::Markdown,
+                    "latex" => RenderTargetArg::Latex,
+                    "html" => RenderTargetArg::Html,
+                    "text" => RenderTargetArg::Text,
+                    "json" => RenderTargetArg::Json,
+                    _ => return Err(format!("unknown render target `{value}`").into()),
+                });
+            }
+            "--fidelity" => {
+                fidelity = match value.as_str() {
+                    "strict" => FidelityArg::Strict,
+                    "raw-fallback" => FidelityArg::RawFallback,
+                    "lossy" => FidelityArg::Lossy,
+                    _ => return Err(format!("unknown fidelity mode `{value}`").into()),
+                };
+            }
+            "--text-output" => text_output = Some(PathBuf::from(value)),
+            "--request-id" => request_id = value,
+            _ => return Err(format!("unknown render option `{argument}`").into()),
+        }
+    }
+    Ok((
+        input,
+        to.ok_or("render requires --to")?,
+        fidelity,
+        text_output,
+        request_id,
+    ))
+}
+
+#[cfg(feature = "cli")]
+fn validate_cli(input: &str, schema: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let (bytes, source) = grist::cli::read_input_bytes(input, &grist::cli::InputHints::default())?;
+    let value: serde_json::Value = serde_json::from_slice(&bytes)?;
+    let schema_path = PathBuf::from(schema);
+    let report = if schema_path.is_file() {
+        let schema_value = load_json_value(&schema_path)?;
+        let version = schema_value
+            .get("$id")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("external");
+        grist::schema::validate_against_schema(schema, version, &value, &schema_value)?
+    } else {
+        grist::schema::validate_schema(schema, &value)?
+    };
+    let options_digest = grist::core::options_digest(&serde_json::json!({"schema": schema}))?;
+    let envelope = grist::core::Envelope::complete(
+        grist::core::OperationKind::Validate,
+        grist::core::ArtifactKind::SchemaValidation,
+        source,
+        grist::core::ParserInfo::new("grist.schema.validate"),
+        options_digest,
+        grist::core::SchemaVersion::SCHEMA_VALIDATION_V1,
+        report,
+    )
+    .with_identity(grist::core::ContentIdentity::for_raw_bytes(&bytes))
+    .with_canonical_payload_identity()?;
+    print_json(&envelope)?;
+    Ok(())
+}
+
+#[cfg(feature = "cli")]
+fn parse_external_validate(
+    args: Vec<String>,
+) -> Result<(String, String), Box<dyn std::error::Error>> {
+    let mut values = args.into_iter();
+    let input = values.next().ok_or("validate requires an input")?;
+    let flag = values.next().ok_or("validate requires --schema")?;
+    if flag != "--schema" {
+        return Err(format!("unknown validate option `{flag}`").into());
+    }
+    let schema = values.next().ok_or("--schema requires a value")?;
+    if let Some(extra) = values.next() {
+        return Err(format!("unexpected validate argument `{extra}`").into());
+    }
+    Ok((input, schema))
 }
 
 #[cfg(feature = "cli")]
@@ -819,6 +1702,30 @@ impl From<SummaryProfileArg> for grist::summary::SummaryProfile {
 }
 
 #[cfg(feature = "cli")]
+impl From<RenderTargetArg> for grist::render::RenderFormat {
+    fn from(value: RenderTargetArg) -> Self {
+        match value {
+            RenderTargetArg::Markdown => Self::Markdown,
+            RenderTargetArg::Latex => Self::Latex,
+            RenderTargetArg::Html => Self::Html,
+            RenderTargetArg::Text => Self::PlainText,
+            RenderTargetArg::Json => Self::CanonicalJson,
+        }
+    }
+}
+
+#[cfg(feature = "cli")]
+impl From<FidelityArg> for grist::render::FidelityMode {
+    fn from(value: FidelityArg) -> Self {
+        match value {
+            FidelityArg::Strict => Self::Strict,
+            FidelityArg::RawFallback => Self::RawFallback,
+            FidelityArg::Lossy => Self::Lossy,
+        }
+    }
+}
+
+#[cfg(feature = "cli")]
 impl From<SerializationFormatArg> for grist::serialization::SerializationFormat {
     fn from(value: SerializationFormatArg) -> Self {
         match value {
@@ -826,6 +1733,17 @@ impl From<SerializationFormatArg> for grist::serialization::SerializationFormat 
             SerializationFormatArg::Jsonl => Self::Jsonl,
             SerializationFormatArg::Yaml => Self::Yaml,
             SerializationFormatArg::Toml => Self::Toml,
+        }
+    }
+}
+
+#[cfg(feature = "cli")]
+impl From<XmlDialectArg> for grist::xml::XmlDialect {
+    fn from(value: XmlDialectArg) -> Self {
+        match value {
+            XmlDialectArg::Auto => Self::Auto,
+            XmlDialectArg::Xml => Self::Xml,
+            XmlDialectArg::Jats => Self::Jats,
         }
     }
 }
@@ -845,6 +1763,7 @@ impl From<HtmlModeArg> for grist::html::HtmlParseMode {
 impl From<CsvDelimiterArg> for grist::csv::CsvDelimiter {
     fn from(value: CsvDelimiterArg) -> Self {
         match value {
+            CsvDelimiterArg::Auto => Self::Auto,
             CsvDelimiterArg::Comma => Self::Comma,
             CsvDelimiterArg::Tab => Self::Tab,
             CsvDelimiterArg::Semicolon => Self::Semicolon,
@@ -889,8 +1808,30 @@ impl From<TypeScriptDialectArg> for grist::typescript::TypeScriptDialect {
     fn from(value: TypeScriptDialectArg) -> Self {
         match value {
             TypeScriptDialectArg::TypeScript => Self::TypeScript,
+            TypeScriptDialectArg::JavaScript => Self::JavaScript,
             TypeScriptDialectArg::Tsx => Self::Tsx,
             TypeScriptDialectArg::Jsx => Self::Jsx,
+        }
+    }
+}
+
+#[cfg(feature = "cli")]
+impl From<JavaScriptDialectArg> for grist::javascript::JavaScriptDialect {
+    fn from(value: JavaScriptDialectArg) -> Self {
+        match value {
+            JavaScriptDialectArg::JavaScript => Self::JavaScript,
+            JavaScriptDialectArg::Jsx => Self::Jsx,
+        }
+    }
+}
+
+#[cfg(feature = "cli")]
+impl From<JavaScriptDetailArg> for grist::javascript::JavaScriptDetailMode {
+    fn from(value: JavaScriptDetailArg) -> Self {
+        match value {
+            JavaScriptDetailArg::Semantic => Self::Semantic,
+            JavaScriptDetailArg::SemanticWithSyntax => Self::SemanticWithSyntax,
+            JavaScriptDetailArg::SyntaxDebug => Self::SyntaxDebug,
         }
     }
 }
@@ -989,6 +1930,72 @@ fn load_json_value_optional(
 }
 
 #[cfg(feature = "cli")]
+fn selected_model_output_json_value(
+    payload: &serde_json::Value,
+) -> Result<&serde_json::Value, String> {
+    let candidates = payload
+        .get("candidates")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| "model-output payload has no candidate list".to_string())?;
+    let selected = match payload
+        .get("selected_candidate_id")
+        .and_then(serde_json::Value::as_str)
+    {
+        Some(selected) => selected,
+        None if candidates.is_empty() => {
+            return Err("no model-output candidate was detected".to_string());
+        }
+        None if payload.get("status").and_then(serde_json::Value::as_str) == Some("ambiguous") => {
+            return Err(format!(
+                "ambiguous model-output candidates: {} candidates were retained and none was selected",
+                candidates.len()
+            ));
+        }
+        None => return Err("no model-output candidate was selected".to_string()),
+    };
+    let candidate = candidates
+        .iter()
+        .find(|candidate| candidate.get("id").and_then(serde_json::Value::as_str) == Some(selected))
+        .ok_or_else(|| format!("selected model-output candidate {selected} was not retained"))?;
+    let status = candidate
+        .get("status")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("unknown");
+    if matches!(status, "incomplete" | "malformed") {
+        let position = candidate.get("json_error");
+        let suffix = position
+            .map(|position| {
+                format!(
+                    " at byte {} (line {}, column {}): {}",
+                    position
+                        .get("byte_offset")
+                        .and_then(serde_json::Value::as_u64)
+                        .unwrap_or_default(),
+                    position
+                        .get("line")
+                        .and_then(serde_json::Value::as_u64)
+                        .unwrap_or_default(),
+                    position
+                        .get("column")
+                        .and_then(serde_json::Value::as_u64)
+                        .unwrap_or_default(),
+                    position
+                        .get("message")
+                        .and_then(serde_json::Value::as_str)
+                        .unwrap_or("JSON parse failed")
+                )
+            })
+            .unwrap_or_default();
+        return Err(format!(
+            "selected model-output candidate {selected} is {status}{suffix}"
+        ));
+    }
+    candidate
+        .get("value")
+        .ok_or_else(|| format!("selected model-output candidate {selected} has no JSON value"))
+}
+
+#[cfg(feature = "cli")]
 fn load_alias_rules(
     path: &PathBuf,
 ) -> Result<grist::model_output::AliasRules, Box<dyn std::error::Error>> {
@@ -1005,4 +2012,104 @@ fn load_alias_rules(
 fn main() {
     eprintln!("grist CLI requires the `cli` feature");
     std::process::exit(1);
+}
+#[cfg(feature = "cli")]
+fn stream_model_output_cli(
+    input: &str,
+    options: grist::model_output::ModelOutputOptions,
+    max_buffer_bytes: Option<usize>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let source = if input == "-" {
+        SourceInfo::stdin("stdin")
+    } else {
+        SourceInfo::from_path(&PathBuf::from(input))
+    };
+    let mut parser = if let Some(max_buffer_bytes) = max_buffer_bytes {
+        grist::model_output::StreamingModelOutputParserV2::new_with_limit(
+            source,
+            options,
+            max_buffer_bytes,
+        )
+    } else {
+        grist::model_output::StreamingModelOutputParserV2::new(source, options)
+    };
+    let mut reader: Box<dyn Read> = if input == "-" {
+        Box::new(std::io::stdin())
+    } else {
+        let path = PathBuf::from(input);
+        match std::fs::File::open(&path) {
+            Ok(file) => Box::new(file),
+            Err(error) => {
+                return fail_model_output_stream(
+                    parser,
+                    "stream.io_open_failed",
+                    format!(
+                        "failed to open model-output stream {}: {error}",
+                        path.display()
+                    ),
+                );
+            }
+        }
+    };
+    let mut terminal_status = None;
+    let mut chunk = [0_u8; 8 * 1024];
+    loop {
+        let read = match reader.read(&mut chunk) {
+            Ok(read) => read,
+            Err(error) => {
+                return fail_model_output_stream(
+                    parser,
+                    "stream.io_read_failed",
+                    format!("failed to read model-output stream: {error}"),
+                );
+            }
+        };
+        if read == 0 {
+            break;
+        }
+        for event in parser.push_bytes(&chunk[..read]) {
+            if let grist::model_output::ModelOutputStreamEventV2::Terminal { terminal } = &event {
+                terminal_status = Some(terminal.status);
+            }
+            print_json(&serde_json::to_value(event)?)?;
+        }
+        if parser.is_terminated() {
+            break;
+        }
+    }
+    let (events, _) = parser.finish();
+    for event in events {
+        if let grist::model_output::ModelOutputStreamEventV2::Terminal { terminal } = &event {
+            terminal_status = Some(terminal.status);
+        }
+        print_json(&serde_json::to_value(event)?)?;
+    }
+    if matches!(
+        terminal_status,
+        Some(grist::core::OperationStatus::Failed | grist::core::OperationStatus::Cancelled)
+    ) {
+        return Err(Box::new(ModelOutputStreamExit(
+            terminal_status.expect("matched terminal status"),
+        )));
+    }
+    Ok(())
+}
+
+#[cfg(feature = "cli")]
+fn fail_model_output_stream(
+    parser: grist::model_output::StreamingModelOutputParserV2,
+    code: &'static str,
+    message: String,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let (events, _) = parser.fail(Diagnostic::error(
+        "grist.model_output.streaming",
+        code,
+        message,
+    ));
+    for event in events {
+        print_json(&serde_json::to_value(event)?)?;
+    }
+    Err(Box::new(ModelOutputStreamExit(
+        grist::core::OperationStatus::Failed,
+    )))
 }

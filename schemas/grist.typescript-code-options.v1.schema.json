@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "TypeScriptDetailMode": {
+      "enum": [
+        "semantic",
+        "semantic_with_syntax",
+        "syntax_debug"
+      ],
+      "type": "string"
+    },
+    "TypeScriptDialect": {
+      "enum": [
+        "typescript",
+        "java_script",
+        "tsx",
+        "jsx"
+      ],
+      "type": "string"
+    }
+  },
+  "properties": {
+    "detail": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/TypeScriptDetailMode"
+        }
+      ],
+      "default": "semantic"
+    },
+    "dialect": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/TypeScriptDialect"
+        }
+      ],
+      "default": "typescript"
+    }
+  },
+  "title": "TypeScriptIngestOptions",
+  "type": "object"
+}

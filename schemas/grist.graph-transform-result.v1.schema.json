@@ -1,0 +1,2122 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "AggregateContentIdentity": {
+      "description": "Content identity for a compound input.\n\nMembers are sorted by member index, then path and identity fields. `sha256` hashes canonical JSON v1 of `schema_version`, `canonicalization`, and the sorted `members` array. Summary fields and the digest itself are excluded.",
+      "properties": {
+        "canonicalization": {
+          "$ref": "#/definitions/CanonicalJsonVersion"
+        },
+        "manifest_byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "member_count": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "members": {
+          "items": {
+            "$ref": "#/definitions/AggregateMemberIdentity"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "total_byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "canonicalization",
+        "manifest_byte_length",
+        "member_count",
+        "members",
+        "schema_version",
+        "sha256",
+        "total_byte_length"
+      ],
+      "type": "object"
+    },
+    "AggregateMemberIdentity": {
+      "description": "Stable member summary used in a compound-input aggregate manifest.",
+      "properties": {
+        "aggregate_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "canonical_payload_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "decoded_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "format": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/FormatIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "member_index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "member_path": {
+          "type": "string"
+        },
+        "raw_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "byte_length",
+        "member_path"
+      ],
+      "type": "object"
+    },
+    "BoundingBox": {
+      "description": "A rectangle in a declared coordinate system.",
+      "properties": {
+        "height": {
+          "format": "double",
+          "type": "number"
+        },
+        "origin": {
+          "$ref": "#/definitions/CoordinateOrigin"
+        },
+        "unit": {
+          "$ref": "#/definitions/CoordinateUnit"
+        },
+        "width": {
+          "format": "double",
+          "type": "number"
+        },
+        "x": {
+          "format": "double",
+          "type": "number"
+        },
+        "y": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "height",
+        "origin",
+        "unit",
+        "width",
+        "x",
+        "y"
+      ],
+      "type": "object"
+    },
+    "CanonicalJsonVersion": {
+      "description": "Canonical JSON compatibility boundary.\n\nNew algorithms require new enum variants. Changing `V1` would change payload and aggregate identities and is an incompatible change.",
+      "enum": [
+        "grist/canonical-json/v1"
+      ],
+      "type": "string"
+    },
+    "CanonicalPayloadIdentity": {
+      "description": "SHA-256 of the exact canonical JSON bytes of an authoritative payload.",
+      "properties": {
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "canonicalization": {
+          "$ref": "#/definitions/CanonicalJsonVersion"
+        },
+        "payload_schema_version": {
+          "$ref": "#/definitions/SchemaVersion"
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "byte_length",
+        "canonicalization",
+        "payload_schema_version",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "CellAddress": {
+      "description": "A sheet cell address with explicit row and column bases.",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/IndexBase"
+        },
+        "column": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "row": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "column",
+        "row"
+      ],
+      "type": "object"
+    },
+    "ContentIdentity": {
+      "description": "Complete singular or compound content identity retained by an envelope.",
+      "properties": {
+        "aggregate": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/AggregateContentIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "canonical_payload": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CanonicalPayloadIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "decoded": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DecodedContentIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "detection_candidates": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/DetectionCandidate"
+          },
+          "type": "array"
+        },
+        "format": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/FormatIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "raw": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RawContentIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "CoordinateOrigin": {
+      "description": "Coordinate-system origin for rectangular source regions.",
+      "enum": [
+        "top_left",
+        "bottom_left"
+      ],
+      "type": "string"
+    },
+    "CoordinateUnit": {
+      "description": "Units used by rectangular source regions.",
+      "enum": [
+        "points",
+        "pixels",
+        "normalized"
+      ],
+      "type": "string"
+    },
+    "DecodedContentIdentity": {
+      "description": "SHA-256 of decoded text's UTF-8 bytes, including replacements when lossy.\n\nEncoding, loss state, and diagnostics are metadata outside the hashed bytes.",
+      "properties": {
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "encoding": {
+          "type": "string"
+        },
+        "lossy": {
+          "type": "boolean"
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "byte_length",
+        "encoding",
+        "lossy",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "DerivedNodeReference": {
+      "description": "A reference from derived content back to the nodes and declared transforms that produced it.",
+      "properties": {
+        "derivation_steps": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "source_node_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "derivation_steps",
+        "source_node_ids"
+      ],
+      "type": "object"
+    },
+    "DetectionCandidate": {
+      "description": "A ranked format candidate with all evidence retained.",
+      "properties": {
+        "confidence": {
+          "format": "float",
+          "type": "number"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/definitions/DetectionEvidence"
+          },
+          "type": "array"
+        },
+        "identity": {
+          "$ref": "#/definitions/FormatIdentity"
+        },
+        "parser_availability": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/ParserAvailability"
+            }
+          ],
+          "default": "unregistered"
+        },
+        "parser_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rank": {
+          "description": "One-based rank; lower ranks are preferred.",
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "confidence",
+        "evidence",
+        "identity",
+        "rank"
+      ],
+      "type": "object"
+    },
+    "DetectionEvidence": {
+      "description": "One retained reason for a ranked detection candidate.",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/DetectionEvidenceKind"
+        }
+      },
+      "required": [
+        "description",
+        "kind"
+      ],
+      "type": "object"
+    },
+    "DetectionEvidenceKind": {
+      "description": "Signal family that contributed to a detection candidate.",
+      "enum": [
+        "magic_bytes",
+        "declared_media_type",
+        "extension",
+        "filename",
+        "container_manifest",
+        "charset",
+        "structure",
+        "shebang",
+        "grammar_probe",
+        "fallback"
+      ],
+      "type": "string"
+    },
+    "Diagnostic": {
+      "description": "A root-cause diagnostic with source attribution and structured causes.",
+      "properties": {
+        "affected_ids": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "cause": {
+          "default": [],
+          "description": "Legacy flat causes retained for v1 wire compatibility.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "causes": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/DiagnosticCause"
+          },
+          "type": "array"
+        },
+        "class": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/DiagnosticClass"
+            }
+          ],
+          "default": "unclassified"
+        },
+        "code": {
+          "type": "string"
+        },
+        "details": true,
+        "documentation_uri": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "explanation_key": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SourceLocator"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "module": {
+          "default": "",
+          "type": "string"
+        },
+        "parser": {
+          "type": "string"
+        },
+        "partial": {
+          "default": false,
+          "type": "boolean"
+        },
+        "range": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "recovery": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RecoveryAction"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "severity": {
+          "$ref": "#/definitions/Severity"
+        },
+        "source": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_identity": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ContentIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "parser",
+        "severity"
+      ],
+      "type": "object"
+    },
+    "DiagnosticCause": {
+      "description": "One nested reason beneath a diagnostic's root-cause message.",
+      "properties": {
+        "cause": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DiagnosticCause"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "code": {
+          "type": "string"
+        },
+        "details": true,
+        "message": {
+          "type": "string"
+        },
+        "module": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parser": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "type": "object"
+    },
+    "DiagnosticClass": {
+      "description": "Stable top-level condition families shared by every parser and operation.",
+      "enum": [
+        "malformed_input",
+        "unsupported_content",
+        "lossy_normalization",
+        "provider_failure",
+        "parser_defect",
+        "security_rejection",
+        "resource_budget_exhaustion",
+        "unclassified"
+      ],
+      "type": "string"
+    },
+    "DocumentEdge": {
+      "properties": {
+        "attrs": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "evidence": {
+          "$ref": "#/definitions/RelationEvidence"
+        },
+        "extensions": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "id": {
+          "type": "string"
+        },
+        "range": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "relation": {
+          "$ref": "#/definitions/DocumentRelation"
+        },
+        "source": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "attrs",
+        "evidence",
+        "extensions",
+        "id",
+        "relation",
+        "source",
+        "target"
+      ],
+      "type": "object"
+    },
+    "DocumentGraph": {
+      "description": "A normalized graph projection of a parsed document or code artifact.",
+      "properties": {
+        "attrs": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "diagnostics": {
+          "items": {
+            "$ref": "#/definitions/Diagnostic"
+          },
+          "type": "array"
+        },
+        "dialect": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "edges": {
+          "items": {
+            "$ref": "#/definitions/DocumentEdge"
+          },
+          "type": "array"
+        },
+        "extensions": {
+          "additionalProperties": true,
+          "default": {},
+          "description": "Parser-format extensions. Common normalized attributes remain in `attrs`.",
+          "type": "object"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/DocumentKind"
+        },
+        "language": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "nodes": {
+          "items": {
+            "$ref": "#/definitions/DocumentNode"
+          },
+          "type": "array"
+        },
+        "projection": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProjectionMetadata"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Describes the authoritative typed payload from which this projection was made."
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SourceInfo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "attrs",
+        "diagnostics",
+        "edges",
+        "id",
+        "kind",
+        "nodes",
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "DocumentKind": {
+      "oneOf": [
+        {
+          "enum": [
+            "document",
+            "markdown",
+            "restructured_text",
+            "ascii_doc",
+            "html",
+            "epub",
+            "pdf",
+            "image",
+            "subtitle",
+            "media",
+            "word_ooxml",
+            "presentation_ooxml",
+            "spreadsheet_ooxml",
+            "spreadsheet_odf",
+            "presentation_odf",
+            "odf_word",
+            "rtf",
+            "xml",
+            "latex",
+            "bibliography",
+            "email",
+            "mbox",
+            "notebook",
+            "text",
+            "csv",
+            "serialization",
+            "structured_binary",
+            "model_output",
+            "repository",
+            "code",
+            "python",
+            "rust",
+            "java_script",
+            "type_script",
+            "ldgr_projection"
+          ],
+          "type": "string"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "other": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "other"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "DocumentNode": {
+      "description": "One normalized node in a `DocumentGraph`.",
+      "properties": {
+        "attrs": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "extensions": {
+          "additionalProperties": true,
+          "default": {},
+          "description": "Namespaced parser-format attributes copied from the authoritative payload.",
+          "type": "object"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/DocumentNodeKind"
+        },
+        "locator": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SourceLocator"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Cross-format source locator. `range` is retained for v1 text compatibility."
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ordinal": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "qualified_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "raw": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RawNodeContent"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Lossless raw representation for raw or unknown constructs."
+        },
+        "text": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "attrs",
+        "id",
+        "kind"
+      ],
+      "type": "object"
+    },
+    "DocumentNodeKind": {
+      "description": "Cross-document node vocabulary.",
+      "oneOf": [
+        {
+          "enum": [
+            "document",
+            "container",
+            "archive_member",
+            "attachment",
+            "metadata",
+            "page",
+            "slide",
+            "sheet",
+            "section",
+            "heading",
+            "header",
+            "footer",
+            "paragraph",
+            "text_run",
+            "text",
+            "span",
+            "emphasis",
+            "strong",
+            "link",
+            "list",
+            "list_item",
+            "quote",
+            "table",
+            "table_row",
+            "table_cell",
+            "row",
+            "cell",
+            "chart",
+            "code_block",
+            "inline_code",
+            "math_inline",
+            "math_block",
+            "math",
+            "equation",
+            "label",
+            "reference",
+            "citation",
+            "bibliography_entry",
+            "footnote",
+            "endnote",
+            "figure",
+            "image",
+            "caption",
+            "annotation",
+            "comment",
+            "revision",
+            "bookmark",
+            "form",
+            "form_field",
+            "content_control",
+            "email",
+            "message_body",
+            "mime_part",
+            "thread",
+            "notebook",
+            "notebook_cell",
+            "cell_output",
+            "transcript",
+            "cue",
+            "media_track",
+            "structured_value",
+            "record",
+            "frontmatter",
+            "raw_block",
+            "raw_inline",
+            "raw",
+            "unknown",
+            "module",
+            "namespace",
+            "package",
+            "symbol",
+            "code_symbol",
+            "class",
+            "function",
+            "method",
+            "constructor",
+            "interface",
+            "type_alias",
+            "enum",
+            "variable",
+            "field",
+            "import",
+            "export",
+            "call",
+            "assignment",
+            "return",
+            "branch",
+            "literal",
+            "identifier",
+            "obligation",
+            "condition",
+            "requirement",
+            "permission",
+            "prohibition",
+            "claim",
+            "evidence",
+            "diagnostic"
+          ],
+          "type": "string"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "other": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "other"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "DocumentRelation": {
+      "description": "Cross-document relation vocabulary.",
+      "oneOf": [
+        {
+          "enum": [
+            "contains",
+            "precedes",
+            "parent_of",
+            "next_sibling",
+            "previous_sibling",
+            "references",
+            "resolves_to",
+            "defines",
+            "links_to",
+            "cites",
+            "annotates",
+            "caption_for",
+            "footnote_for",
+            "annotation_for",
+            "revision_of",
+            "attachment_of",
+            "embedded_in",
+            "reply_to",
+            "derived_from",
+            "source_of",
+            "evidence_for",
+            "alternative_representation_of",
+            "reconciled_with",
+            "imports",
+            "exports",
+            "calls",
+            "inherits",
+            "implements",
+            "assigns",
+            "returns",
+            "formula_depends_on",
+            "reads",
+            "writes",
+            "decorates",
+            "conditional_on",
+            "requires",
+            "forbids",
+            "allows",
+            "satisfies",
+            "violates",
+            "weakens",
+            "strengthens"
+          ],
+          "type": "string"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "other": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "other"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "FormatIdentity": {
+      "description": "Detected parser-format name paired with an Internet media type when known.",
+      "properties": {
+        "format": {
+          "type": "string"
+        },
+        "media_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "format"
+      ],
+      "type": "object"
+    },
+    "GraphTransformFidelity": {
+      "properties": {
+        "losses": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/GraphTransformLoss"
+          },
+          "type": "array"
+        },
+        "lossless": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "lossless"
+      ],
+      "type": "object"
+    },
+    "GraphTransformLoss": {
+      "properties": {
+        "input_node_ids": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "$ref": "#/definitions/GraphTransformLossKind"
+        },
+        "message": {
+          "type": "string"
+        },
+        "output_node_ids": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "message"
+      ],
+      "type": "object"
+    },
+    "GraphTransformLossKind": {
+      "enum": [
+        "node_removed",
+        "content_changed",
+        "locator_precision_reduced",
+        "other"
+      ],
+      "type": "string"
+    },
+    "GraphTransformSourceMap": {
+      "properties": {
+        "entries": {
+          "items": {
+            "$ref": "#/definitions/GraphTransformSourceMapEntry"
+          },
+          "type": "array"
+        },
+        "input_graph_sha256": {
+          "type": "string"
+        },
+        "output_graph_sha256": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "entries",
+        "input_graph_sha256",
+        "output_graph_sha256",
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "GraphTransformSourceMapEntry": {
+      "properties": {
+        "derivation_steps": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "input_node_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "locator_unavailable_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "original_locators": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/SourceLocator"
+          },
+          "type": "array"
+        },
+        "output_node_id": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/TransformMapStatus"
+        }
+      },
+      "required": [
+        "input_node_ids",
+        "output_node_id",
+        "status"
+      ],
+      "type": "object"
+    },
+    "IndexBase": {
+      "description": "Whether an ordinal is counted from zero or one.\n\nEvery format component carrying a page, slide, cell, frame, token, output, member, track, or record ordinal uses this type rather than relying on an undocumented convention.",
+      "enum": [
+        "zero",
+        "one"
+      ],
+      "type": "string"
+    },
+    "IndexPosition": {
+      "description": "One explicitly based ordinal.",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/IndexBase"
+        },
+        "value": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "value"
+      ],
+      "type": "object"
+    },
+    "IndexRange": {
+      "description": "A half-open range of ordinals using one declared base.",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/IndexBase"
+        },
+        "end": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "start": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "end",
+        "start"
+      ],
+      "type": "object"
+    },
+    "InferenceMetadata": {
+      "description": "Rule and bounded confidence for a relation not explicitly present in the source.",
+      "properties": {
+        "confidence": {
+          "$ref": "#/definitions/LocatorConfidence"
+        },
+        "evidence_locators": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/SourceLocator"
+          },
+          "type": "array"
+        },
+        "rule": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "confidence",
+        "rule"
+      ],
+      "type": "object"
+    },
+    "LocationComponent": {
+      "description": "One location inside its immediately preceding parent component.",
+      "oneOf": [
+        {
+          "description": "A zero-based half-open byte range relative to the immediately preceding component, or to the source when this is the outermost component.",
+          "properties": {
+            "byte_end": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "byte_start": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "type": {
+              "enum": [
+                "byte_range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "byte_end",
+            "byte_start",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "byte_end": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "byte_start": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "end_column": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "end_line": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "start_column": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "start_line": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "type": {
+              "enum": [
+                "text_range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "byte_end",
+            "byte_start",
+            "end_column",
+            "end_line",
+            "start_column",
+            "start_line",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "bbox": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/BoundingBox"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "page": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "rotation_degrees": {
+              "format": "int16",
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "tokens": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexRange"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "enum": [
+                "pdf_region"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "page",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "column": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "object_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "paragraph": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "part": {
+              "type": "string"
+            },
+            "row": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "run": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "table": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "enum": [
+                "ooxml_part"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "part",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "bbox": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/BoundingBox"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "shape_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "slide": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "type": {
+              "enum": [
+                "slide_region"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "slide",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "end_cell": {
+              "$ref": "#/definitions/CellAddress"
+            },
+            "sheet": {
+              "type": "string"
+            },
+            "start_cell": {
+              "$ref": "#/definitions/CellAddress"
+            },
+            "type": {
+              "enum": [
+                "sheet_range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "end_cell",
+            "sheet",
+            "start_cell",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "cell_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "index": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "output_index": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "enum": [
+                "notebook_cell"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "index",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "header": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "message_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "mime_path": {
+              "items": {
+                "$ref": "#/definitions/IndexPosition"
+              },
+              "type": "array"
+            },
+            "type": {
+              "enum": [
+                "email_part"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "member_index": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "member_path": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "archive_member"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "member_index",
+            "member_path",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "bbox": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/BoundingBox"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "frame": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "type": {
+              "enum": [
+                "image_region"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "frame",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "end_ms": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "start_ms": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "track": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "enum": [
+                "media_time"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "end_ms",
+            "start_ms",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "collection": {
+              "type": "string"
+            },
+            "field": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "records": {
+              "$ref": "#/definitions/IndexRange"
+            },
+            "type": {
+              "enum": [
+                "record_range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "collection",
+            "records",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "pointer": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "json_pointer"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "pointer",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "xml_path"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "type"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "LocatorConfidence": {
+      "format": "double",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "type": "number"
+    },
+    "ParserAvailability": {
+      "description": "Whether a ranked candidate can be interpreted by the active registry.",
+      "enum": [
+        "available",
+        "unavailable",
+        "unregistered"
+      ],
+      "type": "string"
+    },
+    "ProjectionMetadata": {
+      "description": "Identifies the detailed typed payload that remains authoritative over a graph projection.",
+      "properties": {
+        "authoritative_payload_kind": {
+          "type": "string"
+        },
+        "authoritative_payload_schema_version": {
+          "type": "string"
+        },
+        "projection_rule": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative_payload_kind",
+        "authoritative_payload_schema_version",
+        "projection_rule"
+      ],
+      "type": "object"
+    },
+    "RawContentIdentity": {
+      "description": "SHA-256 of exactly the original input bytes, without a prefix or suffix.",
+      "properties": {
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "byte_length",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "RawNodeContent": {
+      "description": "Raw parser content retained when no normalized node kind is sufficient.",
+      "properties": {
+        "namespace": {
+          "type": "string"
+        },
+        "original_kind": {
+          "type": "string"
+        },
+        "payload": true
+      },
+      "required": [
+        "namespace",
+        "original_kind",
+        "payload"
+      ],
+      "type": "object"
+    },
+    "RecoveryAction": {
+      "description": "A recovery action is guidance, never an action executed by Grist.",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/RecoveryKind"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "description",
+        "kind",
+        "retryable"
+      ],
+      "type": "object"
+    },
+    "RecoveryKind": {
+      "description": "Machine-actionable recovery families.",
+      "enum": [
+        "inspect_input",
+        "select_parser",
+        "enable_feature",
+        "retry_provider",
+        "increase_budget",
+        "supply_credentials",
+        "change_options",
+        "report_parser_defect"
+      ],
+      "type": "string"
+    },
+    "RelationEvidence": {
+      "description": "Evidence required for every normalized relation.",
+      "oneOf": [
+        {
+          "properties": {
+            "locator": {
+              "$ref": "#/definitions/SourceLocator"
+            },
+            "origin": {
+              "enum": [
+                "explicit"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "locator",
+            "origin"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "inference": {
+              "$ref": "#/definitions/InferenceMetadata"
+            },
+            "origin": {
+              "enum": [
+                "inferred"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "inference",
+            "origin"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "SchemaVersion": {
+      "type": "string"
+    },
+    "Severity": {
+      "description": "Diagnostic importance at the public API boundary.",
+      "enum": [
+        "info",
+        "warning",
+        "error",
+        "fatal"
+      ],
+      "type": "string"
+    },
+    "SourceInfo": {
+      "description": "Descriptive source metadata supplied by the caller.\n\nURI values are labels only. Resolving or fetching them is outside Grist's source contract.",
+      "properties": {
+        "declared_mime_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "ingestion_timestamp": {
+          "description": "Caller-supplied timestamp. Grist never inserts the current time.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SourceInfo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "repository_relative_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "uri": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "display_name"
+      ],
+      "type": "object"
+    },
+    "SourceLocator": {
+      "description": "An outermost-to-innermost containment chain.\n\nComponent `n` is interpreted relative to component `n - 1`. For example, `[archive_member, email_part, ooxml_part, text_range]` identifies text in an OOXML part attached to an email stored in an archive without flattening any parent coordinate system.",
+      "oneOf": [
+        {
+          "properties": {
+            "derived_from": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/DerivedNodeReference"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "precision": {
+              "enum": [
+                "exact"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "precision"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "confidence": {
+              "$ref": "#/definitions/LocatorConfidence"
+            },
+            "derived_from": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/DerivedNodeReference"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "precision": {
+              "enum": [
+                "approximate"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "confidence",
+            "precision"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "confidence": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/LocatorConfidence"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "derived_from": {
+              "$ref": "#/definitions/DerivedNodeReference"
+            },
+            "precision": {
+              "enum": [
+                "synthetic"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "derived_from",
+            "precision"
+          ],
+          "type": "object"
+        }
+      ],
+      "properties": {
+        "components": {
+          "items": {
+            "$ref": "#/definitions/LocationComponent"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "components"
+      ],
+      "type": "object"
+    },
+    "SourceRange": {
+      "properties": {
+        "byte_end": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "byte_start": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "end_column": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "end_line": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "start_column": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "start_line": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "byte_end",
+        "byte_start",
+        "end_column",
+        "end_line",
+        "start_column",
+        "start_line"
+      ],
+      "type": "object"
+    },
+    "TransformMapStatus": {
+      "enum": [
+        "preserved",
+        "modified",
+        "derived"
+      ],
+      "type": "string"
+    }
+  },
+  "properties": {
+    "fidelity": {
+      "$ref": "#/definitions/GraphTransformFidelity"
+    },
+    "graph": {
+      "$ref": "#/definitions/DocumentGraph"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "source_map": {
+      "$ref": "#/definitions/GraphTransformSourceMap"
+    }
+  },
+  "required": [
+    "fidelity",
+    "graph",
+    "schema_version",
+    "source_map"
+  ],
+  "title": "GraphTransformResult",
+  "type": "object"
+}

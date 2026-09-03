@@ -1,1 +1,84 @@
-{"$schema":"http://json-schema.org/draft-07/schema#","definitions":{"SourceRange":{"properties":{"byte_end":{"format":"uint","minimum":0.0,"type":"integer"},"byte_start":{"format":"uint","minimum":0.0,"type":"integer"},"end_column":{"format":"uint","minimum":0.0,"type":"integer"},"end_line":{"format":"uint","minimum":0.0,"type":"integer"},"start_column":{"format":"uint","minimum":0.0,"type":"integer"},"start_line":{"format":"uint","minimum":0.0,"type":"integer"}},"required":["byte_end","byte_start","end_column","end_line","start_column","start_line"],"type":"object"},"TextBlock":{"properties":{"id":{"type":"string"},"range":{"$ref":"#/definitions/SourceRange"},"text":{"type":"string"}},"required":["id","range","text"],"type":"object"}},"properties":{"blocks":{"items":{"$ref":"#/definitions/TextBlock"},"type":"array"},"schema_version":{"type":"string"}},"required":["blocks","schema_version"],"title":"TextDocument","type":"object"}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "SourceRange": {
+      "properties": {
+        "byte_end": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "byte_start": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "end_column": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "end_line": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "start_column": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "start_line": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "byte_end",
+        "byte_start",
+        "end_column",
+        "end_line",
+        "start_column",
+        "start_line"
+      ],
+      "type": "object"
+    },
+    "TextBlock": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "range",
+        "text"
+      ],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "blocks": {
+      "items": {
+        "$ref": "#/definitions/TextBlock"
+      },
+      "type": "array"
+    },
+    "schema_version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "blocks",
+    "schema_version"
+  ],
+  "title": "TextDocument",
+  "type": "object"
+}

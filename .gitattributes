@@ -1,1 +1,10 @@
 .dev/bin/dev* filter=lfs diff=lfs merge=lfs -text
+fixtures/**/*.json text eol=lf
+fixtures/**/*.md text eol=lf
+# Deliberate CRLF regression fixture: its manifest identity is the CRLF byte
+# form, so text normalization must not rewrite it.
+fixtures/generated/markdown/downstream-regression.md -text
+fixtures/**/*.txt text eol=lf
+fixtures/**/*.html text eol=lf
+fixtures/**/*.zip binary
+fixtures/**/*.bin binary

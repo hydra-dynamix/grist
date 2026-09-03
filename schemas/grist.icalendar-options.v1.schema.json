@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "max_components": {
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_decoded_attachment_bytes": {
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_nesting_depth": {
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_properties": {
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_unfolded_line_bytes": {
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "max_components",
+    "max_decoded_attachment_bytes",
+    "max_nesting_depth",
+    "max_properties",
+    "max_unfolded_line_bytes"
+  ],
+  "title": "ICalendarOptions",
+  "type": "object"
+}

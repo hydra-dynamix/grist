@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "SchemaValidationIssue": {
+      "properties": {
+        "instance_path": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "schema_path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "instance_path",
+        "message",
+        "schema_path"
+      ],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "issues": {
+      "items": {
+        "$ref": "#/definitions/SchemaValidationIssue"
+      },
+      "type": "array"
+    },
+    "schema_name": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "target_schema_version": {
+      "type": "string"
+    },
+    "valid": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "issues",
+    "schema_name",
+    "schema_version",
+    "target_schema_version",
+    "valid"
+  ],
+  "title": "SchemaValidationReport",
+  "type": "object"
+}

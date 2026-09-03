@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "include_details": {
+      "type": "boolean"
+    },
+    "include_info": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "include_details",
+    "include_info"
+  ],
+  "title": "DiagnosticOptions",
+  "type": "object"
+}

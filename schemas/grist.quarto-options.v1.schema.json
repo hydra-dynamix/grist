@@ -1,0 +1,97 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "MarkdownDialect": {
+      "enum": [
+        "common_mark",
+        "r_markdown",
+        "quarto"
+      ],
+      "type": "string"
+    }
+  },
+  "properties": {
+    "definition_lists": {
+      "default": true,
+      "type": "boolean"
+    },
+    "dialect": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/MarkdownDialect"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Explicit dialect, or filename-based detection when omitted."
+    },
+    "encoding": {
+      "default": null,
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "footnotes": {
+      "default": true,
+      "type": "boolean"
+    },
+    "frontmatter": {
+      "default": true,
+      "type": "boolean"
+    },
+    "gfm": {
+      "default": true,
+      "type": "boolean"
+    },
+    "heading_attributes": {
+      "default": true,
+      "type": "boolean"
+    },
+    "math": {
+      "default": true,
+      "type": "boolean"
+    },
+    "max_reference_bytes": {
+      "format": "uint64",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_total_reference_bytes": {
+      "description": "Aggregate retained reference bytes across the complete document.",
+      "format": "uint64",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "project_root": {
+      "description": "Explicit filesystem boundary. No root means local references stay inert.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "resolve_local_references": {
+      "type": "boolean"
+    },
+    "retain_extensions": {
+      "default": true,
+      "type": "boolean"
+    },
+    "strikethrough": {
+      "default": true,
+      "type": "boolean"
+    },
+    "tables": {
+      "default": true,
+      "type": "boolean"
+    },
+    "task_lists": {
+      "default": true,
+      "type": "boolean"
+    }
+  },
+  "title": "MarkdownOptions",
+  "type": "object"
+}

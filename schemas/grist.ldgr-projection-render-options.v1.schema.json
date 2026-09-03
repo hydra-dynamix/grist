@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "contextual_prose": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "include_title": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "include_title"
+  ],
+  "title": "LdgrProjectionRenderOptions",
+  "type": "object"
+}

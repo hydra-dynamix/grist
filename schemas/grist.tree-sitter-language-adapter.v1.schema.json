@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "TreeSitterAdapterCapability": {
+      "enum": [
+        "grammar_detection",
+        "source_ranges",
+        "error_recovery",
+        "document_graph_projection",
+        "inert_parsing"
+      ],
+      "type": "string"
+    }
+  },
+  "properties": {
+    "active_content_execution": {
+      "type": "boolean"
+    },
+    "capabilities": {
+      "items": {
+        "$ref": "#/definitions/TreeSitterAdapterCapability"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "enabled_feature": {
+      "type": "string"
+    },
+    "grammar": {
+      "type": "string"
+    },
+    "grammar_version": {
+      "type": "string"
+    },
+    "language": {
+      "type": "string"
+    },
+    "network_access": {
+      "type": "boolean"
+    },
+    "schema_version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "active_content_execution",
+    "capabilities",
+    "enabled_feature",
+    "grammar",
+    "grammar_version",
+    "language",
+    "network_access",
+    "schema_version"
+  ],
+  "title": "TreeSitterAdapterMetadata",
+  "type": "object"
+}

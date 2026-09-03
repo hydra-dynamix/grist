@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "extract_macro_bytes": {
+      "default": false,
+      "type": "boolean"
+    },
+    "inline_child_artifact_bytes": {
+      "default": false,
+      "type": "boolean"
+    }
+  },
+  "title": "PresentationOoxmlOptions",
+  "type": "object"
+}

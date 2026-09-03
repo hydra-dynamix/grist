@@ -1,0 +1,74 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "CanonicalJsonVersion": {
+      "description": "Canonical JSON compatibility boundary.\n\nNew algorithms require new enum variants. Changing `V1` would change payload and aggregate identities and is an incompatible change.",
+      "enum": [
+        "grist/canonical-json/v1"
+      ],
+      "type": "string"
+    },
+    "OperationKind": {
+      "description": "The public operation that produced an envelope.",
+      "enum": [
+        "parse",
+        "ingest",
+        "transform",
+        "render",
+        "segment",
+        "validate"
+      ],
+      "type": "string"
+    }
+  },
+  "description": "Complete material that selects one cached operation result.",
+  "properties": {
+    "canonicalization": {
+      "$ref": "#/definitions/CanonicalJsonVersion"
+    },
+    "digest": {
+      "type": "string"
+    },
+    "input_sha256": {
+      "type": "string"
+    },
+    "namespace": {
+      "type": "string"
+    },
+    "operation": {
+      "$ref": "#/definitions/OperationKind"
+    },
+    "options_digest": {
+      "type": "string"
+    },
+    "parser_sha256": {
+      "type": "string"
+    },
+    "payload_schema_version": {
+      "type": "string"
+    },
+    "provider_configuration_digests": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "schema_version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "canonicalization",
+    "digest",
+    "input_sha256",
+    "namespace",
+    "operation",
+    "options_digest",
+    "parser_sha256",
+    "payload_schema_version",
+    "provider_configuration_digests",
+    "schema_version"
+  ],
+  "title": "CacheKey",
+  "type": "object"
+}

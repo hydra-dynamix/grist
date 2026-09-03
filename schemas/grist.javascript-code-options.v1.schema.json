@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "JavaScriptDetailMode": {
+      "enum": [
+        "semantic",
+        "semantic_with_syntax",
+        "syntax_debug"
+      ],
+      "type": "string"
+    },
+    "JavaScriptDialect": {
+      "enum": [
+        "java_script",
+        "jsx"
+      ],
+      "type": "string"
+    }
+  },
+  "properties": {
+    "detail": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/JavaScriptDetailMode"
+        }
+      ],
+      "default": "semantic"
+    },
+    "dialect": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/JavaScriptDialect"
+        }
+      ],
+      "default": "java_script"
+    }
+  },
+  "title": "JavaScriptIngestOptions",
+  "type": "object"
+}

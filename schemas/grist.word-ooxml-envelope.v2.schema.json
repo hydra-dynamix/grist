@@ -1,0 +1,5100 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "AggregateContentIdentity": {
+      "description": "Content identity for a compound input.\n\nMembers are sorted by member index, then path and identity fields. `sha256` hashes canonical JSON v1 of `schema_version`, `canonicalization`, and the sorted `members` array. Summary fields and the digest itself are excluded.",
+      "properties": {
+        "canonicalization": {
+          "$ref": "#/definitions/CanonicalJsonVersion"
+        },
+        "manifest_byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "member_count": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "members": {
+          "items": {
+            "$ref": "#/definitions/AggregateMemberIdentity"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "total_byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "canonicalization",
+        "manifest_byte_length",
+        "member_count",
+        "members",
+        "schema_version",
+        "sha256",
+        "total_byte_length"
+      ],
+      "type": "object"
+    },
+    "AggregateMemberIdentity": {
+      "description": "Stable member summary used in a compound-input aggregate manifest.",
+      "properties": {
+        "aggregate_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "canonical_payload_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "decoded_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "format": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/FormatIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "member_index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "member_path": {
+          "type": "string"
+        },
+        "raw_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "byte_length",
+        "member_path"
+      ],
+      "type": "object"
+    },
+    "ArtifactContent": {
+      "description": "Storage representation is deliberately outside the stable artifact identity.",
+      "oneOf": [
+        {
+          "description": "Inline representation with its caller-selected threshold made explicit.",
+          "properties": {
+            "bytes": {
+              "items": {
+                "format": "uint8",
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "inline_threshold_bytes": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "storage": {
+              "enum": [
+                "inline"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "bytes",
+            "inline_threshold_bytes",
+            "storage"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "inline_threshold_bytes": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "reference": {
+              "$ref": "#/definitions/ContentAddressedArtifactReference"
+            },
+            "storage": {
+              "enum": [
+                "content_addressed"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "inline_threshold_bytes",
+            "reference",
+            "storage"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "ArtifactDisposition": {
+      "description": "Content-disposition semantics, independent of storage or safety policy.",
+      "enum": [
+        "attachment",
+        "inline",
+        "related",
+        "alternative",
+        "package_part",
+        "unspecified"
+      ],
+      "type": "string"
+    },
+    "ArtifactExtraction": {
+      "description": "Machine-readable extraction result for one child.",
+      "properties": {
+        "diagnostic_codes": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "message": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "$ref": "#/definitions/ArtifactExtractionStatus"
+        },
+        "status_code": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "status_code"
+      ],
+      "type": "object"
+    },
+    "ArtifactExtractionStatus": {
+      "description": "Terminal extraction states retained even when no child bytes are available.",
+      "enum": [
+        "extracted",
+        "quarantined",
+        "inventory_only",
+        "skipped",
+        "encrypted",
+        "unsupported",
+        "rejected",
+        "budget_limited",
+        "failed"
+      ],
+      "type": "string"
+    },
+    "ArtifactIdentity": {
+      "description": "Stable child identity. It excludes filename, disposition, status, and storage mode.",
+      "properties": {
+        "artifact_id": {
+          "type": "string"
+        },
+        "content": {
+          "$ref": "#/definitions/ContentIdentity"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "content"
+      ],
+      "type": "object"
+    },
+    "ArtifactKind": {
+      "enum": [
+        "archive",
+        "markdown",
+        "restructured_text",
+        "ascii_doc",
+        "html",
+        "epub",
+        "pdf",
+        "image",
+        "subtitle",
+        "media",
+        "word_ooxml",
+        "presentation_ooxml",
+        "spreadsheet_ooxml",
+        "spreadsheet_odf",
+        "presentation_odf",
+        "odf_word",
+        "rtf",
+        "xml",
+        "csv",
+        "rust_code",
+        "python_code",
+        "javascript_code",
+        "typescript_code",
+        "code",
+        "manifest",
+        "latex",
+        "bibliography",
+        "serialization",
+        "structured_binary",
+        "columnar",
+        "sqlite",
+        "email",
+        "mbox",
+        "outlook_msg",
+        "i_calendar",
+        "v_card",
+        "notebook",
+        "model_output",
+        "repo_ingest",
+        "file_ingest",
+        "text",
+        "ldgr_projection",
+        "detection",
+        "document_graph",
+        "graph_document",
+        "graph_transform_result",
+        "render_result",
+        "reconstruction_result",
+        "segment_collection",
+        "schema_validation",
+        "container_traversal",
+        "capabilities",
+        "unsupported"
+      ],
+      "type": "string"
+    },
+    "ArtifactParent": {
+      "description": "The parent is retained structurally rather than flattened into a path.",
+      "properties": {
+        "identity": {
+          "$ref": "#/definitions/ContentIdentity"
+        },
+        "relationship": {
+          "$ref": "#/definitions/ArtifactRelationship"
+        }
+      },
+      "required": [
+        "identity",
+        "relationship"
+      ],
+      "type": "object"
+    },
+    "ArtifactRelationship": {
+      "description": "How the source relates the child to its immediate parent.",
+      "enum": [
+        "attachment_of",
+        "embedded_in",
+        "inline_resource_of",
+        "alternative_representation_of",
+        "package_part_of",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "ArtifactSafety": {
+      "description": "Auditable, deterministic safety result. Classifiers only inspect supplied metadata and bytes.",
+      "properties": {
+        "classification": {
+          "$ref": "#/definitions/ArtifactSafetyClassification"
+        },
+        "evidence": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/ArtifactSafetyEvidence"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "classification"
+      ],
+      "type": "object"
+    },
+    "ArtifactSafetyClassification": {
+      "description": "Security classification used to decide whether materialization is allowed.",
+      "enum": [
+        "passive",
+        "encrypted",
+        "active_content",
+        "script",
+        "macro",
+        "executable",
+        "suspicious",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "ArtifactSafetyEvidence": {
+      "description": "Why a safety class was selected.",
+      "properties": {
+        "classification": {
+          "$ref": "#/definitions/ArtifactSafetyClassification"
+        },
+        "source": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "classification",
+        "source",
+        "value"
+      ],
+      "type": "object"
+    },
+    "BoundingBox": {
+      "description": "A rectangle in a declared coordinate system.",
+      "properties": {
+        "height": {
+          "format": "double",
+          "type": "number"
+        },
+        "origin": {
+          "$ref": "#/definitions/CoordinateOrigin"
+        },
+        "unit": {
+          "$ref": "#/definitions/CoordinateUnit"
+        },
+        "width": {
+          "format": "double",
+          "type": "number"
+        },
+        "x": {
+          "format": "double",
+          "type": "number"
+        },
+        "y": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "height",
+        "origin",
+        "unit",
+        "width",
+        "x",
+        "y"
+      ],
+      "type": "object"
+    },
+    "CanonicalJsonVersion": {
+      "description": "Canonical JSON compatibility boundary.\n\nNew algorithms require new enum variants. Changing `V1` would change payload and aggregate identities and is an incompatible change.",
+      "enum": [
+        "grist/canonical-json/v1"
+      ],
+      "type": "string"
+    },
+    "CanonicalPayloadIdentity": {
+      "description": "SHA-256 of the exact canonical JSON bytes of an authoritative payload.",
+      "properties": {
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "canonicalization": {
+          "$ref": "#/definitions/CanonicalJsonVersion"
+        },
+        "payload_schema_version": {
+          "$ref": "#/definitions/SchemaVersion"
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "byte_length",
+        "canonicalization",
+        "payload_schema_version",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "CellAddress": {
+      "description": "A sheet cell address with explicit row and column bases.",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/IndexBase"
+        },
+        "column": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "row": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "column",
+        "row"
+      ],
+      "type": "object"
+    },
+    "ContentAddressedArtifactReference": {
+      "description": "Digest-keyed external reference. Grist does not prescribe persistence policy.",
+      "properties": {
+        "algorithm": {
+          "type": "string"
+        },
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "digest": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "algorithm",
+        "byte_length",
+        "digest"
+      ],
+      "type": "object"
+    },
+    "ContentIdentity": {
+      "description": "Complete singular or compound content identity retained by an envelope.",
+      "properties": {
+        "aggregate": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/AggregateContentIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "canonical_payload": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CanonicalPayloadIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "decoded": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DecodedContentIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "detection_candidates": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/DetectionCandidate"
+          },
+          "type": "array"
+        },
+        "format": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/FormatIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "raw": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RawContentIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "CoordinateOrigin": {
+      "description": "Coordinate-system origin for rectangular source regions.",
+      "enum": [
+        "top_left",
+        "bottom_left"
+      ],
+      "type": "string"
+    },
+    "CoordinateUnit": {
+      "description": "Units used by rectangular source regions.",
+      "enum": [
+        "points",
+        "pixels",
+        "normalized"
+      ],
+      "type": "string"
+    },
+    "DecodedContentIdentity": {
+      "description": "SHA-256 of decoded text's UTF-8 bytes, including replacements when lossy.\n\nEncoding, loss state, and diagnostics are metadata outside the hashed bytes.",
+      "properties": {
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "encoding": {
+          "type": "string"
+        },
+        "lossy": {
+          "type": "boolean"
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "byte_length",
+        "encoding",
+        "lossy",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "DerivedNodeReference": {
+      "description": "A reference from derived content back to the nodes and declared transforms that produced it.",
+      "properties": {
+        "derivation_steps": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "source_node_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "derivation_steps",
+        "source_node_ids"
+      ],
+      "type": "object"
+    },
+    "DetectionCandidate": {
+      "description": "A ranked format candidate with all evidence retained.",
+      "properties": {
+        "confidence": {
+          "format": "float",
+          "type": "number"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/definitions/DetectionEvidence"
+          },
+          "type": "array"
+        },
+        "identity": {
+          "$ref": "#/definitions/FormatIdentity"
+        },
+        "parser_availability": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/ParserAvailability"
+            }
+          ],
+          "default": "unregistered"
+        },
+        "parser_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rank": {
+          "description": "One-based rank; lower ranks are preferred.",
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "confidence",
+        "evidence",
+        "identity",
+        "rank"
+      ],
+      "type": "object"
+    },
+    "DetectionEvidence": {
+      "description": "One retained reason for a ranked detection candidate.",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/DetectionEvidenceKind"
+        }
+      },
+      "required": [
+        "description",
+        "kind"
+      ],
+      "type": "object"
+    },
+    "DetectionEvidenceKind": {
+      "description": "Signal family that contributed to a detection candidate.",
+      "enum": [
+        "magic_bytes",
+        "declared_media_type",
+        "extension",
+        "filename",
+        "container_manifest",
+        "charset",
+        "structure",
+        "shebang",
+        "grammar_probe",
+        "fallback"
+      ],
+      "type": "string"
+    },
+    "Diagnostic": {
+      "description": "A root-cause diagnostic with source attribution and structured causes.",
+      "properties": {
+        "affected_ids": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "cause": {
+          "default": [],
+          "description": "Legacy flat causes retained for v1 wire compatibility.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "causes": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/DiagnosticCause"
+          },
+          "type": "array"
+        },
+        "class": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/DiagnosticClass"
+            }
+          ],
+          "default": "unclassified"
+        },
+        "code": {
+          "type": "string"
+        },
+        "details": true,
+        "documentation_uri": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "explanation_key": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SourceLocator"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "module": {
+          "default": "",
+          "type": "string"
+        },
+        "parser": {
+          "type": "string"
+        },
+        "partial": {
+          "default": false,
+          "type": "boolean"
+        },
+        "range": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "recovery": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RecoveryAction"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "severity": {
+          "$ref": "#/definitions/Severity"
+        },
+        "source": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_identity": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ContentIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "parser",
+        "severity"
+      ],
+      "type": "object"
+    },
+    "DiagnosticCause": {
+      "description": "One nested reason beneath a diagnostic's root-cause message.",
+      "properties": {
+        "cause": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DiagnosticCause"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "code": {
+          "type": "string"
+        },
+        "details": true,
+        "message": {
+          "type": "string"
+        },
+        "module": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parser": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "type": "object"
+    },
+    "DiagnosticClass": {
+      "description": "Stable top-level condition families shared by every parser and operation.",
+      "enum": [
+        "malformed_input",
+        "unsupported_content",
+        "lossy_normalization",
+        "provider_failure",
+        "parser_defect",
+        "security_rejection",
+        "resource_budget_exhaustion",
+        "unclassified"
+      ],
+      "type": "string"
+    },
+    "EmbeddedArtifact": {
+      "description": "Complete artifact inventory record.",
+      "properties": {
+        "content": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ArtifactContent"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "declared_filename": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "disposition": {
+          "$ref": "#/definitions/ArtifactDisposition"
+        },
+        "extraction": {
+          "$ref": "#/definitions/ArtifactExtraction"
+        },
+        "identity": {
+          "$ref": "#/definitions/ArtifactIdentity"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "media_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parent": {
+          "$ref": "#/definitions/ArtifactParent"
+        },
+        "safety": {
+          "$ref": "#/definitions/ArtifactSafety"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "disposition",
+        "extraction",
+        "identity",
+        "locator",
+        "parent",
+        "safety",
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "FormatIdentity": {
+      "description": "Detected parser-format name paired with an Internet media type when known.",
+      "properties": {
+        "format": {
+          "type": "string"
+        },
+        "media_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "format"
+      ],
+      "type": "object"
+    },
+    "Hashes": {
+      "properties": {
+        "sha256": {
+          "type": "string"
+        },
+        "size_bytes": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "text_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "sha256",
+        "size_bytes"
+      ],
+      "type": "object"
+    },
+    "IndexBase": {
+      "description": "Whether an ordinal is counted from zero or one.\n\nEvery format component carrying a page, slide, cell, frame, token, output, member, track, or record ordinal uses this type rather than relying on an undocumented convention.",
+      "enum": [
+        "zero",
+        "one"
+      ],
+      "type": "string"
+    },
+    "IndexPosition": {
+      "description": "One explicitly based ordinal.",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/IndexBase"
+        },
+        "value": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "value"
+      ],
+      "type": "object"
+    },
+    "IndexRange": {
+      "description": "A half-open range of ordinals using one declared base.",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/IndexBase"
+        },
+        "end": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "start": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "end",
+        "start"
+      ],
+      "type": "object"
+    },
+    "LocationComponent": {
+      "description": "One location inside its immediately preceding parent component.",
+      "oneOf": [
+        {
+          "description": "A zero-based half-open byte range relative to the immediately preceding component, or to the source when this is the outermost component.",
+          "properties": {
+            "byte_end": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "byte_start": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "type": {
+              "enum": [
+                "byte_range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "byte_end",
+            "byte_start",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "byte_end": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "byte_start": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "end_column": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "end_line": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "start_column": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "start_line": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "type": {
+              "enum": [
+                "text_range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "byte_end",
+            "byte_start",
+            "end_column",
+            "end_line",
+            "start_column",
+            "start_line",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "bbox": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/BoundingBox"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "page": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "rotation_degrees": {
+              "format": "int16",
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "tokens": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexRange"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "enum": [
+                "pdf_region"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "page",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "column": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "object_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "paragraph": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "part": {
+              "type": "string"
+            },
+            "row": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "run": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "table": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "enum": [
+                "ooxml_part"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "part",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "bbox": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/BoundingBox"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "shape_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "slide": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "type": {
+              "enum": [
+                "slide_region"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "slide",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "end_cell": {
+              "$ref": "#/definitions/CellAddress"
+            },
+            "sheet": {
+              "type": "string"
+            },
+            "start_cell": {
+              "$ref": "#/definitions/CellAddress"
+            },
+            "type": {
+              "enum": [
+                "sheet_range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "end_cell",
+            "sheet",
+            "start_cell",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "cell_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "index": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "output_index": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "enum": [
+                "notebook_cell"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "index",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "header": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "message_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "mime_path": {
+              "items": {
+                "$ref": "#/definitions/IndexPosition"
+              },
+              "type": "array"
+            },
+            "type": {
+              "enum": [
+                "email_part"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "member_index": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "member_path": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "archive_member"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "member_index",
+            "member_path",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "bbox": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/BoundingBox"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "frame": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "type": {
+              "enum": [
+                "image_region"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "frame",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "end_ms": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "start_ms": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "track": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "enum": [
+                "media_time"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "end_ms",
+            "start_ms",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "collection": {
+              "type": "string"
+            },
+            "field": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "records": {
+              "$ref": "#/definitions/IndexRange"
+            },
+            "type": {
+              "enum": [
+                "record_range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "collection",
+            "records",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "pointer": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "json_pointer"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "pointer",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "xml_path"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "type"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "LocatorConfidence": {
+      "format": "double",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "type": "number"
+    },
+    "OperationKind": {
+      "description": "The public operation that produced an envelope.",
+      "enum": [
+        "parse",
+        "ingest",
+        "transform",
+        "render",
+        "segment",
+        "validate"
+      ],
+      "type": "string"
+    },
+    "OperationStatus": {
+      "description": "Whether an operation satisfied its requested contract.",
+      "enum": [
+        "complete",
+        "partial",
+        "failed",
+        "unsupported",
+        "encrypted",
+        "ambiguous",
+        "cancelled"
+      ],
+      "type": "string"
+    },
+    "ParserAvailability": {
+      "description": "Whether a ranked candidate can be interpreted by the active registry.",
+      "enum": [
+        "available",
+        "unavailable",
+        "unregistered"
+      ],
+      "type": "string"
+    },
+    "ParserInfo": {
+      "description": "Parser and backend identity used to interpret an input.\n\n`version` is the Grist crate version retained under its v1 JSON name.",
+      "properties": {
+        "build_identity": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "enabled_feature": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "grammar_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "implementation": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "implementation_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "type": "object"
+    },
+    "ProvenanceStep": {
+      "description": "One declared derivation step that contributed to an operation result.\n\nA missing `loss_class` is the stable wire representation of an explicit lossless declaration; any lossy step names its loss class.",
+      "properties": {
+        "implementation": {
+          "type": "string"
+        },
+        "input_identity": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "loss_class": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "operation": {
+          "$ref": "#/definitions/OperationKind"
+        },
+        "options_digest": {
+          "type": "string"
+        },
+        "output_identity": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "provider": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "timestamp": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "warnings": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "implementation",
+        "operation",
+        "options_digest"
+      ],
+      "type": "object"
+    },
+    "ProviderInvocation": {
+      "description": "One explicitly attributed external-provider call.",
+      "properties": {
+        "confidence_model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "configuration_digest": {
+          "type": "string"
+        },
+        "deterministic": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "diagnostics": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Diagnostic"
+          },
+          "type": "array"
+        },
+        "implementation": {
+          "type": "string"
+        },
+        "input_identity": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "model_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "output_identity": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "provider": {
+          "type": "string"
+        },
+        "timing": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "configuration_digest",
+        "implementation",
+        "provider"
+      ],
+      "type": "object"
+    },
+    "RawContentIdentity": {
+      "description": "SHA-256 of exactly the original input bytes, without a prefix or suffix.",
+      "properties": {
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "byte_length",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "RecoveryAction": {
+      "description": "A recovery action is guidance, never an action executed by Grist.",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/RecoveryKind"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "description",
+        "kind",
+        "retryable"
+      ],
+      "type": "object"
+    },
+    "RecoveryKind": {
+      "description": "Machine-actionable recovery families.",
+      "enum": [
+        "inspect_input",
+        "select_parser",
+        "enable_feature",
+        "retry_provider",
+        "increase_budget",
+        "supply_credentials",
+        "change_options",
+        "report_parser_defect"
+      ],
+      "type": "string"
+    },
+    "SchemaVersion": {
+      "type": "string"
+    },
+    "Severity": {
+      "description": "Diagnostic importance at the public API boundary.",
+      "enum": [
+        "info",
+        "warning",
+        "error",
+        "fatal"
+      ],
+      "type": "string"
+    },
+    "SourceInfo": {
+      "description": "Descriptive source metadata supplied by the caller.\n\nURI values are labels only. Resolving or fetching them is outside Grist's source contract.",
+      "properties": {
+        "declared_mime_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "ingestion_timestamp": {
+          "description": "Caller-supplied timestamp. Grist never inserts the current time.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SourceInfo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "repository_relative_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "uri": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "display_name"
+      ],
+      "type": "object"
+    },
+    "SourceLocator": {
+      "description": "An outermost-to-innermost containment chain.\n\nComponent `n` is interpreted relative to component `n - 1`. For example, `[archive_member, email_part, ooxml_part, text_range]` identifies text in an OOXML part attached to an email stored in an archive without flattening any parent coordinate system.",
+      "oneOf": [
+        {
+          "properties": {
+            "derived_from": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/DerivedNodeReference"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "precision": {
+              "enum": [
+                "exact"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "precision"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "confidence": {
+              "$ref": "#/definitions/LocatorConfidence"
+            },
+            "derived_from": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/DerivedNodeReference"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "precision": {
+              "enum": [
+                "approximate"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "confidence",
+            "precision"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "confidence": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/LocatorConfidence"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "derived_from": {
+              "$ref": "#/definitions/DerivedNodeReference"
+            },
+            "precision": {
+              "enum": [
+                "synthetic"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "derived_from",
+            "precision"
+          ],
+          "type": "object"
+        }
+      ],
+      "properties": {
+        "components": {
+          "items": {
+            "$ref": "#/definitions/LocationComponent"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "components"
+      ],
+      "type": "object"
+    },
+    "SourceRange": {
+      "properties": {
+        "byte_end": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "byte_start": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "end_column": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "end_line": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "start_column": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "start_line": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "byte_end",
+        "byte_start",
+        "end_column",
+        "end_line",
+        "start_column",
+        "start_line"
+      ],
+      "type": "object"
+    },
+    "WordAbstractNumbering": {
+      "properties": {
+        "abstract_num_id": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "levels": {
+          "items": {
+            "$ref": "#/definitions/WordNumberingLevel"
+          },
+          "type": "array"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "multi_level_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "number_style_link": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "style_link": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "abstract_num_id",
+        "levels",
+        "locator"
+      ],
+      "type": "object"
+    },
+    "WordBlock": {
+      "oneOf": [
+        {
+          "properties": {
+            "citations": {
+              "items": {
+                "$ref": "#/definitions/WordCitation"
+              },
+              "type": "array"
+            },
+            "cross_references": {
+              "items": {
+                "$ref": "#/definitions/WordCrossReference"
+              },
+              "type": "array"
+            },
+            "direct_properties": {
+              "$ref": "#/definitions/WordParagraphProperties"
+            },
+            "fields": {
+              "items": {
+                "$ref": "#/definitions/WordField"
+              },
+              "type": "array"
+            },
+            "heading_level": {
+              "format": "uint8",
+              "minimum": 0.0,
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "index": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "inlines": {
+              "items": {
+                "$ref": "#/definitions/WordInline"
+              },
+              "type": "array"
+            },
+            "kind": {
+              "enum": [
+                "paragraph"
+              ],
+              "type": "string"
+            },
+            "locator": {
+              "$ref": "#/definitions/SourceLocator"
+            },
+            "numbering": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/WordResolvedNumbering"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "numbering_reference": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/WordNumberingReference"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "properties": {
+              "$ref": "#/definitions/WordParagraphProperties"
+            },
+            "section": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/WordSection"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "style_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "text": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "citations",
+            "cross_references",
+            "direct_properties",
+            "fields",
+            "index",
+            "inlines",
+            "kind",
+            "locator",
+            "properties",
+            "text"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "grid_columns": {
+              "items": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "type": "array"
+            },
+            "index": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "kind": {
+              "enum": [
+                "table"
+              ],
+              "type": "string"
+            },
+            "layout": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "locator": {
+              "$ref": "#/definitions/SourceLocator"
+            },
+            "rows": {
+              "items": {
+                "$ref": "#/definitions/WordTableRow"
+              },
+              "type": "array"
+            },
+            "style_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "text": {
+              "type": "string"
+            },
+            "width": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "grid_columns",
+            "index",
+            "kind",
+            "locator",
+            "rows",
+            "text"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "WordBookmarkKind": {
+      "enum": [
+        "start",
+        "end"
+      ],
+      "type": "string"
+    },
+    "WordCaption": {
+      "properties": {
+        "caption_id": {
+          "type": "string"
+        },
+        "inference_rule": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "label": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "story_part": {
+          "type": "string"
+        },
+        "target_object_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "caption_id",
+        "locator",
+        "story_part",
+        "text"
+      ],
+      "type": "object"
+    },
+    "WordChart": {
+      "properties": {
+        "chart_id": {
+          "type": "string"
+        },
+        "chart_part": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "chart_types": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "content": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/WordRichXmlNode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "relationship_id": {
+          "type": "string"
+        },
+        "source_part": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "chart_id",
+        "chart_types",
+        "locator",
+        "relationship_id",
+        "source_part",
+        "text"
+      ],
+      "type": "object"
+    },
+    "WordChildArtifact": {
+      "properties": {
+        "artifact": {
+          "$ref": "#/definitions/EmbeddedArtifact"
+        },
+        "content_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "part": {
+          "type": "string"
+        },
+        "relationship_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "artifact",
+        "locator",
+        "part",
+        "relationship_ids"
+      ],
+      "type": "object"
+    },
+    "WordCitation": {
+      "properties": {
+        "instruction": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "result_text": {
+          "type": "string"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "instruction",
+        "locator",
+        "result_text",
+        "tags"
+      ],
+      "type": "object"
+    },
+    "WordColumns": {
+      "properties": {
+        "count": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "definitions": {
+          "items": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "equal_width": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "separator": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "spacing": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "count",
+        "definitions"
+      ],
+      "type": "object"
+    },
+    "WordComment": {
+      "properties": {
+        "anchors": {
+          "items": {
+            "$ref": "#/definitions/WordCommentAnchor"
+          },
+          "type": "array"
+        },
+        "author": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "content": {
+          "$ref": "#/definitions/WordRichXmlNode"
+        },
+        "date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "durable_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "initials": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "paragraph_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parent_comment_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reply_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "resolved": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "anchors",
+        "content",
+        "id",
+        "locator",
+        "reply_ids",
+        "text"
+      ],
+      "type": "object"
+    },
+    "WordCommentAnchor": {
+      "properties": {
+        "anchor_kind": {
+          "$ref": "#/definitions/WordCommentAnchorKind"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "story_part": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "anchor_kind",
+        "locator",
+        "story_part"
+      ],
+      "type": "object"
+    },
+    "WordCommentAnchorKind": {
+      "enum": [
+        "range_start",
+        "range_end",
+        "reference"
+      ],
+      "type": "string"
+    },
+    "WordContentControl": {
+      "properties": {
+        "alias": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "content": {
+          "$ref": "#/definitions/WordRichXmlNode"
+        },
+        "control_id": {
+          "type": "string"
+        },
+        "control_type": {
+          "type": "string"
+        },
+        "data_binding": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "lock": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parent_control_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "placeholder": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "properties": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/WordRichXmlNode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "showing_placeholder": {
+          "type": "boolean"
+        },
+        "story_part": {
+          "type": "string"
+        },
+        "tag": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content",
+        "control_id",
+        "control_type",
+        "data_binding",
+        "locator",
+        "showing_placeholder",
+        "story_part",
+        "text"
+      ],
+      "type": "object"
+    },
+    "WordContentTypeDefault": {
+      "properties": {
+        "content_type": {
+          "type": "string"
+        },
+        "extension": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        }
+      },
+      "required": [
+        "content_type",
+        "extension",
+        "locator"
+      ],
+      "type": "object"
+    },
+    "WordContentTypeOverride": {
+      "properties": {
+        "content_type": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "part_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content_type",
+        "locator",
+        "part_name"
+      ],
+      "type": "object"
+    },
+    "WordContentTypes": {
+      "properties": {
+        "defaults": {
+          "items": {
+            "$ref": "#/definitions/WordContentTypeDefault"
+          },
+          "type": "array"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "overrides": {
+          "items": {
+            "$ref": "#/definitions/WordContentTypeOverride"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "defaults",
+        "locator",
+        "overrides"
+      ],
+      "type": "object"
+    },
+    "WordCrossReference": {
+      "properties": {
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "reference_type": {
+          "type": "string"
+        },
+        "result_text": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "locator",
+        "reference_type",
+        "result_text",
+        "target"
+      ],
+      "type": "object"
+    },
+    "WordCustomProperty": {
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "format_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "link_target": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "part": {
+          "type": "string"
+        },
+        "property_id": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "value": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "value_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "attributes",
+        "locator",
+        "part"
+      ],
+      "type": "object"
+    },
+    "WordDocumentProperties": {
+      "properties": {
+        "core": {
+          "items": {
+            "$ref": "#/definitions/WordProperty"
+          },
+          "type": "array"
+        },
+        "custom": {
+          "items": {
+            "$ref": "#/definitions/WordCustomProperty"
+          },
+          "type": "array"
+        },
+        "extended": {
+          "items": {
+            "$ref": "#/definitions/WordProperty"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "core",
+        "custom",
+        "extended"
+      ],
+      "type": "object"
+    },
+    "WordDrawing": {
+      "properties": {
+        "alt_text": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "content": {
+          "$ref": "#/definitions/WordRichXmlNode"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "drawing_id": {
+          "type": "string"
+        },
+        "drawing_kind": {
+          "$ref": "#/definitions/WordDrawingKind"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "relationships": {
+          "items": {
+            "$ref": "#/definitions/WordObjectRelationship"
+          },
+          "type": "array"
+        },
+        "story_part": {
+          "type": "string"
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "content",
+        "drawing_id",
+        "drawing_kind",
+        "locator",
+        "relationships",
+        "story_part"
+      ],
+      "type": "object"
+    },
+    "WordDrawingKind": {
+      "enum": [
+        "image",
+        "chart",
+        "text_box",
+        "ole_object",
+        "shape",
+        "group",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "WordEmbeddedObject": {
+      "properties": {
+        "child_artifact_part": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "content": {
+          "$ref": "#/definitions/WordRichXmlNode"
+        },
+        "draw_aspect": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "object_id": {
+          "type": "string"
+        },
+        "object_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "program_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "relationship": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/WordObjectRelationship"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "relationship_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "shape_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "story_part": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content",
+        "locator",
+        "object_id",
+        "story_part"
+      ],
+      "type": "object"
+    },
+    "WordEquation": {
+      "properties": {
+        "display": {
+          "type": "boolean"
+        },
+        "equation_id": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "omml": {
+          "$ref": "#/definitions/WordRichXmlNode"
+        },
+        "story_part": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "display",
+        "equation_id",
+        "locator",
+        "omml",
+        "story_part",
+        "text"
+      ],
+      "type": "object"
+    },
+    "WordField": {
+      "properties": {
+        "dirty": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "field_type": {
+          "type": "string"
+        },
+        "instruction": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "locked": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "result_runs": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/WordRun"
+          },
+          "type": "array"
+        },
+        "result_text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "field_type",
+        "instruction",
+        "locator",
+        "result_text"
+      ],
+      "type": "object"
+    },
+    "WordHeaderFooter": {
+      "properties": {
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "part": {
+          "type": "string"
+        },
+        "relationship_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "story": {
+          "$ref": "#/definitions/WordStory"
+        }
+      },
+      "required": [
+        "locator",
+        "part",
+        "relationship_ids",
+        "story"
+      ],
+      "type": "object"
+    },
+    "WordInline": {
+      "oneOf": [
+        {
+          "properties": {
+            "contents": {
+              "items": {
+                "$ref": "#/definitions/WordRunContent"
+              },
+              "type": "array"
+            },
+            "direct_formatting": {
+              "$ref": "#/definitions/WordRunFormatting"
+            },
+            "effective_formatting": {
+              "$ref": "#/definitions/WordRunFormatting"
+            },
+            "index": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "kind": {
+              "enum": [
+                "run"
+              ],
+              "type": "string"
+            },
+            "locator": {
+              "$ref": "#/definitions/SourceLocator"
+            },
+            "style_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "text": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "contents",
+            "direct_formatting",
+            "effective_formatting",
+            "index",
+            "kind",
+            "locator",
+            "text"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "anchor": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "history": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "hyperlink"
+              ],
+              "type": "string"
+            },
+            "locator": {
+              "$ref": "#/definitions/SourceLocator"
+            },
+            "relationship_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "runs": {
+              "items": {
+                "$ref": "#/definitions/WordRun"
+              },
+              "type": "array"
+            },
+            "target": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "text": {
+              "type": "string"
+            },
+            "tooltip": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "locator",
+            "runs",
+            "text"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "bookmark_kind": {
+              "$ref": "#/definitions/WordBookmarkKind"
+            },
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "bookmark"
+              ],
+              "type": "string"
+            },
+            "locator": {
+              "$ref": "#/definitions/SourceLocator"
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "bookmark_kind",
+            "id",
+            "kind",
+            "locator"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "dirty": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "field_type": {
+              "type": "string"
+            },
+            "instruction": {
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "field"
+              ],
+              "type": "string"
+            },
+            "locator": {
+              "$ref": "#/definitions/SourceLocator"
+            },
+            "locked": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "result_runs": {
+              "default": [],
+              "items": {
+                "$ref": "#/definitions/WordRun"
+              },
+              "type": "array"
+            },
+            "result_text": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "field_type",
+            "instruction",
+            "kind",
+            "locator",
+            "result_text"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "WordMacroProject": {
+      "properties": {
+        "artifact": {
+          "$ref": "#/definitions/EmbeddedArtifact"
+        },
+        "content_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "identity": {
+          "$ref": "#/definitions/ContentIdentity"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "part": {
+          "type": "string"
+        },
+        "relationship_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "artifact",
+        "identity",
+        "locator",
+        "part",
+        "relationship_ids"
+      ],
+      "type": "object"
+    },
+    "WordNote": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "note_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "story": {
+          "$ref": "#/definitions/WordStory"
+        }
+      },
+      "required": [
+        "id",
+        "locator",
+        "story"
+      ],
+      "type": "object"
+    },
+    "WordNumbering": {
+      "properties": {
+        "abstract_definitions": {
+          "items": {
+            "$ref": "#/definitions/WordAbstractNumbering"
+          },
+          "type": "array"
+        },
+        "instances": {
+          "items": {
+            "$ref": "#/definitions/WordNumberingInstance"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "abstract_definitions",
+        "instances"
+      ],
+      "type": "object"
+    },
+    "WordNumberingInstance": {
+      "properties": {
+        "abstract_num_id": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "num_id": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "overrides": {
+          "items": {
+            "$ref": "#/definitions/WordNumberingOverride"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "abstract_num_id",
+        "locator",
+        "num_id",
+        "overrides"
+      ],
+      "type": "object"
+    },
+    "WordNumberingLevel": {
+      "properties": {
+        "alignment": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "level": {
+          "format": "uint8",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "level_text": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "number_format": {
+          "type": "string"
+        },
+        "paragraph_properties": {
+          "$ref": "#/definitions/WordParagraphProperties"
+        },
+        "paragraph_style": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "picture_bullet_id": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "restart_after_level": {
+          "format": "uint8",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "run_formatting": {
+          "$ref": "#/definitions/WordRunFormatting"
+        },
+        "start": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "suffix": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "level",
+        "level_text",
+        "locator",
+        "number_format",
+        "paragraph_properties",
+        "run_formatting",
+        "start"
+      ],
+      "type": "object"
+    },
+    "WordNumberingOverride": {
+      "properties": {
+        "level": {
+          "format": "uint8",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "level_definition": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/WordNumberingLevel"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "start_override": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "level",
+        "locator"
+      ],
+      "type": "object"
+    },
+    "WordNumberingReference": {
+      "properties": {
+        "level": {
+          "format": "uint8",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "num_id": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "level",
+        "locator",
+        "num_id"
+      ],
+      "type": "object"
+    },
+    "WordObjectRelationship": {
+      "properties": {
+        "external": {
+          "type": "boolean"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "relationship_id": {
+          "type": "string"
+        },
+        "relationship_type": {
+          "type": "string"
+        },
+        "resolved_part": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "target": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "external",
+        "locator",
+        "relationship_id",
+        "relationship_type",
+        "target"
+      ],
+      "type": "object"
+    },
+    "WordOoxmlDocument": {
+      "properties": {
+        "body": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/WordStory"
+            }
+          ],
+          "default": {
+            "blocks": [],
+            "locator": null,
+            "part": "",
+            "sections": [],
+            "visible_text": ""
+          }
+        },
+        "captions": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/WordCaption"
+          },
+          "type": "array"
+        },
+        "charts": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/WordChart"
+          },
+          "type": "array"
+        },
+        "child_artifacts": {
+          "items": {
+            "$ref": "#/definitions/WordChildArtifact"
+          },
+          "type": "array"
+        },
+        "comments": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/WordComment"
+          },
+          "type": "array"
+        },
+        "content_controls": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/WordContentControl"
+          },
+          "type": "array"
+        },
+        "content_types": {
+          "$ref": "#/definitions/WordContentTypes"
+        },
+        "drawings": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/WordDrawing"
+          },
+          "type": "array"
+        },
+        "embedded_objects": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/WordEmbeddedObject"
+          },
+          "type": "array"
+        },
+        "endnotes": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/WordNote"
+          },
+          "type": "array"
+        },
+        "equations": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/WordEquation"
+          },
+          "type": "array"
+        },
+        "footers": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/WordHeaderFooter"
+          },
+          "type": "array"
+        },
+        "footnotes": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/WordNote"
+          },
+          "type": "array"
+        },
+        "headers": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/WordHeaderFooter"
+          },
+          "type": "array"
+        },
+        "macro_projects": {
+          "items": {
+            "$ref": "#/definitions/WordMacroProject"
+          },
+          "type": "array"
+        },
+        "main_document_locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "main_document_part": {
+          "type": "string"
+        },
+        "numbering": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/WordNumbering"
+            }
+          ],
+          "default": {
+            "abstract_definitions": [],
+            "instances": []
+          }
+        },
+        "package_kind": {
+          "$ref": "#/definitions/WordPackageKind"
+        },
+        "package_media_type": {
+          "type": "string"
+        },
+        "parts": {
+          "items": {
+            "$ref": "#/definitions/WordPackagePart"
+          },
+          "type": "array"
+        },
+        "properties": {
+          "$ref": "#/definitions/WordDocumentProperties"
+        },
+        "relationships": {
+          "items": {
+            "$ref": "#/definitions/WordRelationship"
+          },
+          "type": "array"
+        },
+        "revision_graph": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/WordRevisionGraph"
+            }
+          ],
+          "default": {
+            "edges": [],
+            "projections": {
+              "accepted": [],
+              "original": [],
+              "rejected": []
+            },
+            "revisions": []
+          }
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "styles": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/WordStyle"
+          },
+          "type": "array"
+        },
+        "text_boxes": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/WordTextBox"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "child_artifacts",
+        "content_types",
+        "macro_projects",
+        "main_document_locator",
+        "main_document_part",
+        "package_kind",
+        "package_media_type",
+        "parts",
+        "properties",
+        "relationships",
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "WordPackageKind": {
+      "enum": [
+        "document",
+        "macro_enabled_document",
+        "template",
+        "macro_enabled_template"
+      ],
+      "type": "string"
+    },
+    "WordPackagePart": {
+      "properties": {
+        "compressed_size": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "compression": {
+          "type": "string"
+        },
+        "content_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "crc32": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "identity": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ContentIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "package_index": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        },
+        "rejection_code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "$ref": "#/definitions/WordPartStatus"
+        },
+        "uncompressed_size": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "compressed_size",
+        "compression",
+        "crc32",
+        "locator",
+        "package_index",
+        "path",
+        "status",
+        "uncompressed_size"
+      ],
+      "type": "object"
+    },
+    "WordParagraphProperties": {
+      "properties": {
+        "alignment": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "contextual_spacing": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "indentation": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "keep_lines": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "keep_next": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "outline_level": {
+          "format": "uint8",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "page_break_before": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "properties": {
+          "items": {
+            "$ref": "#/definitions/WordXmlProperty"
+          },
+          "type": "array"
+        },
+        "spacing": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "widow_control": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "indentation",
+        "properties",
+        "spacing"
+      ],
+      "type": "object"
+    },
+    "WordPartStatus": {
+      "enum": [
+        "available",
+        "directory",
+        "encrypted",
+        "rejected"
+      ],
+      "type": "string"
+    },
+    "WordProperty": {
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "name": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "part": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "attributes",
+        "locator",
+        "name",
+        "part",
+        "value"
+      ],
+      "type": "object"
+    },
+    "WordRelationship": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "relationship_part": {
+          "type": "string"
+        },
+        "relationship_type": {
+          "type": "string"
+        },
+        "resolved_part": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_part": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "target": {
+          "type": "string"
+        },
+        "target_exists": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "target_mode": {
+          "$ref": "#/definitions/WordRelationshipTargetMode"
+        }
+      },
+      "required": [
+        "id",
+        "locator",
+        "relationship_part",
+        "relationship_type",
+        "target",
+        "target_mode"
+      ],
+      "type": "object"
+    },
+    "WordRelationshipTargetMode": {
+      "enum": [
+        "internal",
+        "external"
+      ],
+      "type": "string"
+    },
+    "WordResolvedNumbering": {
+      "properties": {
+        "abstract_num_id": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "definition_locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "label": {
+          "type": "string"
+        },
+        "level": {
+          "format": "uint8",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "level_text": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "num_id": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "number_format": {
+          "type": "string"
+        },
+        "ordered": {
+          "type": "boolean"
+        },
+        "ordinal": {
+          "format": "int64",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "abstract_num_id",
+        "definition_locator",
+        "label",
+        "level",
+        "level_text",
+        "locator",
+        "num_id",
+        "number_format",
+        "ordered",
+        "ordinal"
+      ],
+      "type": "object"
+    },
+    "WordRevision": {
+      "properties": {
+        "author": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "content": {
+          "$ref": "#/definitions/WordRichXmlNode"
+        },
+        "date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "node_id": {
+          "type": "string"
+        },
+        "parent_revision_node_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "revision_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "revision_kind": {
+          "$ref": "#/definitions/WordRevisionKind"
+        },
+        "story_part": {
+          "type": "string"
+        },
+        "target_xml_path": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content",
+        "locator",
+        "node_id",
+        "revision_kind",
+        "story_part",
+        "target_xml_path",
+        "text"
+      ],
+      "type": "object"
+    },
+    "WordRevisionEdge": {
+      "properties": {
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "relation": {
+          "$ref": "#/definitions/WordRevisionRelation"
+        },
+        "source_revision_node_id": {
+          "type": "string"
+        },
+        "target_revision_node_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "locator",
+        "relation",
+        "source_revision_node_id",
+        "target_revision_node_id"
+      ],
+      "type": "object"
+    },
+    "WordRevisionGraph": {
+      "properties": {
+        "edges": {
+          "items": {
+            "$ref": "#/definitions/WordRevisionEdge"
+          },
+          "type": "array"
+        },
+        "projections": {
+          "$ref": "#/definitions/WordRevisionProjections"
+        },
+        "revisions": {
+          "items": {
+            "$ref": "#/definitions/WordRevision"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "edges",
+        "projections",
+        "revisions"
+      ],
+      "type": "object"
+    },
+    "WordRevisionKind": {
+      "enum": [
+        "insertion",
+        "deletion",
+        "move_from",
+        "move_to",
+        "move_from_range_start",
+        "move_from_range_end",
+        "move_to_range_start",
+        "move_to_range_end",
+        "custom_xml_insertion_range_start",
+        "custom_xml_insertion_range_end",
+        "custom_xml_deletion_range_start",
+        "custom_xml_deletion_range_end",
+        "custom_xml_move_from_range_start",
+        "custom_xml_move_from_range_end",
+        "custom_xml_move_to_range_start",
+        "custom_xml_move_to_range_end",
+        "run_properties",
+        "paragraph_properties",
+        "table_properties",
+        "table_grid_properties",
+        "table_row_properties",
+        "table_cell_properties",
+        "cell_insertion",
+        "cell_deletion",
+        "cell_merge",
+        "section_properties",
+        "numbering_properties"
+      ],
+      "type": "string"
+    },
+    "WordRevisionProjections": {
+      "properties": {
+        "accepted": {
+          "items": {
+            "$ref": "#/definitions/WordStoryTextProjection"
+          },
+          "type": "array"
+        },
+        "original": {
+          "items": {
+            "$ref": "#/definitions/WordStoryTextProjection"
+          },
+          "type": "array"
+        },
+        "rejected": {
+          "items": {
+            "$ref": "#/definitions/WordStoryTextProjection"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "accepted",
+        "original",
+        "rejected"
+      ],
+      "type": "object"
+    },
+    "WordRevisionRelation": {
+      "enum": [
+        "contains",
+        "move_pair",
+        "range_pair"
+      ],
+      "type": "string"
+    },
+    "WordRevisionView": {
+      "enum": [
+        "original",
+        "accepted",
+        "rejected"
+      ],
+      "type": "string"
+    },
+    "WordRichXmlNode": {
+      "description": "Namespace-preserving structural retention for rich OOXML constructs.",
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "children": {
+          "items": {
+            "$ref": "#/definitions/WordRichXmlNode"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "attributes",
+        "children",
+        "name",
+        "text"
+      ],
+      "type": "object"
+    },
+    "WordRun": {
+      "properties": {
+        "contents": {
+          "items": {
+            "$ref": "#/definitions/WordRunContent"
+          },
+          "type": "array"
+        },
+        "direct_formatting": {
+          "$ref": "#/definitions/WordRunFormatting"
+        },
+        "effective_formatting": {
+          "$ref": "#/definitions/WordRunFormatting"
+        },
+        "index": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "style_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "contents",
+        "direct_formatting",
+        "effective_formatting",
+        "index",
+        "locator",
+        "text"
+      ],
+      "type": "object"
+    },
+    "WordRunContent": {
+      "oneOf": [
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "text"
+              ],
+              "type": "string"
+            },
+            "locator": {
+              "$ref": "#/definitions/SourceLocator"
+            },
+            "preserve_space": {
+              "type": "boolean"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "locator",
+            "preserve_space",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "tab"
+              ],
+              "type": "string"
+            },
+            "locator": {
+              "$ref": "#/definitions/SourceLocator"
+            }
+          },
+          "required": [
+            "kind",
+            "locator"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "break_type": {
+              "type": "string"
+            },
+            "clear": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "break"
+              ],
+              "type": "string"
+            },
+            "locator": {
+              "$ref": "#/definitions/SourceLocator"
+            }
+          },
+          "required": [
+            "break_type",
+            "kind",
+            "locator"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "carriage_return"
+              ],
+              "type": "string"
+            },
+            "locator": {
+              "$ref": "#/definitions/SourceLocator"
+            }
+          },
+          "required": [
+            "kind",
+            "locator"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "soft_hyphen"
+              ],
+              "type": "string"
+            },
+            "locator": {
+              "$ref": "#/definitions/SourceLocator"
+            }
+          },
+          "required": [
+            "kind",
+            "locator"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "no_break_hyphen"
+              ],
+              "type": "string"
+            },
+            "locator": {
+              "$ref": "#/definitions/SourceLocator"
+            }
+          },
+          "required": [
+            "kind",
+            "locator"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "character": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "font": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "symbol"
+              ],
+              "type": "string"
+            },
+            "locator": {
+              "$ref": "#/definitions/SourceLocator"
+            }
+          },
+          "required": [
+            "kind",
+            "locator"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "footnote_reference"
+              ],
+              "type": "string"
+            },
+            "locator": {
+              "$ref": "#/definitions/SourceLocator"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "locator"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "endnote_reference"
+              ],
+              "type": "string"
+            },
+            "locator": {
+              "$ref": "#/definitions/SourceLocator"
+            }
+          },
+          "required": [
+            "id",
+            "kind",
+            "locator"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "instruction": {
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "field_instruction"
+              ],
+              "type": "string"
+            },
+            "locator": {
+              "$ref": "#/definitions/SourceLocator"
+            }
+          },
+          "required": [
+            "instruction",
+            "kind",
+            "locator"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "character_type": {
+              "type": "string"
+            },
+            "dirty": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "field_character"
+              ],
+              "type": "string"
+            },
+            "locator": {
+              "$ref": "#/definitions/SourceLocator"
+            },
+            "locked": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "character_type",
+            "kind",
+            "locator"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "last_rendered_page_break"
+              ],
+              "type": "string"
+            },
+            "locator": {
+              "$ref": "#/definitions/SourceLocator"
+            }
+          },
+          "required": [
+            "kind",
+            "locator"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "WordRunFormatting": {
+      "properties": {
+        "all_caps": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "bold": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "color": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "double_strike": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "font_size_half_points": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "fonts": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "hidden": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "highlight": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "italic": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "language": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "properties": {
+          "items": {
+            "$ref": "#/definitions/WordXmlProperty"
+          },
+          "type": "array"
+        },
+        "small_caps": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "strike": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "underline": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "vertical_alignment": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "fonts",
+        "language",
+        "properties"
+      ],
+      "type": "object"
+    },
+    "WordSection": {
+      "properties": {
+        "break_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "columns": {
+          "$ref": "#/definitions/WordColumns"
+        },
+        "footer_references": {
+          "items": {
+            "$ref": "#/definitions/WordStoryReference"
+          },
+          "type": "array"
+        },
+        "header_references": {
+          "items": {
+            "$ref": "#/definitions/WordStoryReference"
+          },
+          "type": "array"
+        },
+        "index": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "page_margins": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "page_size": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "title_page": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "columns",
+        "footer_references",
+        "header_references",
+        "index",
+        "locator",
+        "page_margins",
+        "page_size",
+        "title_page"
+      ],
+      "type": "object"
+    },
+    "WordStory": {
+      "properties": {
+        "blocks": {
+          "items": {
+            "$ref": "#/definitions/WordBlock"
+          },
+          "type": "array"
+        },
+        "locator": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SourceLocator"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "part": {
+          "type": "string"
+        },
+        "sections": {
+          "items": {
+            "$ref": "#/definitions/WordSection"
+          },
+          "type": "array"
+        },
+        "visible_text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "blocks",
+        "part",
+        "sections",
+        "visible_text"
+      ],
+      "type": "object"
+    },
+    "WordStoryReference": {
+      "properties": {
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "part": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reference_type": {
+          "type": "string"
+        },
+        "relationship_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "locator",
+        "reference_type",
+        "relationship_id"
+      ],
+      "type": "object"
+    },
+    "WordStoryTextProjection": {
+      "properties": {
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "source_revision_node_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "story_part": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "view": {
+          "$ref": "#/definitions/WordRevisionView"
+        }
+      },
+      "required": [
+        "locator",
+        "source_revision_node_ids",
+        "story_part",
+        "text",
+        "view"
+      ],
+      "type": "object"
+    },
+    "WordStyle": {
+      "properties": {
+        "based_on": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "custom": {
+          "type": "boolean"
+        },
+        "effective_paragraph_properties": {
+          "$ref": "#/definitions/WordParagraphProperties"
+        },
+        "effective_run_formatting": {
+          "$ref": "#/definitions/WordRunFormatting"
+        },
+        "hidden": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "is_default": {
+          "type": "boolean"
+        },
+        "linked_style": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "next": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "paragraph_properties": {
+          "$ref": "#/definitions/WordParagraphProperties"
+        },
+        "run_formatting": {
+          "$ref": "#/definitions/WordRunFormatting"
+        },
+        "semi_hidden": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "style_id": {
+          "type": "string"
+        },
+        "style_type": {
+          "type": "string"
+        },
+        "ui_priority": {
+          "format": "int32",
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "custom",
+        "effective_paragraph_properties",
+        "effective_run_formatting",
+        "is_default",
+        "locator",
+        "paragraph_properties",
+        "run_formatting",
+        "style_id",
+        "style_type"
+      ],
+      "type": "object"
+    },
+    "WordTableCell": {
+      "properties": {
+        "blocks": {
+          "items": {
+            "$ref": "#/definitions/WordBlock"
+          },
+          "type": "array"
+        },
+        "column_span": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "grid_column": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "horizontal_merge": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "merged_into": {
+          "items": [
+            {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            }
+          ],
+          "maxItems": 2,
+          "minItems": 2,
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "row_span": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        },
+        "vertical_merge": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "width": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "blocks",
+        "column_span",
+        "grid_column",
+        "index",
+        "locator",
+        "row_span",
+        "text"
+      ],
+      "type": "object"
+    },
+    "WordTableRow": {
+      "properties": {
+        "cant_split": {
+          "type": "boolean"
+        },
+        "cells": {
+          "items": {
+            "$ref": "#/definitions/WordTableCell"
+          },
+          "type": "array"
+        },
+        "height": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "index": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "is_header": {
+          "type": "boolean"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        }
+      },
+      "required": [
+        "cant_split",
+        "cells",
+        "index",
+        "is_header",
+        "locator"
+      ],
+      "type": "object"
+    },
+    "WordTextBox": {
+      "properties": {
+        "content": {
+          "$ref": "#/definitions/WordRichXmlNode"
+        },
+        "drawing_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "story_part": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "text_box_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content",
+        "locator",
+        "story_part",
+        "text",
+        "text_box_id"
+      ],
+      "type": "object"
+    },
+    "WordXmlProperty": {
+      "properties": {
+        "attributes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "name": {
+          "type": "string"
+        },
+        "value": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "attributes",
+        "locator",
+        "name"
+      ],
+      "type": "object"
+    }
+  },
+  "description": "Universal result for parse, ingest, transform, render, segment, and validation operations.",
+  "properties": {
+    "diagnostics": {
+      "items": {
+        "$ref": "#/definitions/Diagnostic"
+      },
+      "type": "array"
+    },
+    "hashes": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/Hashes"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Legacy v1 hashes retained for wire and Rust compatibility."
+    },
+    "identity": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/ContentIdentity"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Versioned raw, decoded, canonical-payload, format, and aggregate identity."
+    },
+    "kind": {
+      "$ref": "#/definitions/ArtifactKind"
+    },
+    "operation": {
+      "$ref": "#/definitions/OperationKind"
+    },
+    "options_digest": {
+      "type": "string"
+    },
+    "parser": {
+      "$ref": "#/definitions/ParserInfo"
+    },
+    "payload": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/WordOoxmlDocument"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "payload_schema_version": {
+      "$ref": "#/definitions/SchemaVersion"
+    },
+    "provenance": {
+      "items": {
+        "$ref": "#/definitions/ProvenanceStep"
+      },
+      "type": "array"
+    },
+    "providers": {
+      "items": {
+        "$ref": "#/definitions/ProviderInvocation"
+      },
+      "type": "array"
+    },
+    "schema_version": {
+      "$ref": "#/definitions/SchemaVersion"
+    },
+    "source": {
+      "$ref": "#/definitions/SourceInfo"
+    },
+    "status": {
+      "$ref": "#/definitions/OperationStatus"
+    }
+  },
+  "required": [
+    "diagnostics",
+    "kind",
+    "operation",
+    "options_digest",
+    "parser",
+    "payload_schema_version",
+    "provenance",
+    "providers",
+    "schema_version",
+    "source",
+    "status"
+  ],
+  "title": "Envelope_for_WordOoxmlDocument",
+  "type": "object"
+}

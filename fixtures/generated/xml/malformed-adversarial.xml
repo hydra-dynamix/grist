@@ -1,0 +1,2 @@
+<!DOCTYPE article [<!ENTITY xxe SYSTEM "file:///must-not-read"><!ENTITY local "retained">]>
+<article xmlns:xi="http://www.w3.org/2001/XInclude" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:test https://network.invalid/schema.xsd"><body><xi:include href="https://network.invalid/never"/><sec><title>Malformed</title><p attr="&local;">&xxe;<broken></sec></body></article>tail

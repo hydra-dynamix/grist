@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Stored canonical output plus the hashes required to validate reuse.",
+  "properties": {
+    "canonical_output": {
+      "items": {
+        "format": "uint8",
+        "minimum": 0.0,
+        "type": "integer"
+      },
+      "type": "array"
+    },
+    "canonical_output_sha256": {
+      "type": "string"
+    },
+    "key_digest": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "canonical_output",
+    "canonical_output_sha256",
+    "key_digest",
+    "schema_version"
+  ],
+  "title": "CacheEntry",
+  "type": "object"
+}

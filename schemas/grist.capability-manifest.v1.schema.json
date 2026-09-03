@@ -1,0 +1,1356 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "ActiveContentPolicy": {
+      "enum": [
+        "escape"
+      ],
+      "type": "string"
+    },
+    "ArchiveSecurityPolicy": {
+      "properties": {
+        "max_path_bytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "max_path_components": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_path_bytes",
+        "max_path_components"
+      ],
+      "type": "object"
+    },
+    "ArtifactKind": {
+      "enum": [
+        "archive",
+        "markdown",
+        "restructured_text",
+        "ascii_doc",
+        "html",
+        "epub",
+        "pdf",
+        "image",
+        "subtitle",
+        "media",
+        "word_ooxml",
+        "presentation_ooxml",
+        "spreadsheet_ooxml",
+        "spreadsheet_odf",
+        "presentation_odf",
+        "odf_word",
+        "rtf",
+        "xml",
+        "csv",
+        "rust_code",
+        "python_code",
+        "javascript_code",
+        "typescript_code",
+        "code",
+        "manifest",
+        "latex",
+        "bibliography",
+        "serialization",
+        "structured_binary",
+        "columnar",
+        "sqlite",
+        "email",
+        "mbox",
+        "outlook_msg",
+        "i_calendar",
+        "v_card",
+        "notebook",
+        "model_output",
+        "repo_ingest",
+        "file_ingest",
+        "text",
+        "ldgr_projection",
+        "detection",
+        "document_graph",
+        "graph_document",
+        "graph_transform_result",
+        "render_result",
+        "reconstruction_result",
+        "segment_collection",
+        "schema_validation",
+        "container_traversal",
+        "capabilities",
+        "unsupported"
+      ],
+      "type": "string"
+    },
+    "BackendCapability": {
+      "description": "Backend identity used by one registered parser implementation.",
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "build_identity": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "grammar_or_specification_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "implementation": {
+          "type": "string"
+        },
+        "implementation_version": {
+          "type": "string"
+        },
+        "parser_id": {
+          "type": "string"
+        },
+        "parser_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "available",
+        "implementation",
+        "implementation_version",
+        "parser_id",
+        "parser_name"
+      ],
+      "type": "object"
+    },
+    "BudgetAxis": {
+      "enum": [
+        "input_bytes",
+        "decoded_characters",
+        "pages",
+        "records",
+        "cells",
+        "nodes",
+        "nesting_depth",
+        "archive_expansion_ratio",
+        "archive_members",
+        "child_artifacts",
+        "parse_millis",
+        "provider_millis",
+        "memory_bytes",
+        "temporary_storage_bytes",
+        "output_bytes"
+      ],
+      "type": "string"
+    },
+    "BudgetCapabilities": {
+      "description": "Discoverable named budget policies and every enforceable budget axis.",
+      "properties": {
+        "axes": {
+          "items": {
+            "$ref": "#/definitions/BudgetAxis"
+          },
+          "type": "array"
+        },
+        "cli_default_profile": {
+          "type": "string"
+        },
+        "explicit_selection_required": {
+          "type": "boolean"
+        },
+        "profiles": {
+          "items": {
+            "$ref": "#/definitions/BudgetProfileDefinition"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "axes",
+        "cli_default_profile",
+        "explicit_selection_required",
+        "profiles"
+      ],
+      "type": "object"
+    },
+    "BudgetProfileDefinition": {
+      "properties": {
+        "budget": {
+          "$ref": "#/definitions/ResourceBudget"
+        },
+        "name": {
+          "type": "string"
+        },
+        "trusted": {
+          "type": "boolean"
+        },
+        "version": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "budget",
+        "name",
+        "trusted",
+        "version"
+      ],
+      "type": "object"
+    },
+    "Capability": {
+      "enum": [
+        "native_extraction",
+        "typed_payload",
+        "document_graph_projection",
+        "grammar_detection",
+        "source_ranges",
+        "error_recovery",
+        "inert_parsing",
+        "streaming",
+        "embedded_artifacts",
+        "provider_derived_content",
+        "isolated_backend"
+      ],
+      "type": "string"
+    },
+    "Determinism": {
+      "enum": [
+        "guaranteed",
+        "guaranteed_with_recording",
+        "not_guaranteed"
+      ],
+      "type": "string"
+    },
+    "ExecutionPolicy": {
+      "oneOf": [
+        {
+          "description": "Active constructs are retained as data and can never be invoked.",
+          "enum": [
+            "preserve_inert"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "FeatureCapability": {
+      "description": "Whether a compiled feature gate is active in this build.",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "enabled",
+        "name"
+      ],
+      "type": "object"
+    },
+    "FormatCapability": {
+      "description": "Canonical availability record for one format known to the active registry.",
+      "properties": {
+        "allowed_providers": {
+          "items": {
+            "$ref": "#/definitions/ProviderKind"
+          },
+          "type": "array"
+        },
+        "available": {
+          "type": "boolean"
+        },
+        "backends": {
+          "items": {
+            "$ref": "#/definitions/BackendCapability"
+          },
+          "type": "array"
+        },
+        "format": {
+          "$ref": "#/definitions/FormatMetadata"
+        },
+        "options_schemas": {
+          "items": {
+            "$ref": "#/definitions/SchemaMetadata"
+          },
+          "type": "array"
+        },
+        "parser_capabilities": {
+          "items": {
+            "$ref": "#/definitions/Capability"
+          },
+          "type": "array"
+        },
+        "parser_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "payload_schemas": {
+          "items": {
+            "$ref": "#/definitions/SchemaMetadata"
+          },
+          "type": "array"
+        },
+        "required_features": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "required_providers": {
+          "items": {
+            "$ref": "#/definitions/ProviderKind"
+          },
+          "type": "array"
+        },
+        "unavailable_reasons": {
+          "items": {
+            "$ref": "#/definitions/UnavailableReason"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "allowed_providers",
+        "available",
+        "backends",
+        "format",
+        "options_schemas",
+        "parser_capabilities",
+        "parser_ids",
+        "payload_schemas",
+        "required_features",
+        "required_providers",
+        "unavailable_reasons"
+      ],
+      "type": "object"
+    },
+    "FormatMetadata": {
+      "properties": {
+        "aliases": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "artifact_kind": {
+          "$ref": "#/definitions/ArtifactKind"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "extensions": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "id": {
+          "type": "string"
+        },
+        "media_types": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "artifact_kind",
+        "display_name",
+        "id"
+      ],
+      "type": "object"
+    },
+    "FormatReconstructionClaim": {
+      "properties": {
+        "fixture_evidence": {
+          "items": {
+            "$ref": "#/definitions/ReconstructionFixtureEvidence"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "format": {
+          "type": "string"
+        },
+        "implementation": {
+          "type": "string"
+        },
+        "implementation_version": {
+          "type": "string"
+        },
+        "maximum_fidelity": {
+          "$ref": "#/definitions/ReconstructionFidelity"
+        },
+        "media_type": {
+          "type": "string"
+        },
+        "package_profile": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "fixture_evidence",
+        "format",
+        "implementation",
+        "implementation_version",
+        "maximum_fidelity",
+        "media_type",
+        "package_profile"
+      ],
+      "type": "object"
+    },
+    "InputMetadataPolicy": {
+      "enum": [
+        "caller_directed_only"
+      ],
+      "type": "string"
+    },
+    "IsolationMetadata": {
+      "properties": {
+        "active_content_execution": {
+          "type": "boolean"
+        },
+        "network": {
+          "$ref": "#/definitions/NetworkPolicy"
+        },
+        "private_temporary_filesystem": {
+          "type": "boolean"
+        },
+        "subprocess_limit": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "active_content_execution",
+        "network",
+        "private_temporary_filesystem",
+        "subprocess_limit"
+      ],
+      "type": "object"
+    },
+    "NetworkAccess": {
+      "description": "Whether a selected provider may access the network for this request.",
+      "enum": [
+        "denied",
+        "allowed"
+      ],
+      "type": "string"
+    },
+    "NetworkPolicy": {
+      "enum": [
+        "forbidden",
+        "optional",
+        "required"
+      ],
+      "type": "string"
+    },
+    "NetworkPolicy2": {
+      "oneOf": [
+        {
+          "description": "Only an explicitly selected provider receives a caller's per-request permission. Core parsing never performs network I/O.",
+          "enum": [
+            "explicit_providers_only"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "OptionsMetadata": {
+      "properties": {
+        "default": true,
+        "schema": {
+          "$ref": "#/definitions/SchemaMetadata"
+        }
+      },
+      "required": [
+        "default",
+        "schema"
+      ],
+      "type": "object"
+    },
+    "ParserDescriptor": {
+      "properties": {
+        "allowed_providers": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/ProviderKind"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "capabilities": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Capability"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "format": {
+          "$ref": "#/definitions/FormatMetadata"
+        },
+        "id": {
+          "type": "string"
+        },
+        "options": {
+          "$ref": "#/definitions/OptionsMetadata"
+        },
+        "origin": {
+          "$ref": "#/definitions/ParserOrigin"
+        },
+        "parser": {
+          "$ref": "#/definitions/ParserInfo"
+        },
+        "payload_schema": {
+          "$ref": "#/definitions/SchemaMetadata"
+        },
+        "priority": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "required_features": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "required_providers": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/ProviderKind"
+          },
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "format",
+        "id",
+        "options",
+        "origin",
+        "parser",
+        "payload_schema",
+        "priority"
+      ],
+      "type": "object"
+    },
+    "ParserInfo": {
+      "description": "Parser and backend identity used to interpret an input.\n\n`version` is the Grist crate version retained under its v1 JSON name.",
+      "properties": {
+        "build_identity": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "enabled_feature": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "grammar_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "implementation": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "implementation_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "type": "object"
+    },
+    "ParserOrigin": {
+      "enum": [
+        "built_in",
+        "caller"
+      ],
+      "type": "string"
+    },
+    "ProviderCapability": {
+      "description": "Availability and request requirements for one provider kind.",
+      "properties": {
+        "allowed_by_formats": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "available": {
+          "type": "boolean"
+        },
+        "explicit_selection_required": {
+          "type": "boolean"
+        },
+        "implementations": {
+          "items": {
+            "$ref": "#/definitions/ProviderDescriptor"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "$ref": "#/definitions/ProviderKind"
+        },
+        "network_permission_modes": {
+          "items": {
+            "$ref": "#/definitions/NetworkAccess"
+          },
+          "type": "array"
+        },
+        "required_by_formats": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "unavailable_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "allowed_by_formats",
+        "available",
+        "explicit_selection_required",
+        "implementations",
+        "kind",
+        "network_permission_modes",
+        "required_by_formats"
+      ],
+      "type": "object"
+    },
+    "ProviderDescriptor": {
+      "properties": {
+        "capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "determinism": {
+          "$ref": "#/definitions/Determinism"
+        },
+        "enabled_feature": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "implementation": {
+          "type": "string"
+        },
+        "implementation_version": {
+          "type": "string"
+        },
+        "isolation": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/IsolationMetadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "kind": {
+          "$ref": "#/definitions/ProviderKind"
+        },
+        "name": {
+          "type": "string"
+        },
+        "network": {
+          "$ref": "#/definitions/NetworkPolicy"
+        },
+        "origin": {
+          "$ref": "#/definitions/ParserOrigin"
+        },
+        "priority": {
+          "format": "int32",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "capabilities",
+        "determinism",
+        "id",
+        "implementation",
+        "implementation_version",
+        "kind",
+        "name",
+        "network",
+        "origin",
+        "priority"
+      ],
+      "type": "object"
+    },
+    "ProviderKind": {
+      "description": "Provider capabilities selectable by a parse request.",
+      "enum": [
+        "ocr",
+        "transcription",
+        "decryption",
+        "isolated_parser_backend"
+      ],
+      "type": "string"
+    },
+    "ReconstructionCapability": {
+      "description": "Faithful reconstruction support for one known source format.",
+      "properties": {
+        "claims": {
+          "items": {
+            "$ref": "#/definitions/FormatReconstructionClaim"
+          },
+          "type": "array"
+        },
+        "format": {
+          "type": "string"
+        },
+        "supported": {
+          "type": "boolean"
+        },
+        "unavailable_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "claims",
+        "format",
+        "supported"
+      ],
+      "type": "object"
+    },
+    "ReconstructionClaim": {
+      "enum": [
+        "normalized_not_byte_round_trip"
+      ],
+      "type": "string"
+    },
+    "ReconstructionFidelity": {
+      "enum": [
+        "lossy",
+        "semantic_equivalent",
+        "package_equivalent",
+        "byte_identical"
+      ],
+      "type": "string"
+    },
+    "ReconstructionFixtureEvidence": {
+      "properties": {
+        "expected_package_sha256": {
+          "type": "string"
+        },
+        "fixture_id": {
+          "type": "string"
+        },
+        "input_sha256": {
+          "type": "string"
+        },
+        "verified_fidelity": {
+          "$ref": "#/definitions/ReconstructionFidelity"
+        }
+      },
+      "required": [
+        "expected_package_sha256",
+        "fixture_id",
+        "input_sha256",
+        "verified_fidelity"
+      ],
+      "type": "object"
+    },
+    "RegistrySnapshot": {
+      "properties": {
+        "parsers": {
+          "items": {
+            "$ref": "#/definitions/ParserDescriptor"
+          },
+          "type": "array"
+        },
+        "providers": {
+          "items": {
+            "$ref": "#/definitions/ProviderDescriptor"
+          },
+          "type": "array"
+        },
+        "unavailable_parsers": {
+          "items": {
+            "$ref": "#/definitions/UnavailableParser"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "parsers",
+        "providers",
+        "unavailable_parsers"
+      ],
+      "type": "object"
+    },
+    "ResourceBudget": {
+      "description": "All limits visible at every public operation boundary. `None` is explicitly unbounded.",
+      "properties": {
+        "max_archive_expansion_ratio": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "max_archive_members": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_cells": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_child_artifacts": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_decoded_characters": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_input_bytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_memory_bytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_nesting_depth": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_nodes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_output_bytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_pages": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_parse_millis": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_provider_millis": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_records": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_temporary_storage_bytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "SchemaCatalog": {
+      "properties": {
+        "schema_version": {
+          "type": "string"
+        },
+        "schemas": {
+          "items": {
+            "$ref": "#/definitions/SchemaDescriptor"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema_version",
+        "schemas"
+      ],
+      "type": "object"
+    },
+    "SchemaDescriptor": {
+      "description": "Complete registration metadata for one current public wire contract.",
+      "properties": {
+        "backend_sensitive": {
+          "type": "boolean"
+        },
+        "canonical_example": {
+          "type": "string"
+        },
+        "family": {
+          "type": "string"
+        },
+        "file_name": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/SchemaKind"
+        },
+        "name": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "backend_sensitive",
+        "canonical_example",
+        "family",
+        "file_name",
+        "kind",
+        "name",
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "SchemaEntry": {
+      "description": "Backward-compatible compact schema-list record used by the CLI.",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "SchemaKind": {
+      "enum": [
+        "envelope",
+        "payload",
+        "graph",
+        "segment",
+        "event",
+        "diagnostic",
+        "options",
+        "manifest",
+        "contract"
+      ],
+      "type": "string"
+    },
+    "SchemaMetadata": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "type": "object"
+    },
+    "SecurityCapabilities": {
+      "description": "Security policy and isolation behavior available to callers.",
+      "properties": {
+        "active_content_execution": {
+          "type": "boolean"
+        },
+        "default_policy": {
+          "$ref": "#/definitions/SecurityPolicy"
+        },
+        "implicit_network_access": {
+          "type": "boolean"
+        },
+        "isolated_backend_minimum": {
+          "$ref": "#/definitions/IsolationMetadata"
+        },
+        "policy_schema_version": {
+          "type": "string"
+        },
+        "secrets_serialized": {
+          "type": "boolean"
+        },
+        "supported_modes": {
+          "items": {
+            "$ref": "#/definitions/SecurityMode"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "active_content_execution",
+        "default_policy",
+        "implicit_network_access",
+        "isolated_backend_minimum",
+        "policy_schema_version",
+        "secrets_serialized",
+        "supported_modes"
+      ],
+      "type": "object"
+    },
+    "SecurityMode": {
+      "description": "Closed security modes supported by the compiled library.",
+      "enum": [
+        "active_content_preserved_inert",
+        "explicit_providers_only",
+        "xml_active_references_rejected",
+        "hostile_archive_protection",
+        "active_rendering_escaped",
+        "temporary_files_deleted_on_drop",
+        "caller_directed_input_metadata",
+        "secrets_never_serialized"
+      ],
+      "type": "string"
+    },
+    "SecurityPolicy": {
+      "description": "Serializable security behavior carried by every parse request. Its closed enums intentionally provide no unsafe execution or implicit-network mode.",
+      "properties": {
+        "active_rendering": {
+          "$ref": "#/definitions/ActiveContentPolicy"
+        },
+        "archive": {
+          "$ref": "#/definitions/ArchiveSecurityPolicy"
+        },
+        "execution": {
+          "$ref": "#/definitions/ExecutionPolicy"
+        },
+        "input_metadata": {
+          "$ref": "#/definitions/InputMetadataPolicy"
+        },
+        "network": {
+          "$ref": "#/definitions/NetworkPolicy2"
+        },
+        "temporary_retention": {
+          "$ref": "#/definitions/TemporaryRetentionPolicy"
+        },
+        "xml": {
+          "$ref": "#/definitions/XmlSecurityPolicy"
+        }
+      },
+      "required": [
+        "active_rendering",
+        "archive",
+        "execution",
+        "input_metadata",
+        "network",
+        "temporary_retention",
+        "xml"
+      ],
+      "type": "object"
+    },
+    "TemporaryRetentionPolicy": {
+      "enum": [
+        "delete_on_drop",
+        "retain_until_explicit_cleanup"
+      ],
+      "type": "string"
+    },
+    "UnavailableParser": {
+      "properties": {
+        "descriptor": {
+          "$ref": "#/definitions/ParserDescriptor"
+        },
+        "reason": {
+          "$ref": "#/definitions/UnavailableReason"
+        }
+      },
+      "required": [
+        "descriptor",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "UnavailableReason": {
+      "oneOf": [
+        {
+          "properties": {
+            "feature": {
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "feature_disabled"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "feature",
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "not_implemented"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "backend": {
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "backend_unavailable"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "backend",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "UnsupportedCapability": {
+      "description": "One deliberately or currently unsupported public capability.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "XmlSecurityPolicy": {
+      "enum": [
+        "reject_active_references"
+      ],
+      "type": "string"
+    }
+  },
+  "description": "Canonical library and CLI discovery manifest.",
+  "properties": {
+    "backends": {
+      "items": {
+        "$ref": "#/definitions/BackendCapability"
+      },
+      "type": "array"
+    },
+    "budgets": {
+      "$ref": "#/definitions/BudgetCapabilities"
+    },
+    "build_identity": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "enabled_features": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "envelope_schema_versions": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "features": {
+      "items": {
+        "$ref": "#/definitions/FeatureCapability"
+      },
+      "type": "array"
+    },
+    "formats": {
+      "items": {
+        "$ref": "#/definitions/FormatCapability"
+      },
+      "type": "array"
+    },
+    "grist_version": {
+      "type": "string"
+    },
+    "normalized_rendering_reconstruction_claim": {
+      "$ref": "#/definitions/ReconstructionClaim"
+    },
+    "operations": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "providers": {
+      "items": {
+        "$ref": "#/definitions/ProviderCapability"
+      },
+      "type": "array"
+    },
+    "reconstruction": {
+      "items": {
+        "$ref": "#/definitions/ReconstructionCapability"
+      },
+      "type": "array"
+    },
+    "registry": {
+      "$ref": "#/definitions/RegistrySnapshot"
+    },
+    "schema_catalog": {
+      "$ref": "#/definitions/SchemaCatalog"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "schemas": {
+      "items": {
+        "$ref": "#/definitions/SchemaEntry"
+      },
+      "type": "array"
+    },
+    "security": {
+      "$ref": "#/definitions/SecurityCapabilities"
+    },
+    "unsupported_capabilities": {
+      "items": {
+        "$ref": "#/definitions/UnsupportedCapability"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "backends",
+    "budgets",
+    "enabled_features",
+    "envelope_schema_versions",
+    "features",
+    "formats",
+    "grist_version",
+    "normalized_rendering_reconstruction_claim",
+    "operations",
+    "providers",
+    "reconstruction",
+    "registry",
+    "schema_catalog",
+    "schema_version",
+    "schemas",
+    "security",
+    "unsupported_capabilities"
+  ],
+  "title": "CapabilityManifest",
+  "type": "object"
+}

@@ -52,6 +52,15 @@ logs/
 .coverage/
 coverage/
 htmlcov/
+__pycache__/
+*.py[cod]
+
+# Fixture intake containing sensitive or non-redistributable bytes
+/fixtures/private/
+/fixtures/intake-staging/
+
+# Quality gate run evidence (logs and reports)
+/artifacts/quality-gate/
 
 
 # Added by cargo

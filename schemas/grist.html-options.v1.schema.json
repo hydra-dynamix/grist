@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "HtmlParseMode": {
+      "enum": [
+        "auto",
+        "document",
+        "fragment"
+      ],
+      "type": "string"
+    },
+    "HtmlSyntax": {
+      "enum": [
+        "auto",
+        "html5",
+        "xhtml"
+      ],
+      "type": "string"
+    }
+  },
+  "properties": {
+    "encoding": {
+      "default": null,
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "fragment_context": {
+      "default": "body",
+      "type": "string"
+    },
+    "mode": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/HtmlParseMode"
+        }
+      ],
+      "default": "auto"
+    },
+    "retain_comments": {
+      "default": true,
+      "type": "boolean"
+    },
+    "syntax": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/HtmlSyntax"
+        }
+      ],
+      "default": "auto"
+    }
+  },
+  "title": "HtmlOptions",
+  "type": "object"
+}

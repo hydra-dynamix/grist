@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "max_cells": {
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_json_depth": {
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_mime_entries": {
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_outputs_per_cell": {
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "max_cells",
+    "max_json_depth",
+    "max_mime_entries",
+    "max_outputs_per_cell"
+  ],
+  "title": "NotebookOptions",
+  "type": "object"
+}

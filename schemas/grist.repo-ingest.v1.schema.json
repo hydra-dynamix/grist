@@ -1,1 +1,599 @@
-{"$schema":"http://json-schema.org/draft-07/schema#","definitions":{"ArtifactKind":{"enum":["markdown","html","csv","rust_code","python_code","typescript_code","latex","serialization","model_output","repo_ingest","file_ingest","text","ldgr_projection","unsupported"],"type":"string"},"ContentKind":{"enum":["markdown","html","rust","python","typescript","tsx","jsx","latex","csv","json","jsonl","yaml","toml","text","binary","unknown"],"type":"string"},"FileArtifact":{"properties":{"artifact":true,"artifact_ref":{"type":["string","null"]},"content_hash":{"type":"string"},"kind":{"$ref":"#/definitions/ArtifactKind"},"path":{"type":"string"},"schema_version":{"type":"string"}},"required":["content_hash","kind","path","schema_version"],"type":"object"},"FileInventoryEntry":{"properties":{"content_hash":{"type":"string"},"content_kind":{"$ref":"#/definitions/ContentKind"},"kind":{"$ref":"#/definitions/FileKind"},"language":{"type":["string","null"]},"path":{"type":"string"},"size_bytes":{"format":"uint","minimum":0.0,"type":"integer"}},"required":["content_hash","content_kind","kind","path","size_bytes"],"type":"object"},"FileKind":{"enum":["source","test","manifest","lockfile","generated","binary","documentation","unknown"],"type":"string"},"RepoIngestOptionsSummary":{"properties":{"honor_ignore":{"type":"boolean"},"include_ignored":{"type":"boolean"},"inline_artifacts":{"type":"boolean"},"max_file_bytes":{"format":"uint","minimum":0.0,"type":"integer"},"max_repo_files":{"format":"uint","minimum":0.0,"type":"integer"}},"required":["honor_ignore","include_ignored","inline_artifacts","max_file_bytes","max_repo_files"],"type":"object"},"SkippedFile":{"properties":{"path":{"type":"string"},"reason":{"type":"string"}},"required":["path","reason"],"type":"object"},"TestHint":{"properties":{"kind":{"type":"string"},"name":{"type":["string","null"]},"path":{"type":"string"}},"required":["kind","path"],"type":"object"}},"properties":{"artifacts":{"items":{"$ref":"#/definitions/FileArtifact"},"type":"array"},"detected_languages":{"items":{"type":"string"},"type":"array"},"files":{"items":{"$ref":"#/definitions/FileInventoryEntry"},"type":"array"},"ignored":{"items":{"type":"string"},"type":"array"},"lockfile_paths":{"items":{"type":"string"},"type":"array"},"manifest_paths":{"items":{"type":"string"},"type":"array"},"options":{"$ref":"#/definitions/RepoIngestOptionsSummary"},"root":{"type":"string"},"schema_version":{"type":"string"},"skipped":{"items":{"$ref":"#/definitions/SkippedFile"},"type":"array"},"test_hints":{"items":{"$ref":"#/definitions/TestHint"},"type":"array"},"unsupported":{"items":{"type":"string"},"type":"array"}},"required":["artifacts","detected_languages","files","ignored","lockfile_paths","manifest_paths","options","root","schema_version","skipped","test_hints","unsupported"],"title":"RepoIngestReport","type":"object"}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "ArtifactKind": {
+      "enum": [
+        "archive",
+        "markdown",
+        "restructured_text",
+        "ascii_doc",
+        "html",
+        "epub",
+        "pdf",
+        "image",
+        "subtitle",
+        "media",
+        "word_ooxml",
+        "presentation_ooxml",
+        "spreadsheet_ooxml",
+        "spreadsheet_odf",
+        "presentation_odf",
+        "odf_word",
+        "rtf",
+        "xml",
+        "csv",
+        "rust_code",
+        "python_code",
+        "javascript_code",
+        "typescript_code",
+        "code",
+        "manifest",
+        "latex",
+        "bibliography",
+        "serialization",
+        "structured_binary",
+        "columnar",
+        "sqlite",
+        "email",
+        "mbox",
+        "outlook_msg",
+        "i_calendar",
+        "v_card",
+        "notebook",
+        "model_output",
+        "repo_ingest",
+        "file_ingest",
+        "text",
+        "ldgr_projection",
+        "detection",
+        "document_graph",
+        "graph_document",
+        "graph_transform_result",
+        "render_result",
+        "reconstruction_result",
+        "segment_collection",
+        "schema_validation",
+        "container_traversal",
+        "capabilities",
+        "unsupported"
+      ],
+      "type": "string"
+    },
+    "ContentKind": {
+      "enum": [
+        "markdown",
+        "restructured_text",
+        "ascii_doc",
+        "html",
+        "xml",
+        "rust",
+        "python",
+        "java_script",
+        "typescript",
+        "tsx",
+        "jsx",
+        "go",
+        "java",
+        "kotlin",
+        "c",
+        "cpp",
+        "csharp",
+        "ruby",
+        "php",
+        "swift",
+        "shell",
+        "sql",
+        "css",
+        "latex",
+        "bibliography",
+        "graph",
+        "csv",
+        "json",
+        "jsonl",
+        "yaml",
+        "toml",
+        "manifest",
+        "cbor",
+        "message_pack",
+        "protobuf",
+        "arrow",
+        "text",
+        "pdf",
+        "zip",
+        "tar",
+        "docx",
+        "pptx",
+        "xlsx",
+        "xlsm",
+        "epub",
+        "odt",
+        "odp",
+        "ods",
+        "rtf",
+        "eml",
+        "mbox",
+        "msg",
+        "i_calendar",
+        "v_card",
+        "srt",
+        "web_vtt",
+        "ttml",
+        "jupyter_notebook",
+        "sqlite",
+        "png",
+        "jpeg",
+        "gif",
+        "tiff",
+        "webp",
+        "bmp",
+        "heif",
+        "svg",
+        "mp3",
+        "mp4",
+        "quick_time",
+        "wav",
+        "flac",
+        "matroska",
+        "gzip",
+        "bzip2",
+        "xz",
+        "zstd",
+        "seven_zip",
+        "parquet",
+        "ole_compound",
+        "binary",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "FileArtifact": {
+      "properties": {
+        "artifact": true,
+        "artifact_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "canonical_payload_hash": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "content_hash": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/ArtifactKind"
+        },
+        "path": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content_hash",
+        "kind",
+        "path",
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "FileInventoryEntry": {
+      "properties": {
+        "content_hash": {
+          "type": "string"
+        },
+        "content_kind": {
+          "$ref": "#/definitions/ContentKind"
+        },
+        "kind": {
+          "$ref": "#/definitions/FileKind"
+        },
+        "language": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "path": {
+          "type": "string"
+        },
+        "size_bytes": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "content_hash",
+        "content_kind",
+        "kind",
+        "path",
+        "size_bytes"
+      ],
+      "type": "object"
+    },
+    "FileKind": {
+      "enum": [
+        "source",
+        "test",
+        "manifest",
+        "lockfile",
+        "generated",
+        "binary",
+        "documentation",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "OperationStatus": {
+      "description": "Whether an operation satisfied its requested contract.",
+      "enum": [
+        "complete",
+        "partial",
+        "failed",
+        "unsupported",
+        "encrypted",
+        "ambiguous",
+        "cancelled"
+      ],
+      "type": "string"
+    },
+    "RepoAggregateHashes": {
+      "properties": {
+        "canonicalization": {
+          "type": "string"
+        },
+        "content_sha256": {
+          "type": "string"
+        },
+        "inventory_sha256": {
+          "type": "string"
+        },
+        "parsed_artifacts_sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "canonicalization",
+        "content_sha256",
+        "inventory_sha256",
+        "parsed_artifacts_sha256"
+      ],
+      "type": "object"
+    },
+    "RepoIngestOptionsSummary": {
+      "properties": {
+        "honor_ignore": {
+          "type": "boolean"
+        },
+        "include_ignored": {
+          "type": "boolean"
+        },
+        "inline_artifacts": {
+          "type": "boolean"
+        },
+        "max_file_bytes": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "max_repo_files": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "submodule_policy": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/SubmodulePolicy"
+            }
+          ],
+          "default": "skip"
+        },
+        "symlink_policy": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/SymlinkPolicy"
+            }
+          ],
+          "default": "skip"
+        }
+      },
+      "required": [
+        "honor_ignore",
+        "include_ignored",
+        "inline_artifacts",
+        "max_file_bytes",
+        "max_repo_files"
+      ],
+      "type": "object"
+    },
+    "RepositoryDisposition": {
+      "enum": [
+        "parsed",
+        "inventoried",
+        "binary",
+        "unsupported",
+        "ignored",
+        "skipped",
+        "budget_limited",
+        "failed",
+        "traversed"
+      ],
+      "type": "string"
+    },
+    "RepositoryEntry": {
+      "properties": {
+        "content_kind": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ContentKind"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "disposition": {
+          "$ref": "#/definitions/RepositoryDisposition"
+        },
+        "entry_kind": {
+          "$ref": "#/definitions/RepositoryEntryKind"
+        },
+        "file_kind": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/FileKind"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "language": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parser_status": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/OperationStatus"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "path": {
+          "type": "string"
+        },
+        "raw_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "size_bytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "skip_reasons": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/RepositorySkipReason"
+          },
+          "type": "array"
+        },
+        "symlink_target": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "disposition",
+        "entry_kind",
+        "path"
+      ],
+      "type": "object"
+    },
+    "RepositoryEntryKind": {
+      "enum": [
+        "file",
+        "directory",
+        "symlink",
+        "submodule"
+      ],
+      "type": "string"
+    },
+    "RepositorySkipReason": {
+      "enum": [
+        "ignore_rule",
+        "include_glob",
+        "exclude_glob",
+        "default_excluded",
+        "repository_metadata",
+        "external_artifact_output",
+        "symlink_policy",
+        "symlink_escapes_root",
+        "symlink_directory",
+        "path_escapes_root",
+        "submodule_policy",
+        "repository_file_limit",
+        "traversal_depth_limit",
+        "file_size_limit",
+        "read_error",
+        "unsupported_format",
+        "binary_file",
+        "parse_failed",
+        "parse_ambiguous",
+        "encrypted",
+        "cancelled"
+      ],
+      "type": "string"
+    },
+    "SkippedFile": {
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "SubmodulePolicy": {
+      "enum": [
+        "skip",
+        "traverse"
+      ],
+      "type": "string"
+    },
+    "SymlinkPolicy": {
+      "enum": [
+        "skip",
+        "follow_files_within_root"
+      ],
+      "type": "string"
+    },
+    "TestHint": {
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "path"
+      ],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "aggregate_hashes": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/RepoAggregateHashes"
+        }
+      ],
+      "default": {
+        "canonicalization": "",
+        "content_sha256": "",
+        "inventory_sha256": "",
+        "parsed_artifacts_sha256": ""
+      }
+    },
+    "artifacts": {
+      "items": {
+        "$ref": "#/definitions/FileArtifact"
+      },
+      "type": "array"
+    },
+    "detected_languages": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "entries": {
+      "default": [],
+      "items": {
+        "$ref": "#/definitions/RepositoryEntry"
+      },
+      "type": "array"
+    },
+    "files": {
+      "items": {
+        "$ref": "#/definitions/FileInventoryEntry"
+      },
+      "type": "array"
+    },
+    "ignored": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "lockfile_paths": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "manifest_paths": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "options": {
+      "$ref": "#/definitions/RepoIngestOptionsSummary"
+    },
+    "root": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "skipped": {
+      "items": {
+        "$ref": "#/definitions/SkippedFile"
+      },
+      "type": "array"
+    },
+    "test_hints": {
+      "items": {
+        "$ref": "#/definitions/TestHint"
+      },
+      "type": "array"
+    },
+    "unsupported": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "artifacts",
+    "detected_languages",
+    "files",
+    "ignored",
+    "lockfile_paths",
+    "manifest_paths",
+    "options",
+    "root",
+    "schema_version",
+    "skipped",
+    "test_hints",
+    "unsupported"
+  ],
+  "title": "RepoIngestReport",
+  "type": "object"
+}

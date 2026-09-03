@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "inline_attachment_bytes": {
+      "type": "boolean"
+    },
+    "inline_property_binary": {
+      "type": "boolean"
+    },
+    "inline_unknown_streams": {
+      "type": "boolean"
+    },
+    "max_attachments": {
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_chain_sectors": {
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_embedded_depth": {
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_properties_per_object": {
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_recipients": {
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_rtf_output_bytes": {
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "parse_embedded_messages": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "inline_attachment_bytes",
+    "inline_property_binary",
+    "inline_unknown_streams",
+    "max_attachments",
+    "max_chain_sectors",
+    "max_embedded_depth",
+    "max_properties_per_object",
+    "max_recipients",
+    "max_rtf_output_bytes",
+    "parse_embedded_messages"
+  ],
+  "title": "OutlookMsgOptions",
+  "type": "object"
+}

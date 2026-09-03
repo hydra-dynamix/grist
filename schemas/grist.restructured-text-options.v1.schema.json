@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "encoding": {
+      "default": null,
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "max_include_bytes": {
+      "default": 8388608,
+      "format": "uint64",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "max_include_depth": {
+      "default": 16,
+      "format": "uint16",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "project_root": {
+      "default": null,
+      "description": "Explicit filesystem boundary. No root means includes remain references.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "resolve_includes": {
+      "default": true,
+      "type": "boolean"
+    },
+    "retain_comments": {
+      "default": true,
+      "type": "boolean"
+    }
+  },
+  "title": "RestructuredTextOptions",
+  "type": "object"
+}

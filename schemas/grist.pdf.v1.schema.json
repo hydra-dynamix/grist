@@ -1,0 +1,6227 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "AggregateContentIdentity": {
+      "description": "Content identity for a compound input.\n\nMembers are sorted by member index, then path and identity fields. `sha256` hashes canonical JSON v1 of `schema_version`, `canonicalization`, and the sorted `members` array. Summary fields and the digest itself are excluded.",
+      "properties": {
+        "canonicalization": {
+          "$ref": "#/definitions/CanonicalJsonVersion"
+        },
+        "manifest_byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "member_count": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "members": {
+          "items": {
+            "$ref": "#/definitions/AggregateMemberIdentity"
+          },
+          "type": "array"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "total_byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "canonicalization",
+        "manifest_byte_length",
+        "member_count",
+        "members",
+        "schema_version",
+        "sha256",
+        "total_byte_length"
+      ],
+      "type": "object"
+    },
+    "AggregateMemberIdentity": {
+      "description": "Stable member summary used in a compound-input aggregate manifest.",
+      "properties": {
+        "aggregate_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "canonical_payload_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "decoded_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "format": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/FormatIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "member_index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "member_path": {
+          "type": "string"
+        },
+        "raw_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "byte_length",
+        "member_path"
+      ],
+      "type": "object"
+    },
+    "ArtifactContent": {
+      "description": "Storage representation is deliberately outside the stable artifact identity.",
+      "oneOf": [
+        {
+          "description": "Inline representation with its caller-selected threshold made explicit.",
+          "properties": {
+            "bytes": {
+              "items": {
+                "format": "uint8",
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "inline_threshold_bytes": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "storage": {
+              "enum": [
+                "inline"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "bytes",
+            "inline_threshold_bytes",
+            "storage"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "inline_threshold_bytes": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "reference": {
+              "$ref": "#/definitions/ContentAddressedArtifactReference"
+            },
+            "storage": {
+              "enum": [
+                "content_addressed"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "inline_threshold_bytes",
+            "reference",
+            "storage"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "ArtifactDisposition": {
+      "description": "Content-disposition semantics, independent of storage or safety policy.",
+      "enum": [
+        "attachment",
+        "inline",
+        "related",
+        "alternative",
+        "package_part",
+        "unspecified"
+      ],
+      "type": "string"
+    },
+    "ArtifactExtraction": {
+      "description": "Machine-readable extraction result for one child.",
+      "properties": {
+        "diagnostic_codes": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "message": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "$ref": "#/definitions/ArtifactExtractionStatus"
+        },
+        "status_code": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "status_code"
+      ],
+      "type": "object"
+    },
+    "ArtifactExtractionStatus": {
+      "description": "Terminal extraction states retained even when no child bytes are available.",
+      "enum": [
+        "extracted",
+        "quarantined",
+        "inventory_only",
+        "skipped",
+        "encrypted",
+        "unsupported",
+        "rejected",
+        "budget_limited",
+        "failed"
+      ],
+      "type": "string"
+    },
+    "ArtifactIdentity": {
+      "description": "Stable child identity. It excludes filename, disposition, status, and storage mode.",
+      "properties": {
+        "artifact_id": {
+          "type": "string"
+        },
+        "content": {
+          "$ref": "#/definitions/ContentIdentity"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "content"
+      ],
+      "type": "object"
+    },
+    "ArtifactParent": {
+      "description": "The parent is retained structurally rather than flattened into a path.",
+      "properties": {
+        "identity": {
+          "$ref": "#/definitions/ContentIdentity"
+        },
+        "relationship": {
+          "$ref": "#/definitions/ArtifactRelationship"
+        }
+      },
+      "required": [
+        "identity",
+        "relationship"
+      ],
+      "type": "object"
+    },
+    "ArtifactRelationship": {
+      "description": "How the source relates the child to its immediate parent.",
+      "enum": [
+        "attachment_of",
+        "embedded_in",
+        "inline_resource_of",
+        "alternative_representation_of",
+        "package_part_of",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "ArtifactSafety": {
+      "description": "Auditable, deterministic safety result. Classifiers only inspect supplied metadata and bytes.",
+      "properties": {
+        "classification": {
+          "$ref": "#/definitions/ArtifactSafetyClassification"
+        },
+        "evidence": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/ArtifactSafetyEvidence"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "classification"
+      ],
+      "type": "object"
+    },
+    "ArtifactSafetyClassification": {
+      "description": "Security classification used to decide whether materialization is allowed.",
+      "enum": [
+        "passive",
+        "encrypted",
+        "active_content",
+        "script",
+        "macro",
+        "executable",
+        "suspicious",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "ArtifactSafetyEvidence": {
+      "description": "Why a safety class was selected.",
+      "properties": {
+        "classification": {
+          "$ref": "#/definitions/ArtifactSafetyClassification"
+        },
+        "source": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "classification",
+        "source",
+        "value"
+      ],
+      "type": "object"
+    },
+    "BoundingBox": {
+      "description": "A rectangle in a declared coordinate system.",
+      "properties": {
+        "height": {
+          "format": "double",
+          "type": "number"
+        },
+        "origin": {
+          "$ref": "#/definitions/CoordinateOrigin"
+        },
+        "unit": {
+          "$ref": "#/definitions/CoordinateUnit"
+        },
+        "width": {
+          "format": "double",
+          "type": "number"
+        },
+        "x": {
+          "format": "double",
+          "type": "number"
+        },
+        "y": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "height",
+        "origin",
+        "unit",
+        "width",
+        "x",
+        "y"
+      ],
+      "type": "object"
+    },
+    "CanonicalJsonVersion": {
+      "description": "Canonical JSON compatibility boundary.\n\nNew algorithms require new enum variants. Changing `V1` would change payload and aggregate identities and is an incompatible change.",
+      "enum": [
+        "grist/canonical-json/v1"
+      ],
+      "type": "string"
+    },
+    "CanonicalPayloadIdentity": {
+      "description": "SHA-256 of the exact canonical JSON bytes of an authoritative payload.",
+      "properties": {
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "canonicalization": {
+          "$ref": "#/definitions/CanonicalJsonVersion"
+        },
+        "payload_schema_version": {
+          "$ref": "#/definitions/SchemaVersion"
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "byte_length",
+        "canonicalization",
+        "payload_schema_version",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "CellAddress": {
+      "description": "A sheet cell address with explicit row and column bases.",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/IndexBase"
+        },
+        "column": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "row": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "column",
+        "row"
+      ],
+      "type": "object"
+    },
+    "ContentAddressedArtifactReference": {
+      "description": "Digest-keyed external reference. Grist does not prescribe persistence policy.",
+      "properties": {
+        "algorithm": {
+          "type": "string"
+        },
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "digest": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "algorithm",
+        "byte_length",
+        "digest"
+      ],
+      "type": "object"
+    },
+    "ContentIdentity": {
+      "description": "Complete singular or compound content identity retained by an envelope.",
+      "properties": {
+        "aggregate": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/AggregateContentIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "canonical_payload": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CanonicalPayloadIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "decoded": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DecodedContentIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "detection_candidates": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/DetectionCandidate"
+          },
+          "type": "array"
+        },
+        "format": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/FormatIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "raw": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RawContentIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "CoordinateOrigin": {
+      "description": "Coordinate-system origin for rectangular source regions.",
+      "enum": [
+        "top_left",
+        "bottom_left"
+      ],
+      "type": "string"
+    },
+    "CoordinateUnit": {
+      "description": "Units used by rectangular source regions.",
+      "enum": [
+        "points",
+        "pixels",
+        "normalized"
+      ],
+      "type": "string"
+    },
+    "DecodedContentIdentity": {
+      "description": "SHA-256 of decoded text's UTF-8 bytes, including replacements when lossy.\n\nEncoding, loss state, and diagnostics are metadata outside the hashed bytes.",
+      "properties": {
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "encoding": {
+          "type": "string"
+        },
+        "lossy": {
+          "type": "boolean"
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "byte_length",
+        "encoding",
+        "lossy",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "DecryptionResult": {
+      "properties": {
+        "bytes": {
+          "items": {
+            "format": "uint8",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "diagnostics": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Diagnostic"
+          },
+          "type": "array"
+        },
+        "identity": {
+          "$ref": "#/definitions/RawContentIdentity"
+        },
+        "media_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "bytes",
+        "identity"
+      ],
+      "type": "object"
+    },
+    "DerivedNodeReference": {
+      "description": "A reference from derived content back to the nodes and declared transforms that produced it.",
+      "properties": {
+        "derivation_steps": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "source_node_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "derivation_steps",
+        "source_node_ids"
+      ],
+      "type": "object"
+    },
+    "DetectionCandidate": {
+      "description": "A ranked format candidate with all evidence retained.",
+      "properties": {
+        "confidence": {
+          "format": "float",
+          "type": "number"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/definitions/DetectionEvidence"
+          },
+          "type": "array"
+        },
+        "identity": {
+          "$ref": "#/definitions/FormatIdentity"
+        },
+        "parser_availability": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/ParserAvailability"
+            }
+          ],
+          "default": "unregistered"
+        },
+        "parser_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rank": {
+          "description": "One-based rank; lower ranks are preferred.",
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "confidence",
+        "evidence",
+        "identity",
+        "rank"
+      ],
+      "type": "object"
+    },
+    "DetectionEvidence": {
+      "description": "One retained reason for a ranked detection candidate.",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/DetectionEvidenceKind"
+        }
+      },
+      "required": [
+        "description",
+        "kind"
+      ],
+      "type": "object"
+    },
+    "DetectionEvidenceKind": {
+      "description": "Signal family that contributed to a detection candidate.",
+      "enum": [
+        "magic_bytes",
+        "declared_media_type",
+        "extension",
+        "filename",
+        "container_manifest",
+        "charset",
+        "structure",
+        "shebang",
+        "grammar_probe",
+        "fallback"
+      ],
+      "type": "string"
+    },
+    "Diagnostic": {
+      "description": "A root-cause diagnostic with source attribution and structured causes.",
+      "properties": {
+        "affected_ids": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "cause": {
+          "default": [],
+          "description": "Legacy flat causes retained for v1 wire compatibility.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "causes": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/DiagnosticCause"
+          },
+          "type": "array"
+        },
+        "class": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/DiagnosticClass"
+            }
+          ],
+          "default": "unclassified"
+        },
+        "code": {
+          "type": "string"
+        },
+        "details": true,
+        "documentation_uri": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "explanation_key": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SourceLocator"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "module": {
+          "default": "",
+          "type": "string"
+        },
+        "parser": {
+          "type": "string"
+        },
+        "partial": {
+          "default": false,
+          "type": "boolean"
+        },
+        "range": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "recovery": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RecoveryAction"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "severity": {
+          "$ref": "#/definitions/Severity"
+        },
+        "source": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_identity": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ContentIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "parser",
+        "severity"
+      ],
+      "type": "object"
+    },
+    "DiagnosticCause": {
+      "description": "One nested reason beneath a diagnostic's root-cause message.",
+      "properties": {
+        "cause": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DiagnosticCause"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "code": {
+          "type": "string"
+        },
+        "details": true,
+        "message": {
+          "type": "string"
+        },
+        "module": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parser": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "type": "object"
+    },
+    "DiagnosticClass": {
+      "description": "Stable top-level condition families shared by every parser and operation.",
+      "enum": [
+        "malformed_input",
+        "unsupported_content",
+        "lossy_normalization",
+        "provider_failure",
+        "parser_defect",
+        "security_rejection",
+        "resource_budget_exhaustion",
+        "unclassified"
+      ],
+      "type": "string"
+    },
+    "EmbeddedArtifact": {
+      "description": "Complete artifact inventory record.",
+      "properties": {
+        "content": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ArtifactContent"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "declared_filename": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "disposition": {
+          "$ref": "#/definitions/ArtifactDisposition"
+        },
+        "extraction": {
+          "$ref": "#/definitions/ArtifactExtraction"
+        },
+        "identity": {
+          "$ref": "#/definitions/ArtifactIdentity"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "media_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parent": {
+          "$ref": "#/definitions/ArtifactParent"
+        },
+        "safety": {
+          "$ref": "#/definitions/ArtifactSafety"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "disposition",
+        "extraction",
+        "identity",
+        "locator",
+        "parent",
+        "safety",
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "FormatIdentity": {
+      "description": "Detected parser-format name paired with an Internet media type when known.",
+      "properties": {
+        "format": {
+          "type": "string"
+        },
+        "media_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "format"
+      ],
+      "type": "object"
+    },
+    "IndexBase": {
+      "description": "Whether an ordinal is counted from zero or one.\n\nEvery format component carrying a page, slide, cell, frame, token, output, member, track, or record ordinal uses this type rather than relying on an undocumented convention.",
+      "enum": [
+        "zero",
+        "one"
+      ],
+      "type": "string"
+    },
+    "IndexPosition": {
+      "description": "One explicitly based ordinal.",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/IndexBase"
+        },
+        "value": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "value"
+      ],
+      "type": "object"
+    },
+    "IndexRange": {
+      "description": "A half-open range of ordinals using one declared base.",
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/IndexBase"
+        },
+        "end": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "start": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "base",
+        "end",
+        "start"
+      ],
+      "type": "object"
+    },
+    "IsolatedBackendResult": {
+      "properties": {
+        "diagnostics": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Diagnostic"
+          },
+          "type": "array"
+        },
+        "payload": true,
+        "payload_schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "payload",
+        "payload_schema_version"
+      ],
+      "type": "object"
+    },
+    "LocationComponent": {
+      "description": "One location inside its immediately preceding parent component.",
+      "oneOf": [
+        {
+          "description": "A zero-based half-open byte range relative to the immediately preceding component, or to the source when this is the outermost component.",
+          "properties": {
+            "byte_end": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "byte_start": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "type": {
+              "enum": [
+                "byte_range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "byte_end",
+            "byte_start",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "byte_end": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "byte_start": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "end_column": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "end_line": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "start_column": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "start_line": {
+              "format": "uint",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "type": {
+              "enum": [
+                "text_range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "byte_end",
+            "byte_start",
+            "end_column",
+            "end_line",
+            "start_column",
+            "start_line",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "bbox": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/BoundingBox"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "page": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "rotation_degrees": {
+              "format": "int16",
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "tokens": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexRange"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "enum": [
+                "pdf_region"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "page",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "column": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "object_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "paragraph": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "part": {
+              "type": "string"
+            },
+            "row": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "run": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "table": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "enum": [
+                "ooxml_part"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "part",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "bbox": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/BoundingBox"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "shape_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "slide": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "type": {
+              "enum": [
+                "slide_region"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "slide",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "end_cell": {
+              "$ref": "#/definitions/CellAddress"
+            },
+            "sheet": {
+              "type": "string"
+            },
+            "start_cell": {
+              "$ref": "#/definitions/CellAddress"
+            },
+            "type": {
+              "enum": [
+                "sheet_range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "end_cell",
+            "sheet",
+            "start_cell",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "cell_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "index": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "output_index": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "enum": [
+                "notebook_cell"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "index",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "header": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "message_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "mime_path": {
+              "items": {
+                "$ref": "#/definitions/IndexPosition"
+              },
+              "type": "array"
+            },
+            "type": {
+              "enum": [
+                "email_part"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "member_index": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "member_path": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "archive_member"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "member_index",
+            "member_path",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "bbox": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/BoundingBox"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "frame": {
+              "$ref": "#/definitions/IndexPosition"
+            },
+            "type": {
+              "enum": [
+                "image_region"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "frame",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "end_ms": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "start_ms": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "track": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/IndexPosition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "enum": [
+                "media_time"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "end_ms",
+            "start_ms",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "collection": {
+              "type": "string"
+            },
+            "field": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "records": {
+              "$ref": "#/definitions/IndexRange"
+            },
+            "type": {
+              "enum": [
+                "record_range"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "collection",
+            "records",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "pointer": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "json_pointer"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "pointer",
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "xml_path"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "type"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "LocatorConfidence": {
+      "format": "double",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "type": "number"
+    },
+    "NativeRepresentation_for_PdfNativePageText": {
+      "properties": {
+        "diagnostics": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Diagnostic"
+          },
+          "type": "array"
+        },
+        "identity": {
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/definitions/PdfNativePageText"
+        }
+      },
+      "required": [
+        "identity",
+        "value"
+      ],
+      "type": "object"
+    },
+    "NetworkAccess": {
+      "description": "Whether a selected provider may access the network for this request.",
+      "enum": [
+        "denied",
+        "allowed"
+      ],
+      "type": "string"
+    },
+    "OcrRegion": {
+      "properties": {
+        "bounding_box": {
+          "$ref": "#/definitions/BoundingBox"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProviderConfidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "language": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reading_order": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bounding_box",
+        "text"
+      ],
+      "type": "object"
+    },
+    "OcrResult": {
+      "properties": {
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProviderConfidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "diagnostics": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Diagnostic"
+          },
+          "type": "array"
+        },
+        "layout_confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProviderConfidence"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Provider-assigned confidence in region boundaries and layout geometry."
+        },
+        "reading_order_confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProviderConfidence"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Provider-assigned confidence in the returned region ordering."
+        },
+        "regions": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/OcrRegion"
+          },
+          "type": "array"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "type": "object"
+    },
+    "ParserAvailability": {
+      "description": "Whether a ranked candidate can be interpreted by the active registry.",
+      "enum": [
+        "available",
+        "unavailable",
+        "unregistered"
+      ],
+      "type": "string"
+    },
+    "PdfAction": {
+      "properties": {
+        "action_type": {
+          "type": "string"
+        },
+        "destination": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfDestination"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "disposition": {
+          "$ref": "#/definitions/PdfActiveContentDisposition"
+        },
+        "file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/PdfObjectLocator"
+        },
+        "named_action": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "script_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "uri": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "action_type",
+        "disposition",
+        "locator"
+      ],
+      "type": "object"
+    },
+    "PdfActiveContent": {
+      "properties": {
+        "action_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "disposition": {
+          "$ref": "#/definitions/PdfActiveContentDisposition"
+        },
+        "key": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/PdfObjectLocator"
+        },
+        "object": {
+          "$ref": "#/definitions/PdfReference"
+        }
+      },
+      "required": [
+        "disposition",
+        "key",
+        "locator",
+        "object"
+      ],
+      "type": "object"
+    },
+    "PdfActiveContentDisposition": {
+      "enum": [
+        "inventoried_not_executed"
+      ],
+      "type": "string"
+    },
+    "PdfAnnotation": {
+      "properties": {
+        "action": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfAction"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "author": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "contents": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "in_reply_to": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "modified": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "object": {
+          "$ref": "#/definitions/PdfReference"
+        },
+        "page_index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "popup": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rectangle": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfRectangle"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "subject": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "subtype": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "locator",
+        "object",
+        "page_index",
+        "subtype"
+      ],
+      "type": "object"
+    },
+    "PdfCatalog": {
+      "properties": {
+        "acro_form": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "destinations": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "language": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/PdfObjectLocator"
+        },
+        "metadata": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "names": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "object": {
+          "$ref": "#/definitions/PdfReference"
+        },
+        "optional_content": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "outlines": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "page_labels": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pages": {
+          "$ref": "#/definitions/PdfReference"
+        },
+        "structure_tree_root": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "locator",
+        "object",
+        "pages"
+      ],
+      "type": "object"
+    },
+    "PdfColumn": {
+      "properties": {
+        "bbox": {
+          "$ref": "#/definitions/BoundingBox"
+        },
+        "block_indices": {
+          "items": {
+            "format": "uint64",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/definitions/PdfSemanticEvidence"
+          },
+          "type": "array"
+        },
+        "index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        }
+      },
+      "required": [
+        "bbox",
+        "block_indices",
+        "confidence",
+        "evidence",
+        "index",
+        "locator"
+      ],
+      "type": "object"
+    },
+    "PdfComment": {
+      "properties": {
+        "annotation_id": {
+          "type": "string"
+        },
+        "author": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "in_reply_to": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "subject": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "annotation_id",
+        "id",
+        "locator",
+        "text"
+      ],
+      "type": "object"
+    },
+    "PdfCrossReference": {
+      "properties": {
+        "entries": {
+          "items": {
+            "$ref": "#/definitions/PdfXrefEntry"
+          },
+          "type": "array"
+        },
+        "repaired": {
+          "type": "boolean"
+        },
+        "sections": {
+          "items": {
+            "$ref": "#/definitions/PdfXrefSection"
+          },
+          "type": "array"
+        },
+        "startxref": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "entries",
+        "repaired",
+        "sections"
+      ],
+      "type": "object"
+    },
+    "PdfDestination": {
+      "properties": {
+        "page_index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "page_object": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parameters": {
+          "items": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "type": "array"
+        },
+        "raw": {
+          "$ref": "#/definitions/PdfValue"
+        },
+        "view": {
+          "$ref": "#/definitions/PdfDestinationView"
+        }
+      },
+      "required": [
+        "parameters",
+        "raw",
+        "view"
+      ],
+      "type": "object"
+    },
+    "PdfDestinationView": {
+      "oneOf": [
+        {
+          "enum": [
+            "xyz",
+            "fit",
+            "fit_horizontal",
+            "fit_vertical",
+            "fit_rectangle",
+            "fit_bounding_box",
+            "fit_bounding_box_horizontal",
+            "fit_bounding_box_vertical"
+          ],
+          "type": "string"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "unknown": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "unknown"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "PdfEmbeddedChildStatus": {
+      "enum": [
+        "parsed",
+        "unsupported",
+        "encrypted",
+        "budget_limited",
+        "malformed"
+      ],
+      "type": "string"
+    },
+    "PdfEmbeddedFile": {
+      "properties": {
+        "artifact": {
+          "$ref": "#/definitions/EmbeddedArtifact"
+        },
+        "child_status": {
+          "$ref": "#/definitions/PdfEmbeddedChildStatus"
+        },
+        "children": {
+          "items": {
+            "$ref": "#/definitions/PdfEmbeddedFile"
+          },
+          "type": "array"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "file_spec_object": {
+          "$ref": "#/definitions/PdfReference"
+        },
+        "id": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/PdfObjectLocator"
+        },
+        "relationship": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "stream_object": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "artifact",
+        "child_status",
+        "children",
+        "file_spec_object",
+        "id",
+        "locator"
+      ],
+      "type": "object"
+    },
+    "PdfEncryption": {
+      "properties": {
+        "algorithm_version": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "credential_supplied": {
+          "type": "boolean"
+        },
+        "embedded_file_filter": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "encrypt_metadata": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "encrypted": {
+          "type": "boolean"
+        },
+        "handler": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "key_length_bits": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "locator": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfObjectLocator"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "object": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "permissions": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "revision": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "stream_filter": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "string_filter": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sub_filter": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "credential_supplied",
+        "encrypted"
+      ],
+      "type": "object"
+    },
+    "PdfFigure": {
+      "properties": {
+        "bbox": {
+          "$ref": "#/definitions/BoundingBox"
+        },
+        "caption_block_index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/definitions/PdfSemanticEvidence"
+          },
+          "type": "array"
+        },
+        "graphic_indices": {
+          "items": {
+            "format": "uint64",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        }
+      },
+      "required": [
+        "bbox",
+        "confidence",
+        "evidence",
+        "graphic_indices",
+        "index",
+        "locator"
+      ],
+      "type": "object"
+    },
+    "PdfFilterUsage": {
+      "properties": {
+        "decoded_bytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "filters": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "locator": {
+          "$ref": "#/definitions/PdfObjectLocator"
+        },
+        "object": {
+          "$ref": "#/definitions/PdfReference"
+        },
+        "status": {
+          "$ref": "#/definitions/PdfStreamDecodeStatus"
+        },
+        "supported": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "filters",
+        "locator",
+        "object",
+        "status",
+        "supported"
+      ],
+      "type": "object"
+    },
+    "PdfFont": {
+      "properties": {
+        "base_font": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "direction": {
+          "$ref": "#/definitions/PdfWritingDirection"
+        },
+        "embedded": {
+          "type": "boolean"
+        },
+        "encoding": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/PdfObjectLocator"
+        },
+        "object": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resource_name": {
+          "type": "string"
+        },
+        "style": {
+          "$ref": "#/definitions/PdfFontStyle"
+        },
+        "subtype": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "to_unicode": {
+          "$ref": "#/definitions/PdfUnicodeMapStatus"
+        }
+      },
+      "required": [
+        "direction",
+        "embedded",
+        "id",
+        "locator",
+        "resource_name",
+        "style",
+        "to_unicode"
+      ],
+      "type": "object"
+    },
+    "PdfFontStyle": {
+      "properties": {
+        "bold": {
+          "type": "boolean"
+        },
+        "italic": {
+          "type": "boolean"
+        },
+        "italic_angle": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "monospaced": {
+          "type": "boolean"
+        },
+        "serif": {
+          "type": "boolean"
+        },
+        "weight": {
+          "format": "uint16",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "bold",
+        "italic",
+        "monospaced",
+        "serif"
+      ],
+      "type": "object"
+    },
+    "PdfForm": {
+      "properties": {
+        "calculation_order": {
+          "items": {
+            "$ref": "#/definitions/PdfReference"
+          },
+          "type": "array"
+        },
+        "fields": {
+          "items": {
+            "$ref": "#/definitions/PdfFormField"
+          },
+          "type": "array"
+        },
+        "locator": {
+          "$ref": "#/definitions/PdfObjectLocator"
+        },
+        "need_appearances": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "object": {
+          "$ref": "#/definitions/PdfReference"
+        },
+        "signature_flags": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "calculation_order",
+        "fields",
+        "locator",
+        "object"
+      ],
+      "type": "object"
+    },
+    "PdfFormField": {
+      "properties": {
+        "action": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfAction"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "alternate_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "children": {
+          "items": {
+            "$ref": "#/definitions/PdfReference"
+          },
+          "type": "array"
+        },
+        "default_value": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "field_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "flags": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/PdfObjectLocator"
+        },
+        "mapping_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "object": {
+          "$ref": "#/definitions/PdfReference"
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "partial_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "children",
+        "id",
+        "locator",
+        "object"
+      ],
+      "type": "object"
+    },
+    "PdfGlyph": {
+      "properties": {
+        "bbox": {
+          "$ref": "#/definitions/BoundingBox"
+        },
+        "content_object": {
+          "$ref": "#/definitions/PdfReference"
+        },
+        "direction": {
+          "$ref": "#/definitions/PdfWritingDirection"
+        },
+        "font_id": {
+          "type": "string"
+        },
+        "font_size": {
+          "format": "double",
+          "type": "number"
+        },
+        "geometry_confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "mapping_confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "operation_index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "raw_code_hex": {
+          "type": "string"
+        },
+        "rendering_mode": {
+          "format": "uint8",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bbox",
+        "content_object",
+        "direction",
+        "font_id",
+        "font_size",
+        "geometry_confidence",
+        "index",
+        "locator",
+        "mapping_confidence",
+        "operation_index",
+        "raw_code_hex",
+        "rendering_mode",
+        "text"
+      ],
+      "type": "object"
+    },
+    "PdfGraphicObject": {
+      "properties": {
+        "bbox": {
+          "$ref": "#/definitions/BoundingBox"
+        },
+        "confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/definitions/PdfSemanticEvidence"
+          },
+          "type": "array"
+        },
+        "index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "kind": {
+          "$ref": "#/definitions/PdfGraphicObjectKind"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "pixel_height": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "pixel_width": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "resource_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "segments": {
+          "items": {
+            "$ref": "#/definitions/PdfLineSegment"
+          },
+          "type": "array"
+        },
+        "source_object": {
+          "$ref": "#/definitions/PdfReference"
+        }
+      },
+      "required": [
+        "bbox",
+        "confidence",
+        "evidence",
+        "index",
+        "kind",
+        "locator",
+        "segments",
+        "source_object"
+      ],
+      "type": "object"
+    },
+    "PdfGraphicObjectKind": {
+      "enum": [
+        "raster_image",
+        "vector_path",
+        "form_x_object"
+      ],
+      "type": "string"
+    },
+    "PdfHeader": {
+      "properties": {
+        "binary_marker": {
+          "type": "boolean"
+        },
+        "byte_offset": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "eof_marker_offset": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "trailing_bytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "binary_marker",
+        "byte_offset",
+        "trailing_bytes",
+        "version"
+      ],
+      "type": "object"
+    },
+    "PdfIndirectObject": {
+      "properties": {
+        "locator": {
+          "$ref": "#/definitions/PdfObjectLocator"
+        },
+        "object": {
+          "$ref": "#/definitions/PdfReference"
+        },
+        "raw_sha256": {
+          "type": "string"
+        },
+        "repaired": {
+          "type": "boolean"
+        },
+        "revision": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "stream": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfStream"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "value": {
+          "$ref": "#/definitions/PdfValue"
+        }
+      },
+      "required": [
+        "locator",
+        "object",
+        "raw_sha256",
+        "repaired",
+        "revision",
+        "value"
+      ],
+      "type": "object"
+    },
+    "PdfInteractiveContent": {
+      "properties": {
+        "annotations": {
+          "items": {
+            "$ref": "#/definitions/PdfAnnotation"
+          },
+          "type": "array"
+        },
+        "comments": {
+          "items": {
+            "$ref": "#/definitions/PdfComment"
+          },
+          "type": "array"
+        },
+        "destinations": {
+          "items": {
+            "$ref": "#/definitions/PdfNamedDestination"
+          },
+          "type": "array"
+        },
+        "embedded_files": {
+          "items": {
+            "$ref": "#/definitions/PdfEmbeddedFile"
+          },
+          "type": "array"
+        },
+        "form": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfForm"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "layers": {
+          "items": {
+            "$ref": "#/definitions/PdfLayer"
+          },
+          "type": "array"
+        },
+        "links": {
+          "items": {
+            "$ref": "#/definitions/PdfLink"
+          },
+          "type": "array"
+        },
+        "outlines": {
+          "items": {
+            "$ref": "#/definitions/PdfOutlineItem"
+          },
+          "type": "array"
+        },
+        "relationships": {
+          "items": {
+            "$ref": "#/definitions/PdfInteractiveRelationship"
+          },
+          "type": "array"
+        },
+        "signatures": {
+          "items": {
+            "$ref": "#/definitions/PdfSignature"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "annotations",
+        "comments",
+        "destinations",
+        "embedded_files",
+        "layers",
+        "links",
+        "outlines",
+        "relationships",
+        "signatures"
+      ],
+      "type": "object"
+    },
+    "PdfInteractiveRelation": {
+      "enum": [
+        "resolves_to",
+        "parent_of",
+        "next_sibling",
+        "previous_sibling",
+        "annotation_for",
+        "reply_to",
+        "field_widget",
+        "attachment_of",
+        "embedded_in"
+      ],
+      "type": "string"
+    },
+    "PdfInteractiveRelationship": {
+      "properties": {
+        "locator": {
+          "$ref": "#/definitions/PdfObjectLocator"
+        },
+        "relation": {
+          "$ref": "#/definitions/PdfInteractiveRelation"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "target_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "locator",
+        "relation",
+        "source_id",
+        "target_id"
+      ],
+      "type": "object"
+    },
+    "PdfLayer": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "initially_visible": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "intent": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "locator": {
+          "$ref": "#/definitions/PdfObjectLocator"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "object": {
+          "$ref": "#/definitions/PdfReference"
+        },
+        "usage": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "intent",
+        "locator",
+        "object"
+      ],
+      "type": "object"
+    },
+    "PdfLineSegment": {
+      "properties": {
+        "end": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        "start": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        }
+      },
+      "required": [
+        "end",
+        "start"
+      ],
+      "type": "object"
+    },
+    "PdfLink": {
+      "properties": {
+        "action": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfAction"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "annotation_object": {
+          "$ref": "#/definitions/PdfReference"
+        },
+        "destination": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfDestination"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "named_destination": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "page_index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "rectangle": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfRectangle"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "annotation_object",
+        "id",
+        "locator",
+        "page_index"
+      ],
+      "type": "object"
+    },
+    "PdfList": {
+      "properties": {
+        "confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/definitions/PdfSemanticEvidence"
+          },
+          "type": "array"
+        },
+        "index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "item_block_indices": {
+          "items": {
+            "format": "uint64",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "ordered": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "confidence",
+        "evidence",
+        "index",
+        "item_block_indices",
+        "locator",
+        "ordered"
+      ],
+      "type": "object"
+    },
+    "PdfMetadata": {
+      "properties": {
+        "fields": {
+          "items": {
+            "$ref": "#/definitions/PdfMetadataField"
+          },
+          "type": "array"
+        },
+        "info_object": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "xmp": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "xmp_object": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "xmp_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "fields"
+      ],
+      "type": "object"
+    },
+    "PdfMetadataField": {
+      "properties": {
+        "locator": {
+          "$ref": "#/definitions/PdfObjectLocator"
+        },
+        "name": {
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/definitions/PdfValue"
+        }
+      },
+      "required": [
+        "locator",
+        "name",
+        "value"
+      ],
+      "type": "object"
+    },
+    "PdfNamedDestination": {
+      "properties": {
+        "destination": {
+          "$ref": "#/definitions/PdfDestination"
+        },
+        "id": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/PdfObjectLocator"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "destination",
+        "id",
+        "locator",
+        "name"
+      ],
+      "type": "object"
+    },
+    "PdfNativeLayout": {
+      "properties": {
+        "fonts": {
+          "items": {
+            "$ref": "#/definitions/PdfFont"
+          },
+          "type": "array"
+        },
+        "pages": {
+          "items": {
+            "$ref": "#/definitions/PdfPageNativeLayout"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "fonts",
+        "pages"
+      ],
+      "type": "object"
+    },
+    "PdfNativePageText": {
+      "properties": {
+        "layout_confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "page_index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "reading_order_confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "regions": {
+          "items": {
+            "$ref": "#/definitions/PdfNativeTextRegion"
+          },
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/definitions/PdfNativeTextStatus"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "layout_confidence",
+        "page_index",
+        "reading_order_confidence",
+        "regions",
+        "status",
+        "text"
+      ],
+      "type": "object"
+    },
+    "PdfNativeTextRegion": {
+      "properties": {
+        "bbox": {
+          "$ref": "#/definitions/BoundingBox"
+        },
+        "index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "layout_confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "reading_order": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bbox",
+        "index",
+        "layout_confidence",
+        "locator",
+        "reading_order",
+        "text"
+      ],
+      "type": "object"
+    },
+    "PdfNativeTextStatus": {
+      "enum": [
+        "extracted",
+        "no_native_text",
+        "unusable",
+        "budget_exceeded"
+      ],
+      "type": "string"
+    },
+    "PdfObjectLocation": {
+      "oneOf": [
+        {
+          "properties": {
+            "byte_end": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "byte_start": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "kind": {
+              "enum": [
+                "direct"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "byte_end",
+            "byte_start",
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "container": {
+              "$ref": "#/definitions/PdfReference"
+            },
+            "decoded_byte_end": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "decoded_byte_start": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "kind": {
+              "enum": [
+                "object_stream"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "container",
+            "decoded_byte_end",
+            "decoded_byte_start",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "PdfObjectLocator": {
+      "properties": {
+        "key_path": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "location": {
+          "$ref": "#/definitions/PdfObjectLocation"
+        },
+        "object": {
+          "$ref": "#/definitions/PdfReference"
+        },
+        "stable_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "location",
+        "object",
+        "stable_id"
+      ],
+      "type": "object"
+    },
+    "PdfOcrAttempt": {
+      "properties": {
+        "layout_confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProviderConfidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reading_order_confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProviderConfidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "regions": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/PdfOcrTextRegion"
+          },
+          "type": "array"
+        },
+        "response": {
+          "$ref": "#/definitions/ProviderResponse"
+        },
+        "scope": {
+          "$ref": "#/definitions/PdfOcrScope"
+        }
+      },
+      "required": [
+        "response",
+        "scope"
+      ],
+      "type": "object"
+    },
+    "PdfOcrScope": {
+      "properties": {
+        "graphic_index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "kind": {
+          "$ref": "#/definitions/PdfOcrScopeKind"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "page_index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "reason": {
+          "$ref": "#/definitions/PdfOcrScopeReason"
+        }
+      },
+      "required": [
+        "kind",
+        "locator",
+        "page_index",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "PdfOcrScopeKind": {
+      "enum": [
+        "page",
+        "region"
+      ],
+      "type": "string"
+    },
+    "PdfOcrScopeReason": {
+      "enum": [
+        "no_native_text",
+        "native_text_unusable",
+        "native_text_budget_exceeded",
+        "raster_image_on_hybrid_page",
+        "all_pages_requested"
+      ],
+      "type": "string"
+    },
+    "PdfOcrTextRegion": {
+      "properties": {
+        "bbox": {
+          "$ref": "#/definitions/BoundingBox"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProviderConfidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "language": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "reading_order": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "reading_order_inferred": {
+          "type": "boolean"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bbox",
+        "index",
+        "locator",
+        "reading_order",
+        "reading_order_inferred",
+        "text"
+      ],
+      "type": "object"
+    },
+    "PdfOutlineItem": {
+      "properties": {
+        "action": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfAction"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "destination": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfDestination"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "first_child": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "locator": {
+          "$ref": "#/definitions/PdfObjectLocator"
+        },
+        "named_destination": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "next_sibling": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "object": {
+          "$ref": "#/definitions/PdfReference"
+        },
+        "open": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "previous_sibling": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "locator",
+        "object"
+      ],
+      "type": "object"
+    },
+    "PdfPage": {
+      "properties": {
+        "crop_box": {
+          "$ref": "#/definitions/PdfRectangle"
+        },
+        "height_points": {
+          "format": "double",
+          "type": "number"
+        },
+        "index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "label": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "media_box": {
+          "$ref": "#/definitions/PdfRectangle"
+        },
+        "object": {
+          "$ref": "#/definitions/PdfReference"
+        },
+        "object_locator": {
+          "$ref": "#/definitions/PdfObjectLocator"
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rotation_degrees": {
+          "format": "int16",
+          "type": "integer"
+        },
+        "user_unit": {
+          "format": "double",
+          "type": "number"
+        },
+        "width_points": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "crop_box",
+        "height_points",
+        "index",
+        "locator",
+        "media_box",
+        "object",
+        "object_locator",
+        "rotation_degrees",
+        "user_unit",
+        "width_points"
+      ],
+      "type": "object"
+    },
+    "PdfPageLabel": {
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "page_index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "prefix": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rule_locator": {
+          "$ref": "#/definitions/PdfObjectLocator"
+        },
+        "start": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "style": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfPageLabelStyle"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "label",
+        "page_index",
+        "rule_locator",
+        "start"
+      ],
+      "type": "object"
+    },
+    "PdfPageLabelStyle": {
+      "enum": [
+        "decimal",
+        "upper_roman",
+        "lower_roman",
+        "upper_letters",
+        "lower_letters",
+        "none"
+      ],
+      "type": "string"
+    },
+    "PdfPageNativeLayout": {
+      "properties": {
+        "blocks": {
+          "items": {
+            "$ref": "#/definitions/PdfTextBlock"
+          },
+          "type": "array"
+        },
+        "content_objects": {
+          "items": {
+            "$ref": "#/definitions/PdfReference"
+          },
+          "type": "array"
+        },
+        "glyphs": {
+          "items": {
+            "$ref": "#/definitions/PdfGlyph"
+          },
+          "type": "array"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/definitions/PdfTextLine"
+          },
+          "type": "array"
+        },
+        "page_index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "reading_order": {
+          "$ref": "#/definitions/PdfReadingOrder"
+        },
+        "rotation_degrees": {
+          "format": "int16",
+          "type": "integer"
+        },
+        "status": {
+          "$ref": "#/definitions/PdfNativeTextStatus"
+        },
+        "tokens": {
+          "items": {
+            "$ref": "#/definitions/PdfTextToken"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "blocks",
+        "content_objects",
+        "glyphs",
+        "lines",
+        "page_index",
+        "reading_order",
+        "rotation_degrees",
+        "status",
+        "tokens"
+      ],
+      "type": "object"
+    },
+    "PdfPageSemanticStructure": {
+      "properties": {
+        "blocks": {
+          "items": {
+            "$ref": "#/definitions/PdfSemanticBlock"
+          },
+          "type": "array"
+        },
+        "columns": {
+          "items": {
+            "$ref": "#/definitions/PdfColumn"
+          },
+          "type": "array"
+        },
+        "figures": {
+          "items": {
+            "$ref": "#/definitions/PdfFigure"
+          },
+          "type": "array"
+        },
+        "graphics": {
+          "items": {
+            "$ref": "#/definitions/PdfGraphicObject"
+          },
+          "type": "array"
+        },
+        "lists": {
+          "items": {
+            "$ref": "#/definitions/PdfList"
+          },
+          "type": "array"
+        },
+        "page_index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "reading_order": {
+          "items": {
+            "$ref": "#/definitions/PdfSemanticReadingItem"
+          },
+          "type": "array"
+        },
+        "tables": {
+          "items": {
+            "$ref": "#/definitions/PdfTable"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "blocks",
+        "columns",
+        "figures",
+        "graphics",
+        "lists",
+        "page_index",
+        "reading_order",
+        "tables"
+      ],
+      "type": "object"
+    },
+    "PdfPageTextContent": {
+      "properties": {
+        "native": {
+          "$ref": "#/definitions/NativeRepresentation_for_PdfNativePageText"
+        },
+        "ocr_attempts": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/PdfOcrAttempt"
+          },
+          "type": "array"
+        },
+        "page_index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "reconciled": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ReconciledRepresentation_for_PdfReconciledPageText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "native",
+        "page_index"
+      ],
+      "type": "object"
+    },
+    "PdfPageTreeNode": {
+      "properties": {
+        "actual_descendant_pages": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "declared_count": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "kids": {
+          "items": {
+            "$ref": "#/definitions/PdfReference"
+          },
+          "type": "array"
+        },
+        "locator": {
+          "$ref": "#/definitions/PdfObjectLocator"
+        },
+        "object": {
+          "$ref": "#/definitions/PdfReference"
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "actual_descendant_pages",
+        "kids",
+        "locator",
+        "object"
+      ],
+      "type": "object"
+    },
+    "PdfReadingEvidence": {
+      "properties": {
+        "confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "description": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/PdfReadingEvidenceKind"
+        }
+      },
+      "required": [
+        "confidence",
+        "description",
+        "kind"
+      ],
+      "type": "object"
+    },
+    "PdfReadingEvidenceKind": {
+      "enum": [
+        "content_stream_sequence",
+        "text_matrix_baseline",
+        "geometric_line_clustering",
+        "column_separation",
+        "unicode_directionality"
+      ],
+      "type": "string"
+    },
+    "PdfReadingOrder": {
+      "properties": {
+        "block_order": {
+          "items": {
+            "format": "uint64",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/definitions/PdfReadingEvidence"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "block_order",
+        "confidence",
+        "evidence"
+      ],
+      "type": "object"
+    },
+    "PdfReconciledPageText": {
+      "properties": {
+        "confidence_evidence": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/definitions/PdfReconciledTextItem"
+          },
+          "type": "array"
+        },
+        "layout_confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "reading_order_confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "suppressions": {
+          "items": {
+            "$ref": "#/definitions/PdfTextSuppression"
+          },
+          "type": "array"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "confidence_evidence",
+        "items",
+        "layout_confidence",
+        "reading_order_confidence",
+        "suppressions",
+        "text"
+      ],
+      "type": "object"
+    },
+    "PdfReconciledTextItem": {
+      "properties": {
+        "bbox": {
+          "$ref": "#/definitions/BoundingBox"
+        },
+        "confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "origin": {
+          "$ref": "#/definitions/PdfTextOrigin"
+        },
+        "source": {
+          "$ref": "#/definitions/PdfReconciledTextSource"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bbox",
+        "confidence",
+        "index",
+        "locator",
+        "origin",
+        "source",
+        "text"
+      ],
+      "type": "object"
+    },
+    "PdfReconciledTextSource": {
+      "oneOf": [
+        {
+          "properties": {
+            "origin": {
+              "enum": [
+                "native"
+              ],
+              "type": "string"
+            },
+            "region_index": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "origin",
+            "region_index"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "attempt_index": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "origin": {
+              "enum": [
+                "ocr"
+              ],
+              "type": "string"
+            },
+            "region_index": {
+              "format": "uint64",
+              "minimum": 0.0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "attempt_index",
+            "origin",
+            "region_index"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "PdfRectangle": {
+      "properties": {
+        "bottom": {
+          "format": "double",
+          "type": "number"
+        },
+        "left": {
+          "format": "double",
+          "type": "number"
+        },
+        "right": {
+          "format": "double",
+          "type": "number"
+        },
+        "top": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "bottom",
+        "left",
+        "right",
+        "top"
+      ],
+      "type": "object"
+    },
+    "PdfReference": {
+      "properties": {
+        "generation": {
+          "format": "uint16",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "object_number": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "generation",
+        "object_number"
+      ],
+      "type": "object"
+    },
+    "PdfRepair": {
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "object": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "original_offset": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "recovered_offset": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "description"
+      ],
+      "type": "object"
+    },
+    "PdfRepeatedRegion": {
+      "properties": {
+        "confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/definitions/PdfSemanticEvidence"
+          },
+          "type": "array"
+        },
+        "index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "kind": {
+          "$ref": "#/definitions/PdfRepeatedRegionKind"
+        },
+        "normalized_pattern": {
+          "type": "string"
+        },
+        "occurrences": {
+          "items": {
+            "$ref": "#/definitions/PdfRepeatedRegionOccurrence"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "confidence",
+        "evidence",
+        "index",
+        "kind",
+        "normalized_pattern",
+        "occurrences"
+      ],
+      "type": "object"
+    },
+    "PdfRepeatedRegionKind": {
+      "enum": [
+        "header",
+        "footer",
+        "page_number"
+      ],
+      "type": "string"
+    },
+    "PdfRepeatedRegionOccurrence": {
+      "properties": {
+        "block_index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "page_index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "block_index",
+        "locator",
+        "page_index",
+        "text"
+      ],
+      "type": "object"
+    },
+    "PdfSemanticBlock": {
+      "properties": {
+        "bbox": {
+          "$ref": "#/definitions/BoundingBox"
+        },
+        "confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/definitions/PdfSemanticEvidence"
+          },
+          "type": "array"
+        },
+        "heading_level": {
+          "format": "uint8",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "kind": {
+          "$ref": "#/definitions/PdfSemanticBlockKind"
+        },
+        "list_marker": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "native_block_index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bbox",
+        "confidence",
+        "evidence",
+        "index",
+        "kind",
+        "locator",
+        "native_block_index",
+        "text"
+      ],
+      "type": "object"
+    },
+    "PdfSemanticBlockKind": {
+      "enum": [
+        "heading",
+        "paragraph",
+        "list_item",
+        "header",
+        "footer",
+        "page_number",
+        "caption"
+      ],
+      "type": "string"
+    },
+    "PdfSemanticEvidence": {
+      "properties": {
+        "confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "description": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/PdfSemanticEvidenceKind"
+        },
+        "source_blocks": {
+          "items": {
+            "format": "uint64",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "source_objects": {
+          "items": {
+            "$ref": "#/definitions/PdfReference"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "confidence",
+        "description",
+        "kind"
+      ],
+      "type": "object"
+    },
+    "PdfSemanticEvidenceKind": {
+      "enum": [
+        "tagged_structure",
+        "font_scale",
+        "font_style",
+        "text_pattern",
+        "geometric_alignment",
+        "column_separation",
+        "repeated_position",
+        "ruling_lines",
+        "x_object_invocation",
+        "caption_proximity",
+        "native_reading_order"
+      ],
+      "type": "string"
+    },
+    "PdfSemanticReadingItem": {
+      "properties": {
+        "bbox": {
+          "$ref": "#/definitions/BoundingBox"
+        },
+        "confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "kind": {
+          "$ref": "#/definitions/PdfSemanticReadingItemKind"
+        }
+      },
+      "required": [
+        "bbox",
+        "confidence",
+        "index",
+        "kind"
+      ],
+      "type": "object"
+    },
+    "PdfSemanticReadingItemKind": {
+      "enum": [
+        "block",
+        "table",
+        "figure"
+      ],
+      "type": "string"
+    },
+    "PdfSemanticStructure": {
+      "properties": {
+        "pages": {
+          "items": {
+            "$ref": "#/definitions/PdfPageSemanticStructure"
+          },
+          "type": "array"
+        },
+        "repeated_regions": {
+          "items": {
+            "$ref": "#/definitions/PdfRepeatedRegion"
+          },
+          "type": "array"
+        },
+        "structure_tree": {
+          "$ref": "#/definitions/PdfStructureTreeSummary"
+        }
+      },
+      "required": [
+        "pages",
+        "repeated_regions",
+        "structure_tree"
+      ],
+      "type": "object"
+    },
+    "PdfSignature": {
+      "properties": {
+        "byte_range": {
+          "items": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "contact_info": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "contents_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "field_object": {
+          "$ref": "#/definitions/PdfReference"
+        },
+        "filter": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "location": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/PdfObjectLocator"
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "signature_object": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "signer_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "signing_time": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sub_filter": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "byte_range",
+        "field_object",
+        "id",
+        "locator"
+      ],
+      "type": "object"
+    },
+    "PdfStream": {
+      "properties": {
+        "actual_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "byte_end": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "byte_start": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "declared_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "decode_status": {
+          "$ref": "#/definitions/PdfStreamDecodeStatus"
+        },
+        "decoded_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "decoded_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "encoded_sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "actual_length",
+        "byte_end",
+        "byte_start",
+        "decode_status",
+        "encoded_sha256"
+      ],
+      "type": "object"
+    },
+    "PdfStreamDecodeStatus": {
+      "enum": [
+        "not_filtered",
+        "decoded",
+        "native_encoded",
+        "unsupported",
+        "malformed",
+        "budget_exceeded",
+        "encrypted"
+      ],
+      "type": "string"
+    },
+    "PdfString": {
+      "properties": {
+        "encoding": {
+          "$ref": "#/definitions/PdfStringEncoding"
+        },
+        "raw_hex": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "encoding",
+        "raw_hex",
+        "text"
+      ],
+      "type": "object"
+    },
+    "PdfStringEncoding": {
+      "enum": [
+        "pdf_doc",
+        "utf16_big_endian",
+        "binary"
+      ],
+      "type": "string"
+    },
+    "PdfStructureTreeStatus": {
+      "enum": [
+        "absent",
+        "valid",
+        "malformed"
+      ],
+      "type": "string"
+    },
+    "PdfStructureTreeSummary": {
+      "properties": {
+        "confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "element_count": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "root": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "$ref": "#/definitions/PdfStructureTreeStatus"
+        }
+      },
+      "required": [
+        "confidence",
+        "element_count",
+        "status"
+      ],
+      "type": "object"
+    },
+    "PdfTable": {
+      "properties": {
+        "bbox": {
+          "$ref": "#/definitions/BoundingBox"
+        },
+        "caption_block_index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "column_count": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/definitions/PdfSemanticEvidence"
+          },
+          "type": "array"
+        },
+        "index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "rows": {
+          "items": {
+            "$ref": "#/definitions/PdfTableRow"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "bbox",
+        "column_count",
+        "confidence",
+        "evidence",
+        "index",
+        "locator",
+        "rows"
+      ],
+      "type": "object"
+    },
+    "PdfTableCell": {
+      "properties": {
+        "bbox": {
+          "$ref": "#/definitions/BoundingBox"
+        },
+        "column": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "column_span": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/definitions/PdfSemanticEvidence"
+          },
+          "type": "array"
+        },
+        "header_candidate": {
+          "type": "boolean"
+        },
+        "header_confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "row": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "row_span": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bbox",
+        "column",
+        "column_span",
+        "confidence",
+        "evidence",
+        "header_candidate",
+        "header_confidence",
+        "locator",
+        "row",
+        "row_span",
+        "text"
+      ],
+      "type": "object"
+    },
+    "PdfTableRow": {
+      "properties": {
+        "bbox": {
+          "$ref": "#/definitions/BoundingBox"
+        },
+        "cells": {
+          "items": {
+            "$ref": "#/definitions/PdfTableCell"
+          },
+          "type": "array"
+        },
+        "index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        }
+      },
+      "required": [
+        "bbox",
+        "cells",
+        "index",
+        "locator"
+      ],
+      "type": "object"
+    },
+    "PdfTextBlock": {
+      "properties": {
+        "bbox": {
+          "$ref": "#/definitions/BoundingBox"
+        },
+        "confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "direction": {
+          "$ref": "#/definitions/PdfWritingDirection"
+        },
+        "index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "line_end": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "line_start": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "text": {
+          "type": "string"
+        },
+        "token_end": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "token_start": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "bbox",
+        "confidence",
+        "direction",
+        "index",
+        "line_end",
+        "line_start",
+        "locator",
+        "text",
+        "token_end",
+        "token_start"
+      ],
+      "type": "object"
+    },
+    "PdfTextContent": {
+      "properties": {
+        "pages": {
+          "items": {
+            "$ref": "#/definitions/PdfPageTextContent"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "pages"
+      ],
+      "type": "object"
+    },
+    "PdfTextLine": {
+      "properties": {
+        "bbox": {
+          "$ref": "#/definitions/BoundingBox"
+        },
+        "confidence": {
+          "format": "double",
+          "type": "number"
+        },
+        "direction": {
+          "$ref": "#/definitions/PdfWritingDirection"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/definitions/PdfReadingEvidence"
+          },
+          "type": "array"
+        },
+        "index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "text": {
+          "type": "string"
+        },
+        "token_end": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "token_start": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "bbox",
+        "confidence",
+        "direction",
+        "evidence",
+        "index",
+        "locator",
+        "text",
+        "token_end",
+        "token_start"
+      ],
+      "type": "object"
+    },
+    "PdfTextOrigin": {
+      "enum": [
+        "native",
+        "ocr",
+        "reconciled"
+      ],
+      "type": "string"
+    },
+    "PdfTextSuppression": {
+      "properties": {
+        "geometric_overlap": {
+          "format": "double",
+          "type": "number"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "loss_class": {
+          "type": "string"
+        },
+        "reason": {
+          "$ref": "#/definitions/PdfTextSuppressionReason"
+        },
+        "retained": {
+          "$ref": "#/definitions/PdfReconciledTextSource"
+        },
+        "retained_locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "suppressed": {
+          "$ref": "#/definitions/PdfReconciledTextSource"
+        },
+        "suppressed_text": {
+          "type": "string"
+        },
+        "text_similarity": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "geometric_overlap",
+        "locator",
+        "loss_class",
+        "reason",
+        "retained",
+        "retained_locator",
+        "suppressed",
+        "suppressed_text",
+        "text_similarity"
+      ],
+      "type": "object"
+    },
+    "PdfTextSuppressionReason": {
+      "enum": [
+        "duplicate_native_preferred"
+      ],
+      "type": "string"
+    },
+    "PdfTextToken": {
+      "properties": {
+        "bbox": {
+          "$ref": "#/definitions/BoundingBox"
+        },
+        "direction": {
+          "$ref": "#/definitions/PdfWritingDirection"
+        },
+        "font_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "glyph_end": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "glyph_start": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "index": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "locator": {
+          "$ref": "#/definitions/SourceLocator"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bbox",
+        "direction",
+        "font_ids",
+        "glyph_end",
+        "glyph_start",
+        "index",
+        "locator",
+        "text"
+      ],
+      "type": "object"
+    },
+    "PdfTrailer": {
+      "properties": {
+        "encrypt": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "items": {
+            "$ref": "#/definitions/PdfString"
+          },
+          "type": "array"
+        },
+        "info": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "locator": {
+          "$ref": "#/definitions/PdfObjectLocator"
+        },
+        "previous_xref": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "root": {
+          "$ref": "#/definitions/PdfReference"
+        },
+        "size": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "locator",
+        "root"
+      ],
+      "type": "object"
+    },
+    "PdfUnicodeMapStatus": {
+      "enum": [
+        "present",
+        "standard_encoding",
+        "missing",
+        "malformed"
+      ],
+      "type": "string"
+    },
+    "PdfValue": {
+      "oneOf": [
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "null"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "boolean"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "integer"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "real"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "format": "double",
+              "type": "number"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "name"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "string"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/definitions/PdfString"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "array"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "items": {
+                "$ref": "#/definitions/PdfValue"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "dictionary"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "additionalProperties": {
+                "$ref": "#/definitions/PdfValue"
+              },
+              "type": "object"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "reference"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/definitions/PdfReference"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "keyword"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "PdfWritingDirection": {
+      "enum": [
+        "left_to_right",
+        "right_to_left",
+        "top_to_bottom",
+        "bottom_to_top",
+        "mixed",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "PdfXrefEntry": {
+      "properties": {
+        "byte_offset": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "generation": {
+          "format": "uint16",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "kind": {
+          "$ref": "#/definitions/PdfXrefEntryKind"
+        },
+        "object_number": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "object_stream": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PdfReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "object_stream_index": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "valid": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "generation",
+        "kind",
+        "object_number",
+        "valid"
+      ],
+      "type": "object"
+    },
+    "PdfXrefEntryKind": {
+      "enum": [
+        "free",
+        "in_use",
+        "compressed"
+      ],
+      "type": "string"
+    },
+    "PdfXrefKind": {
+      "enum": [
+        "table",
+        "stream",
+        "recovered_object_scan"
+      ],
+      "type": "string"
+    },
+    "PdfXrefSection": {
+      "properties": {
+        "byte_offset": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "entry_count": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "kind": {
+          "$ref": "#/definitions/PdfXrefKind"
+        },
+        "previous": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "byte_offset",
+        "entry_count",
+        "kind"
+      ],
+      "type": "object"
+    },
+    "ProviderConfidence": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "type": "number"
+    },
+    "ProviderDeterminism": {
+      "enum": [
+        "guaranteed",
+        "guaranteed_with_recording",
+        "not_guaranteed"
+      ],
+      "type": "string"
+    },
+    "ProviderExecutionMetadata": {
+      "properties": {
+        "configuration_digest": {
+          "type": "string"
+        },
+        "diagnostics": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Diagnostic"
+          },
+          "type": "array"
+        },
+        "input_identity": {
+          "$ref": "#/definitions/RawContentIdentity"
+        },
+        "kind": {
+          "$ref": "#/definitions/ProviderKind"
+        },
+        "network_access": {
+          "$ref": "#/definitions/NetworkAccess"
+        },
+        "output_identity": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "provider": {
+          "$ref": "#/definitions/ProviderMetadata"
+        },
+        "recorded": {
+          "type": "boolean"
+        },
+        "request_digest": {
+          "type": "string"
+        },
+        "timing": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProviderTiming"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "configuration_digest",
+        "input_identity",
+        "kind",
+        "network_access",
+        "provider",
+        "recorded",
+        "request_digest"
+      ],
+      "type": "object"
+    },
+    "ProviderKind": {
+      "description": "Provider capabilities selectable by a parse request.",
+      "enum": [
+        "ocr",
+        "transcription",
+        "decryption",
+        "isolated_parser_backend"
+      ],
+      "type": "string"
+    },
+    "ProviderMetadata": {
+      "properties": {
+        "confidence_model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "determinism": {
+          "$ref": "#/definitions/ProviderDeterminism"
+        },
+        "implementation": {
+          "type": "string"
+        },
+        "implementation_version": {
+          "type": "string"
+        },
+        "model_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "determinism",
+        "implementation",
+        "implementation_version",
+        "name"
+      ],
+      "type": "object"
+    },
+    "ProviderOutcome": {
+      "oneOf": [
+        {
+          "properties": {
+            "result": {
+              "$ref": "#/definitions/ProviderResult"
+            },
+            "status": {
+              "enum": [
+                "succeeded"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "result",
+            "status"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "status": {
+              "enum": [
+                "failed"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "status"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "ProviderResponse": {
+      "properties": {
+        "metadata": {
+          "$ref": "#/definitions/ProviderExecutionMetadata"
+        },
+        "outcome": {
+          "$ref": "#/definitions/ProviderOutcome"
+        },
+        "schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "metadata",
+        "outcome",
+        "schema_version"
+      ],
+      "type": "object"
+    },
+    "ProviderResult": {
+      "oneOf": [
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "ocr"
+              ],
+              "type": "string"
+            },
+            "result": {
+              "$ref": "#/definitions/OcrResult"
+            }
+          },
+          "required": [
+            "kind",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "transcription"
+              ],
+              "type": "string"
+            },
+            "result": {
+              "$ref": "#/definitions/TranscriptionResult"
+            }
+          },
+          "required": [
+            "kind",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "decryption"
+              ],
+              "type": "string"
+            },
+            "result": {
+              "$ref": "#/definitions/DecryptionResult"
+            }
+          },
+          "required": [
+            "kind",
+            "result"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "isolated_backend"
+              ],
+              "type": "string"
+            },
+            "result": {
+              "$ref": "#/definitions/IsolatedBackendResult"
+            }
+          },
+          "required": [
+            "kind",
+            "result"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "ProviderTiming": {
+      "properties": {
+        "elapsed_millis": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "source": {
+          "type": "string"
+        },
+        "started_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "source"
+      ],
+      "type": "object"
+    },
+    "RawContentIdentity": {
+      "description": "SHA-256 of exactly the original input bytes, without a prefix or suffix.",
+      "properties": {
+        "byte_length": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "sha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "byte_length",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "ReconciledRepresentation_for_PdfReconciledPageText": {
+      "properties": {
+        "algorithm": {
+          "type": "string"
+        },
+        "algorithm_version": {
+          "type": "string"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProviderConfidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "configuration_digest": {
+          "type": "string"
+        },
+        "diagnostics": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Diagnostic"
+          },
+          "type": "array"
+        },
+        "identity": {
+          "type": "string"
+        },
+        "native_input_identity": {
+          "type": "string"
+        },
+        "provider_output_identities": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "value": {
+          "$ref": "#/definitions/PdfReconciledPageText"
+        }
+      },
+      "required": [
+        "algorithm",
+        "algorithm_version",
+        "configuration_digest",
+        "identity",
+        "native_input_identity",
+        "provider_output_identities",
+        "value"
+      ],
+      "type": "object"
+    },
+    "RecoveryAction": {
+      "description": "A recovery action is guidance, never an action executed by Grist.",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/RecoveryKind"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "description",
+        "kind",
+        "retryable"
+      ],
+      "type": "object"
+    },
+    "RecoveryKind": {
+      "description": "Machine-actionable recovery families.",
+      "enum": [
+        "inspect_input",
+        "select_parser",
+        "enable_feature",
+        "retry_provider",
+        "increase_budget",
+        "supply_credentials",
+        "change_options",
+        "report_parser_defect"
+      ],
+      "type": "string"
+    },
+    "SchemaVersion": {
+      "type": "string"
+    },
+    "Severity": {
+      "description": "Diagnostic importance at the public API boundary.",
+      "enum": [
+        "info",
+        "warning",
+        "error",
+        "fatal"
+      ],
+      "type": "string"
+    },
+    "SourceInfo": {
+      "description": "Descriptive source metadata supplied by the caller.\n\nURI values are labels only. Resolving or fetching them is outside Grist's source contract.",
+      "properties": {
+        "declared_mime_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "ingestion_timestamp": {
+          "description": "Caller-supplied timestamp. Grist never inserts the current time.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SourceInfo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "repository_relative_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "uri": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "display_name"
+      ],
+      "type": "object"
+    },
+    "SourceLocator": {
+      "description": "An outermost-to-innermost containment chain.\n\nComponent `n` is interpreted relative to component `n - 1`. For example, `[archive_member, email_part, ooxml_part, text_range]` identifies text in an OOXML part attached to an email stored in an archive without flattening any parent coordinate system.",
+      "oneOf": [
+        {
+          "properties": {
+            "derived_from": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/DerivedNodeReference"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "precision": {
+              "enum": [
+                "exact"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "precision"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "confidence": {
+              "$ref": "#/definitions/LocatorConfidence"
+            },
+            "derived_from": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/DerivedNodeReference"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "precision": {
+              "enum": [
+                "approximate"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "confidence",
+            "precision"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "confidence": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/LocatorConfidence"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "derived_from": {
+              "$ref": "#/definitions/DerivedNodeReference"
+            },
+            "precision": {
+              "enum": [
+                "synthetic"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "derived_from",
+            "precision"
+          ],
+          "type": "object"
+        }
+      ],
+      "properties": {
+        "components": {
+          "items": {
+            "$ref": "#/definitions/LocationComponent"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "components"
+      ],
+      "type": "object"
+    },
+    "SourceRange": {
+      "properties": {
+        "byte_end": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "byte_start": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "end_column": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "end_line": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "start_column": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "start_line": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "byte_end",
+        "byte_start",
+        "end_column",
+        "end_line",
+        "start_column",
+        "start_line"
+      ],
+      "type": "object"
+    },
+    "TranscriptSegment": {
+      "properties": {
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProviderConfidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "end_ms": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "speaker": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "start_ms": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "end_ms",
+        "start_ms",
+        "text"
+      ],
+      "type": "object"
+    },
+    "TranscriptionResult": {
+      "properties": {
+        "confidence": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ProviderConfidence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "diagnostics": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Diagnostic"
+          },
+          "type": "array"
+        },
+        "language": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "segments": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/TranscriptSegment"
+          },
+          "type": "array"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "active_content": {
+      "items": {
+        "$ref": "#/definitions/PdfActiveContent"
+      },
+      "type": "array"
+    },
+    "catalog": {
+      "$ref": "#/definitions/PdfCatalog"
+    },
+    "encryption": {
+      "$ref": "#/definitions/PdfEncryption"
+    },
+    "filters": {
+      "items": {
+        "$ref": "#/definitions/PdfFilterUsage"
+      },
+      "type": "array"
+    },
+    "header": {
+      "$ref": "#/definitions/PdfHeader"
+    },
+    "interactive": {
+      "$ref": "#/definitions/PdfInteractiveContent"
+    },
+    "metadata": {
+      "$ref": "#/definitions/PdfMetadata"
+    },
+    "native_layout": {
+      "$ref": "#/definitions/PdfNativeLayout"
+    },
+    "objects": {
+      "items": {
+        "$ref": "#/definitions/PdfIndirectObject"
+      },
+      "type": "array"
+    },
+    "page_labels": {
+      "items": {
+        "$ref": "#/definitions/PdfPageLabel"
+      },
+      "type": "array"
+    },
+    "page_tree": {
+      "items": {
+        "$ref": "#/definitions/PdfPageTreeNode"
+      },
+      "type": "array"
+    },
+    "pages": {
+      "items": {
+        "$ref": "#/definitions/PdfPage"
+      },
+      "type": "array"
+    },
+    "repairs": {
+      "items": {
+        "$ref": "#/definitions/PdfRepair"
+      },
+      "type": "array"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "semantic_structure": {
+      "$ref": "#/definitions/PdfSemanticStructure"
+    },
+    "source": {
+      "$ref": "#/definitions/SourceInfo"
+    },
+    "text": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/PdfTextContent"
+        }
+      ],
+      "default": {
+        "pages": []
+      },
+      "description": "Native, provider-derived, and reconciled text remain independently addressable. This is additive so older v1 payloads deserialize with an empty collection rather than conflating representations."
+    },
+    "trailer": {
+      "$ref": "#/definitions/PdfTrailer"
+    },
+    "xref": {
+      "$ref": "#/definitions/PdfCrossReference"
+    }
+  },
+  "required": [
+    "active_content",
+    "catalog",
+    "encryption",
+    "filters",
+    "header",
+    "interactive",
+    "metadata",
+    "native_layout",
+    "objects",
+    "page_labels",
+    "page_tree",
+    "pages",
+    "repairs",
+    "schema_version",
+    "semantic_structure",
+    "source",
+    "trailer",
+    "xref"
+  ],
+  "title": "PdfDocument",
+  "type": "object"
+}

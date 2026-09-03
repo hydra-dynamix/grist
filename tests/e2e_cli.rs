@@ -44,6 +44,29 @@ fn run_stdin(args: &[&str], input: &str) -> serde_json::Value {
     serde_json::from_slice(&output.stdout).unwrap()
 }
 
+fn run_stdin_failure(args: &[&str], input: &str) -> String {
+    let mut child = Command::new(grist())
+        .args(args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(input.as_bytes())
+        .unwrap();
+    let output = child.wait_with_output().unwrap();
+    assert!(!output.status.success(), "command unexpectedly succeeded");
+    format!(
+        "{}{}",
+        String::from_utf8(output.stdout).unwrap(),
+        String::from_utf8(output.stderr).unwrap()
+    )
+}
+
 fn run(args: &[&str]) -> serde_json::Value {
     let output = Command::new(grist()).args(args).output().unwrap();
     assert!(
@@ -71,6 +94,35 @@ fn validate_with_schema(value: &serde_json::Value, schema_name: &str) {
     assert!(
         errors.is_empty(),
         "schema errors for {schema_name}: {errors:?}"
+    );
+}
+
+#[test]
+fn cli_parses_icalendar_and_vcard_as_inert_records() {
+    let calendar = run_stdin(
+        &["parse", "icalendar", "-"],
+        "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//CLI//EN\r\nBEGIN:VEVENT\r\nUID:cli-event\r\nDTSTART:20260808T120000Z\r\nSUMMARY:CLI event\r\nATTACH:https://example.test/a\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n",
+    );
+    validate_with_schema(&calendar, "icalendar-envelope");
+    assert_eq!(calendar["kind"], "i_calendar");
+    assert_eq!(
+        calendar["payload"]["events"][0]["uid"]["value"],
+        "cli-event"
+    );
+    assert_eq!(
+        calendar["payload"]["external_references"][0]["resolved"],
+        false
+    );
+
+    let contact = run_stdin(
+        &["parse", "vcard", "-"],
+        "BEGIN:VCARD\r\nVERSION:4.0\r\nFN:CLI Contact\r\nEMAIL:contact@example.test\r\nEND:VCARD\r\n",
+    );
+    validate_with_schema(&contact, "vcard-envelope");
+    assert_eq!(contact["kind"], "v_card");
+    assert_eq!(
+        contact["payload"]["cards"][0]["formatted_names"][0]["value"],
+        "CLI Contact"
     );
 }
 
@@ -119,6 +171,54 @@ fn cli_parses_markdown_rich_structures_end_to_end() {
 }
 
 #[test]
+fn cli_parses_restructured_text_inertly_end_to_end() {
+    let output = run_stdin(
+        &["parse", "restructured-text", "-"],
+        "Title\n=====\n\nSee :doc:`Guide <guide>`, guide_, and [note]_.\n\n.. _guide: guide.html\n\n.. [note] A note.\n\n.. include:: child.rst\n\n.. custom-tool:: never runs\n",
+    );
+    validate_with_schema(&output, "restructured-text-envelope");
+    assert_eq!(output["kind"], "restructured_text");
+    assert_eq!(output["status"], "partial");
+
+    let nodes = output["payload"]["nodes"].as_array().unwrap();
+    assert!(nodes.iter().any(|node| node["kind"] == "heading"));
+    assert!(nodes.iter().any(|node| node["kind"] == "cross_reference"));
+    let include = nodes.iter().find(|node| node["kind"] == "include").unwrap();
+    assert_eq!(include["include"]["status"], "reference_only");
+    let unknown = nodes
+        .iter()
+        .find(|node| node["name"] == "custom-tool")
+        .unwrap();
+    assert_eq!(unknown["kind"], "directive");
+    assert_eq!(unknown["name"], "custom-tool");
+    assert!(unknown.get("known_syntax").is_none());
+}
+
+#[test]
+fn cli_parses_asciidoc_inertly_end_to_end() {
+    let output = run_stdin(
+        &["parse", "asciidoc", "-"],
+        "= Title\n:toc: left\n\nSee <<guide>>, footnote:id[A note], and [.lead]#role#.\n\n[[guide]]\ninclude::child.adoc[]\n\ncustom-tool::never[runs]\n",
+    );
+    validate_with_schema(&output, "asciidoc-envelope");
+    assert_eq!(output["kind"], "ascii_doc");
+    assert_eq!(output["status"], "partial");
+
+    let nodes = output["payload"]["nodes"].as_array().unwrap();
+    assert!(nodes.iter().any(|node| node["kind"] == "heading"));
+    assert!(nodes.iter().any(|node| node["kind"] == "attribute"));
+    assert!(nodes.iter().any(|node| node["kind"] == "cross_reference"));
+    assert!(nodes.iter().any(|node| node["kind"] == "role"));
+    let include = nodes.iter().find(|node| node["kind"] == "include").unwrap();
+    assert_eq!(include["include"]["status"], "reference_only");
+    let unknown = nodes
+        .iter()
+        .find(|node| node["name"] == "custom-tool")
+        .unwrap();
+    assert_eq!(unknown["kind"], "raw_block");
+    assert!(unknown.get("known_syntax").is_none());
+}
+#[test]
 fn cli_parses_ldgr_projection_ticket_end_to_end() {
     let output = run_stdin(
         &["parse", "ldgr-projection", "-"],
@@ -159,7 +259,7 @@ fn cli_renders_json_summaries_and_validates_dynamic_event_datasets() {
     );
     validate_with_schema(&summary, "rendered-summary");
     assert_eq!(summary["schema_version"], "grist/rendered-summary/v1");
-    assert_eq!(summary["source_schema_version"], "grist/serialization/v1");
+    assert_eq!(summary["source_schema_version"], "grist/structured-text/v2");
     assert_eq!(summary["profile"], "dynamic-event-dataset");
     assert!(
         summary["sections"][0]["facts"]
@@ -367,6 +467,61 @@ fn cli_preserves_latex_commands_with_single_backslashes() {
 }
 
 #[test]
+fn cli_json_value_reports_selected_incomplete_and_malformed_positions() {
+    let incomplete = r#"{"name":"apply_beat_text_edits","arguments":"#;
+    let stderr = run_stdin_failure(&["parse", "model-output", "-", "--json-value"], incomplete);
+    assert!(stderr.contains("selected model-output candidate candidate-0 is incomplete"));
+    assert!(stderr.contains("at byte"));
+    assert!(stderr.contains("line 1, column"));
+
+    let malformed =
+        "{\n\"name\":\"apply_beat_text_edits\",\n\"arguments\":{\"edits\":[]}},\"call_id\":???}";
+    let envelope = run_stdin(&["parse", "model-output", "-"], malformed);
+    assert_eq!(envelope["payload"]["status"], "malformed");
+    assert_eq!(envelope["payload"]["candidates"][0]["status"], "malformed");
+    assert!(envelope["payload"]["candidates"][0]["json_error"]["byte_offset"].is_number());
+    assert!(envelope["payload"]["candidates"][0]["json_error"]["line"].is_number());
+    assert!(envelope["payload"]["candidates"][0]["json_error"]["column"].is_number());
+
+    let stderr = run_stdin_failure(&["parse", "model-output", "-", "--json-value"], malformed);
+    assert!(stderr.contains("selected model-output candidate candidate-0 is malformed"));
+    assert!(stderr.contains("at byte"));
+    assert!(stderr.contains("line 3, column"));
+}
+
+#[test]
+fn cli_json_value_distinguishes_no_candidate_and_ambiguity() {
+    let none = run_stdin_failure(
+        &["parse", "model-output", "-", "--json-value"],
+        "plain prose",
+    );
+    assert!(none.contains("no model-output candidate was detected"));
+
+    let ambiguous = run_stdin_failure(
+        &["parse", "model-output", "-", "--json-value"],
+        r#"first {"a":1} second {"b":2}"#,
+    );
+    assert!(ambiguous.contains("ambiguous model-output candidates: 2 candidates"));
+}
+
+#[test]
+fn cli_repairs_premature_tool_call_brace_and_emits_value() {
+    let input = r#"{"name":"apply_beat_text_edits","arguments":{"edits":[]}},"call_id":"cli"}"#;
+    let envelope = run_stdin(&["parse", "model-output", "-"], input);
+    let candidate = &envelope["payload"]["candidates"][0];
+    assert_eq!(candidate["status"], "recovered");
+    assert_eq!(
+        candidate["repairs"][0]["kind"],
+        "remove_premature_closing_brace"
+    );
+    assert_eq!(candidate["repairs"][0]["original_text"], "}");
+    assert!(candidate["repairs"][0]["source_range"].is_object());
+
+    let value = run_stdin(&["parse", "model-output", "-", "--json-value"], input);
+    assert_eq!(value["edits"], serde_json::json!([]));
+}
+
+#[test]
 fn cli_ingests_repo_with_filters_and_external_artifacts() {
     let repo = temp_dir("repo");
     fs::create_dir_all(repo.join("src")).unwrap();
@@ -475,6 +630,15 @@ fn cli_parses_csv_with_headers_end_to_end() {
         output["payload"]["rows"][1]["cells"][1]["value"],
         serde_json::Value::Null
     );
+
+    let tsv = run_stdin(
+        &["parse", "tsv", "-"],
+        "name\tnote\r\nalpha\t\"one\nline\"\r\n",
+    );
+    validate_with_schema(&tsv, "csv-envelope");
+    assert_eq!(tsv["payload"]["dialect"]["delimiter"], "tab");
+    assert_eq!(tsv["payload"]["rows"][0]["cells"][1]["text"], "one\nline");
+    assert_eq!(tsv["payload"]["rows"][0]["terminator"], "cr_lf");
 }
 
 #[test]
@@ -625,7 +789,7 @@ fn cli_ingests_repo_with_jsx_detection() {
             .as_array()
             .unwrap()
             .iter()
-            .any(|artifact| artifact["kind"] == "typescript_code")
+            .any(|artifact| artifact["kind"] == "javascript_code")
     );
 }
 
@@ -664,25 +828,56 @@ fn cli_help_menus_describe_parse_and_transform_surfaces() {
     assert!(top.contains("Parse one input into a typed Grist JSON envelope"));
     assert!(top.contains("Render parsed artifacts into stable inspection JSON"));
     assert!(top.contains("Validate inputs against stable Grist-supported contracts"));
-    assert!(top.contains("Convert supported inputs through DocumentGraph"));
+    assert!(top.contains("Parse registry-supported inputs through DocumentGraph"));
+
+    for command in [
+        "detect",
+        "parse",
+        "ingest",
+        "inspect",
+        "schema",
+        "render",
+        "validate",
+        "segment",
+        "capabilities",
+        "transform",
+    ] {
+        let help = run_text(&[command, "--help"]);
+        assert!(help.contains("Usage:"), "missing usage for {command}");
+        assert!(help.contains("--help"), "missing help option for {command}");
+    }
 
     let parse = run_text(&["parse", "--help"]);
     assert!(parse.contains("Parse LaTeX documents"));
-    assert!(parse.contains("Parse TypeScript, TSX, or JSX code"));
+    assert!(parse.contains("Parse TypeScript, JavaScript, TSX, or JSX code"));
+    assert!(parse.contains("grist parse <FORMAT> <INPUT>"));
+    assert!(parse.contains("grist capabilities"));
+
+    for format in ["pdf", "eml", "graph"] {
+        let help = run_text(&["parse", format, "--help"]);
+        assert!(help.contains(&format!("Usage: grist parse {format} [OPTIONS] <INPUT>")));
+        assert!(help.contains(&format!("Canonical format: {format}")));
+        assert!(help.contains("--options <OPTIONS>"));
+        assert!(help.contains("Payload schema:"));
+    }
 
     let render = run_text(&["render", "--help"]);
     assert!(render.contains("json-summary"));
     assert!(render.contains("serialization-summary"));
+    assert!(render.contains("grist render <INPUT> --to <TARGET>"));
 
     let validate = run_text(&["validate", "--help"]);
     assert!(validate.contains("Parse JSON and validate it against a JSON Schema file"));
+    assert!(validate.contains("grist validate <INPUT> --schema <SCHEMA>"));
 
     let transform = run_text(&["transform", "--help"]);
     assert!(transform.contains("Target representation to emit"));
     assert!(transform.contains("--file <INPUT>"));
     assert!(transform.contains("--output <OUTPUT>"));
     assert!(transform.contains("extract-obligations"));
-    assert!(transform.contains(".md, .tex, .py, .rs, .ts, .tsx, .jsx"));
+    assert!(transform.contains("built-in parser registry"));
+    assert!(transform.contains("graph, markdown, latex, html, text"));
+    assert!(!transform.contains(".md, .tex, .py, .rs, .ts, .tsx, .jsx"));
 }
 
 #[test]
@@ -720,9 +915,10 @@ fn cli_transforms_documents_through_document_graph() {
         "graph",
         "--extract-obligations",
     ]);
-    validate_with_schema(&graph, "document-graph");
+    validate_with_schema(&graph, "graph-transform-envelope");
+    assert_eq!(graph["operation"], "transform");
     assert!(
-        graph["nodes"]
+        graph["payload"]["graph"]["nodes"]
             .as_array()
             .unwrap()
             .iter()
@@ -754,6 +950,23 @@ fn cli_transforms_documents_through_document_graph() {
             .contains("\\section{Rules}")
     );
 
+    let manifest_path = dir.join("rules.transform.json");
+    let manifest_output = dir.join("rules.manifest.tex");
+    run_text(&[
+        "transform",
+        markdown.to_str().unwrap(),
+        "--to",
+        "latex",
+        "--output",
+        manifest_output.to_str().unwrap(),
+        "--manifest",
+        manifest_path.to_str().unwrap(),
+    ]);
+    let manifest: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(manifest_path).unwrap()).unwrap();
+    validate_with_schema(&manifest, "cli-text-output-manifest");
+    assert!(manifest["graph_transform_source_map"]["entries"].is_array());
+
     let output_graph = dir.join("rules.json");
     let stdout = run_text(&[
         "transform",
@@ -766,10 +979,171 @@ fn cli_transforms_documents_through_document_graph() {
     assert!(stdout.is_empty());
     let graph_file: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(&output_graph).unwrap()).unwrap();
-    validate_with_schema(&graph_file, "document-graph");
+    validate_with_schema(&graph_file, "graph-transform-envelope");
+    assert_eq!(
+        graph_file["payload"]["source_map"]["entries"]
+            .as_array()
+            .unwrap()
+            .len(),
+        graph_file["payload"]["graph"]["nodes"]
+            .as_array()
+            .unwrap()
+            .len()
+    );
 
     let tex = dir.join("paper.tex");
     fs::write(&tex, "\\section{Intro}\nHello.\n").unwrap();
     let rendered_markdown = run_text(&["transform", tex.to_str().unwrap(), "--to", "markdown"]);
     assert!(rendered_markdown.contains("# Intro"));
+}
+#[test]
+fn cli_streams_model_output_fixture_with_schema_and_batch_parity() {
+    let fixture = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("fixtures/generated/model_output/streaming-tool-call.txt");
+    let fixture_path = fixture.to_str().unwrap();
+    let batch = run(&["parse", "model-output", fixture_path]);
+    let output = run_text(&[
+        "parse",
+        "model-output",
+        fixture_path,
+        "--stream",
+        "--max-buffer-bytes",
+        "4096",
+    ]);
+    let events = output
+        .lines()
+        .map(|line| serde_json::from_str::<serde_json::Value>(line).unwrap())
+        .collect::<Vec<_>>();
+    assert!(!events.is_empty());
+    for event in &events {
+        validate_with_schema(event, "model-output-event-v2");
+    }
+    let streamed_candidates = events
+        .iter()
+        .filter(|event| event["event"] == "candidate_completed")
+        .map(|event| event["candidate"].clone())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        streamed_candidates,
+        *batch["payload"]["candidates"].as_array().unwrap()
+    );
+    assert_eq!(events.last().unwrap()["event"], "terminal");
+    assert_eq!(events.last().unwrap()["terminal"]["status"], "complete");
+    assert_eq!(
+        events
+            .iter()
+            .rev()
+            .find(|event| event["event"] == "parser_state_changed")
+            .unwrap()["state"],
+        "complete"
+    );
+}
+
+#[test]
+fn cli_streams_multiread_stdin_and_returns_nonzero_after_hard_terminal() {
+    let input = format!("{}{{\"value\":1}}", " ".repeat(9 * 1024));
+    let mut child = Command::new(grist())
+        .args(["parse", "model-output", "-", "--stream"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(input.as_bytes())
+        .unwrap();
+    let output = child.wait_with_output().unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let events = String::from_utf8(output.stdout)
+        .unwrap()
+        .lines()
+        .map(|line| serde_json::from_str::<serde_json::Value>(line).unwrap())
+        .collect::<Vec<_>>();
+    assert!(
+        events
+            .iter()
+            .any(|event| event["event"] == "candidate_completed")
+    );
+    let terminal = events.last().unwrap();
+    assert_eq!(terminal["event"], "terminal");
+    assert_eq!(terminal["terminal"]["status"], "complete");
+    assert_eq!(
+        terminal["terminal"]["budget_usage"]["input_bytes"],
+        input.len()
+    );
+    validate_with_schema(terminal, "model-output-event-v2");
+
+    let mut failed = Command::new(grist())
+        .args([
+            "parse",
+            "model-output",
+            "-",
+            "--stream",
+            "--max-buffer-bytes",
+            "16",
+        ])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    failed
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(br#"{"value":"this input exceeds the configured limit"}"#)
+        .unwrap();
+    let output = failed.wait_with_output().unwrap();
+    assert!(!output.status.success());
+    let events = String::from_utf8(output.stdout)
+        .unwrap()
+        .lines()
+        .map(|line| serde_json::from_str::<serde_json::Value>(line).unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(events.last().unwrap()["event"], "terminal");
+    assert_eq!(events.last().unwrap()["terminal"]["status"], "failed");
+    assert!(output.stderr.is_empty());
+}
+
+#[test]
+fn cli_stream_open_failure_is_terminal_last_ndjson() {
+    let missing = temp_dir("missing-stream").join("does-not-exist.json");
+    let output = Command::new(grist())
+        .args([
+            "parse",
+            "model-output",
+            missing.to_str().unwrap(),
+            "--stream",
+        ])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(output.stderr.is_empty());
+    let events = String::from_utf8(output.stdout)
+        .unwrap()
+        .lines()
+        .map(|line| serde_json::from_str::<serde_json::Value>(line).unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        events
+            .iter()
+            .filter(|event| event["event"] == "terminal")
+            .count(),
+        1
+    );
+    assert!(events.iter().any(|event| {
+        event["event"] == "diagnostic" && event["diagnostic"]["code"] == "stream.io_open_failed"
+    }));
+    assert_eq!(events.last().unwrap()["event"], "terminal");
+    assert_eq!(events.last().unwrap()["terminal"]["status"], "failed");
+    validate_with_schema(events.last().unwrap(), "model-output-event-v2");
 }

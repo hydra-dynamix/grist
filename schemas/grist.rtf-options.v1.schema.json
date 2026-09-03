@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "inline_embedded_artifact_bytes": {
+      "type": "boolean"
+    },
+    "retain_raw_source_bytes": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "inline_embedded_artifact_bytes",
+    "retain_raw_source_bytes"
+  ],
+  "title": "RtfOptions",
+  "type": "object"
+}

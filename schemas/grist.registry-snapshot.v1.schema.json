@@ -1,0 +1,486 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "ArtifactKind": {
+      "enum": [
+        "archive",
+        "markdown",
+        "restructured_text",
+        "ascii_doc",
+        "html",
+        "epub",
+        "pdf",
+        "image",
+        "subtitle",
+        "media",
+        "word_ooxml",
+        "presentation_ooxml",
+        "spreadsheet_ooxml",
+        "spreadsheet_odf",
+        "presentation_odf",
+        "odf_word",
+        "rtf",
+        "xml",
+        "csv",
+        "rust_code",
+        "python_code",
+        "javascript_code",
+        "typescript_code",
+        "code",
+        "manifest",
+        "latex",
+        "bibliography",
+        "serialization",
+        "structured_binary",
+        "columnar",
+        "sqlite",
+        "email",
+        "mbox",
+        "outlook_msg",
+        "i_calendar",
+        "v_card",
+        "notebook",
+        "model_output",
+        "repo_ingest",
+        "file_ingest",
+        "text",
+        "ldgr_projection",
+        "detection",
+        "document_graph",
+        "graph_document",
+        "graph_transform_result",
+        "render_result",
+        "reconstruction_result",
+        "segment_collection",
+        "schema_validation",
+        "container_traversal",
+        "capabilities",
+        "unsupported"
+      ],
+      "type": "string"
+    },
+    "Capability": {
+      "enum": [
+        "native_extraction",
+        "typed_payload",
+        "document_graph_projection",
+        "grammar_detection",
+        "source_ranges",
+        "error_recovery",
+        "inert_parsing",
+        "streaming",
+        "embedded_artifacts",
+        "provider_derived_content",
+        "isolated_backend"
+      ],
+      "type": "string"
+    },
+    "Determinism": {
+      "enum": [
+        "guaranteed",
+        "guaranteed_with_recording",
+        "not_guaranteed"
+      ],
+      "type": "string"
+    },
+    "FormatMetadata": {
+      "properties": {
+        "aliases": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "artifact_kind": {
+          "$ref": "#/definitions/ArtifactKind"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "extensions": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "id": {
+          "type": "string"
+        },
+        "media_types": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "artifact_kind",
+        "display_name",
+        "id"
+      ],
+      "type": "object"
+    },
+    "IsolationMetadata": {
+      "properties": {
+        "active_content_execution": {
+          "type": "boolean"
+        },
+        "network": {
+          "$ref": "#/definitions/NetworkPolicy"
+        },
+        "private_temporary_filesystem": {
+          "type": "boolean"
+        },
+        "subprocess_limit": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "active_content_execution",
+        "network",
+        "private_temporary_filesystem",
+        "subprocess_limit"
+      ],
+      "type": "object"
+    },
+    "NetworkPolicy": {
+      "enum": [
+        "forbidden",
+        "optional",
+        "required"
+      ],
+      "type": "string"
+    },
+    "OptionsMetadata": {
+      "properties": {
+        "default": true,
+        "schema": {
+          "$ref": "#/definitions/SchemaMetadata"
+        }
+      },
+      "required": [
+        "default",
+        "schema"
+      ],
+      "type": "object"
+    },
+    "ParserDescriptor": {
+      "properties": {
+        "allowed_providers": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/ProviderKind"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "capabilities": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/Capability"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "format": {
+          "$ref": "#/definitions/FormatMetadata"
+        },
+        "id": {
+          "type": "string"
+        },
+        "options": {
+          "$ref": "#/definitions/OptionsMetadata"
+        },
+        "origin": {
+          "$ref": "#/definitions/ParserOrigin"
+        },
+        "parser": {
+          "$ref": "#/definitions/ParserInfo"
+        },
+        "payload_schema": {
+          "$ref": "#/definitions/SchemaMetadata"
+        },
+        "priority": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "required_features": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "required_providers": {
+          "default": [],
+          "items": {
+            "$ref": "#/definitions/ProviderKind"
+          },
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "format",
+        "id",
+        "options",
+        "origin",
+        "parser",
+        "payload_schema",
+        "priority"
+      ],
+      "type": "object"
+    },
+    "ParserInfo": {
+      "description": "Parser and backend identity used to interpret an input.\n\n`version` is the Grist crate version retained under its v1 JSON name.",
+      "properties": {
+        "build_identity": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "enabled_feature": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "grammar_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "implementation": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "implementation_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "type": "object"
+    },
+    "ParserOrigin": {
+      "enum": [
+        "built_in",
+        "caller"
+      ],
+      "type": "string"
+    },
+    "ProviderDescriptor": {
+      "properties": {
+        "capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "determinism": {
+          "$ref": "#/definitions/Determinism"
+        },
+        "enabled_feature": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "implementation": {
+          "type": "string"
+        },
+        "implementation_version": {
+          "type": "string"
+        },
+        "isolation": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/IsolationMetadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "kind": {
+          "$ref": "#/definitions/ProviderKind"
+        },
+        "name": {
+          "type": "string"
+        },
+        "network": {
+          "$ref": "#/definitions/NetworkPolicy"
+        },
+        "origin": {
+          "$ref": "#/definitions/ParserOrigin"
+        },
+        "priority": {
+          "format": "int32",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "capabilities",
+        "determinism",
+        "id",
+        "implementation",
+        "implementation_version",
+        "kind",
+        "name",
+        "network",
+        "origin",
+        "priority"
+      ],
+      "type": "object"
+    },
+    "ProviderKind": {
+      "description": "Provider capabilities selectable by a parse request.",
+      "enum": [
+        "ocr",
+        "transcription",
+        "decryption",
+        "isolated_parser_backend"
+      ],
+      "type": "string"
+    },
+    "SchemaMetadata": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "type": "object"
+    },
+    "UnavailableParser": {
+      "properties": {
+        "descriptor": {
+          "$ref": "#/definitions/ParserDescriptor"
+        },
+        "reason": {
+          "$ref": "#/definitions/UnavailableReason"
+        }
+      },
+      "required": [
+        "descriptor",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "UnavailableReason": {
+      "oneOf": [
+        {
+          "properties": {
+            "feature": {
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "feature_disabled"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "feature",
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "not_implemented"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "backend": {
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "backend_unavailable"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "backend",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    }
+  },
+  "properties": {
+    "parsers": {
+      "items": {
+        "$ref": "#/definitions/ParserDescriptor"
+      },
+      "type": "array"
+    },
+    "providers": {
+      "items": {
+        "$ref": "#/definitions/ProviderDescriptor"
+      },
+      "type": "array"
+    },
+    "unavailable_parsers": {
+      "items": {
+        "$ref": "#/definitions/UnavailableParser"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "parsers",
+    "providers",
+    "unavailable_parsers"
+  ],
+  "title": "RegistrySnapshot",
+  "type": "object"
+}

@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "CorpusViolation": {
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "location",
+        "message"
+      ],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "violations": {
+      "items": {
+        "$ref": "#/definitions/CorpusViolation"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "violations"
+  ],
+  "title": "CorpusValidationReport",
+  "type": "object"
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "schema_path": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "title": "SchemaOptions",
+  "type": "object"
+}

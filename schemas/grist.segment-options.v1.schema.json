@@ -1,0 +1,202 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "AtomicityOptions": {
+      "properties": {
+        "code": {
+          "type": "boolean"
+        },
+        "equations": {
+          "type": "boolean"
+        },
+        "figure_captions": {
+          "type": "boolean"
+        },
+        "tables": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "code",
+        "equations",
+        "figure_captions",
+        "tables"
+      ],
+      "type": "object"
+    },
+    "BoundaryKind": {
+      "enum": [
+        "document",
+        "section",
+        "paragraph",
+        "list_item",
+        "table_row",
+        "code_symbol",
+        "page",
+        "slide",
+        "sheet_range",
+        "message",
+        "notebook_cell",
+        "transcript_cue"
+      ],
+      "type": "string"
+    },
+    "NodeSelectionRules": {
+      "properties": {
+        "exclude_kinds": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "include_kinds": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "required_metadata": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "SegmentSizeUnit": {
+      "enum": [
+        "unicode_scalars",
+        "bytes",
+        "tokens"
+      ],
+      "type": "string"
+    },
+    "TokenizerSpec": {
+      "properties": {
+        "configuration_digest": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "configuration_digest",
+        "name",
+        "version"
+      ],
+      "type": "object"
+    }
+  },
+  "description": "A serializable, versioned segmentation options file.",
+  "properties": {
+    "atomicity": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/AtomicityOptions"
+        }
+      ],
+      "default": {
+        "code": true,
+        "equations": true,
+        "figure_captions": true,
+        "tables": true
+      }
+    },
+    "include_heading_ancestry": {
+      "default": true,
+      "type": "boolean"
+    },
+    "maximum_size": {
+      "default": 1500,
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "metadata": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {},
+      "type": "object"
+    },
+    "overlap_source_nodes": {
+      "default": 0,
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "preferred_boundaries": {
+      "default": [
+        "section",
+        "paragraph",
+        "list_item",
+        "table_row",
+        "code_symbol"
+      ],
+      "items": {
+        "$ref": "#/definitions/BoundaryKind"
+      },
+      "type": "array"
+    },
+    "project_metadata": {
+      "default": [],
+      "description": "Node attribute keys copied into deterministic, source-node-keyed metadata arrays.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "schema_version": {
+      "default": "grist/segment-options/v1",
+      "type": "string"
+    },
+    "selection": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/NodeSelectionRules"
+        }
+      ],
+      "default": {
+        "exclude_kinds": [],
+        "include_kinds": [],
+        "required_metadata": {}
+      }
+    },
+    "size_unit": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/SegmentSizeUnit"
+        }
+      ],
+      "default": "unicode_scalars"
+    },
+    "target_size": {
+      "default": 1000,
+      "format": "uint",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "tokenizer": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/TokenizerSpec"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "title": "SegmentOptions",
+  "type": "object"
+}

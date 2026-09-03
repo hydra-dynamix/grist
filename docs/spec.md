@@ -1,6 +1,6 @@
 # Grist Specification
 
-Grist is a Rust library and CLI for interpretation tasks shared across Hydra Dynamix projects. It provides reliable document/code ingestion and model-output normalization without owning downstream policy, orchestration, trust, validation, or canonical-state decisions.
+Grist is a Rust library and CLI for interpretation tasks shared across Hydra Dynamix projects. It provides reliable document/code ingestion and model-output normalization without owning downstream policy, orchestration, trust, validation, or canonical-state decisions. This document describes the public interpretation architecture; the complete implemented selector and feature matrix is maintained in `cross-format-integration.md`.
 
 This spec is grounded in the immediate integration requirements from:
 
@@ -10,11 +10,16 @@ This spec is grounded in the immediate integration requirements from:
 
 ## Goals
 
-- Provide reusable parsing and ingestion primitives for Markdown documents, HTML/HTMX documents and fragments, CSV datasets, Rust, Python, TypeScript/TSX/JSX code, common serializations, and model outputs.
+- Provide reusable parsing and ingestion primitives across the enabled document,
+  publishing, tabular, code, data, message, archive, media, graph, and
+  model-output format families.
 - Expose stable, typed Rust models that serialize to versioned, verifiable JSON.
-- Provide a JSON-only CLI that maps closely to the public library API for agents and end-to-end testing.
+- Provide a JSON-oriented CLI that maps closely to the public library API for
+  agents and end-to-end testing while allowing explicit normalized-text
+  transform targets.
 - Preserve provenance, source ranges, hashes, diagnostics, and parser metadata where useful.
-- Be modular enough to add future parsers such as TSV, notebooks, PDFs, or DOCX without redesigning the core interface.
+- Keep parsers registry-driven and feature-gated so additional formats do not
+  require redesigning the core interface.
 
 ## Non-goals
 
@@ -44,7 +49,12 @@ Expected modules:
 - `grist::python` — tree-sitter-backed Python parsing.
 - `grist::typescript` — tree-sitter-backed TypeScript, TSX, and JSX parsing.
 - `grist::serialization` — JSON, JSONL, YAML, and TOML parsing.
+- `grist::structured_binary` — CBOR, MessagePack, and descriptor-driven Protocol Buffers.
 - `grist::csv` — CSV row/cell parsing with headers, typed scalar inference, source metadata, and diagnostics.
+- `grist::email` — inert RFC 5322/MIME parsing, attachments, and threading evidence.
+- `grist::mbox` — streaming MBOX variants, separator provenance, and aggregate threads.
+- `grist::outlook` — bounded, inert Outlook MSG compound-file and MAPI parsing.
+- `grist::calendar_contact` - inert iCalendar events/time zones and vCard contacts.
 - `grist::model_output` — model-output candidate extraction, normalization, repair, and streaming parsing.
 - `grist::schema` — generated JSON Schema emission and validation helpers.
 - `grist::cli` / binary `grist` — thin JSON-only CLI over the library API.
@@ -61,6 +71,10 @@ Suggested features:
 - `python`
 - `typescript`
 - `serialization`
+- `structured-binary`
+- `columnar`
+- `sqlite`
+- `email-message`
 - `csv`
 - `model-output`
 - `schemas`
@@ -85,7 +99,15 @@ All public CLI/library JSON outputs include explicit schema versions, for exampl
 - `grist/rust-code/v1`
 - `grist/python-code/v1`
 - `grist/typescript-code/v1`
-- `grist/serialization/v1`
+- `grist/structured-text/v2`
+- `grist/structured-binary/v1`
+- `grist/columnar/v1`
+- `grist/sqlite/v1`
+- `grist/email/v1`
+- `grist/mbox/v1`
+- `grist/outlook-msg/v1`
+- `grist/icalendar/v1`
+- `grist/vcard/v1`
 - `grist/csv/v1`
 - `grist/model-output/v1`
 - `grist/repo-ingest/v1`
@@ -252,7 +274,11 @@ Grist does not store raw bytes in normal JSON output by default.
 
 ### Binary files
 
-Initial Grist does not attempt useful binary ingestion or reconstruction. Binary files should be skipped or reported in summaries/diagnostics, not converted into full artifact records.
+Enabled binary and container parsers use bounded, inert ingestion with explicit
+resource budgets, diagnostics, and embedded-artifact provenance. Unsupported or
+disabled formats remain visible in detection, inventory, and capability reports.
+Package reconstruction is never implied by parsing or normalized rendering; a
+format adapter must make any reconstruction claim explicit.
 
 ### File kind classification
 
@@ -413,7 +439,10 @@ Initial common serialization support includes:
 - YAML;
 - TOML.
 
-CSV is a first-class parser and ingestion artifact. It preserves headers, rows, cells, raw cell text, inferred scalar JSON values, source metadata where available, and parser diagnostics. TSV remains deferred until a concrete use case appears, though the CSV parser is delimiter-configurable enough to support tab-delimited input through explicit options.
+CSV and TSV are first-class delimited-data selectors. They preserve dialect
+evidence, headers, rows, cells, raw cell text, inferred scalar JSON values,
+source metadata where available, and parser diagnostics. Explicit delimiter
+options remain available for nonstandard dialects.
 
 Parsing should be modular so additional serialization parsers can be dropped in later.
 
@@ -508,9 +537,11 @@ The streaming event model should remain compatible with the full-response candid
 
 The `grist` CLI is a first-class control surface for agents and end-to-end testing. It should map closely to public library APIs.
 
-All CLI output is JSON. Human-readable or pretty rendering is deferred.
+Structured commands emit typed JSON envelopes, manifests, or documented NDJSON
+event streams. Transform can explicitly emit normalized Markdown, LaTeX, HTML,
+or plain text; help output is human-readable.
 
-Initial commands:
+Representative commands:
 
 ```text
 grist parse markdown <path|->
@@ -521,7 +552,18 @@ grist ingest file <path|->
 grist ingest repo <path>
 grist schema list
 grist schema emit <name>
+grist detect <path|->
+grist inspect <path|->
+grist segment <path|-> --config <options>
+grist render <graph> --to <target>
+grist validate <path> --schema <schema>
+grist transform <path|-> --to <target>
+grist capabilities
 ```
+
+Named parse subcommands cover common formats. Other enabled registry selectors
+use `grist parse <format> <path|->`; `grist capabilities` is the canonical
+compiled-format discovery surface.
 
 Stdin support:
 

@@ -1,0 +1,617 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "JavaScriptAssignment": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "lhs": {
+          "type": "string"
+        },
+        "operator": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "rhs": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "lhs",
+        "range"
+      ],
+      "type": "object"
+    },
+    "JavaScriptBranch": {
+      "properties": {
+        "condition": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "range"
+      ],
+      "type": "object"
+    },
+    "JavaScriptCall": {
+      "properties": {
+        "args": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "target": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "args",
+        "id",
+        "range",
+        "target"
+      ],
+      "type": "object"
+    },
+    "JavaScriptComment": {
+      "properties": {
+        "doc": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "doc",
+        "id",
+        "range",
+        "text"
+      ],
+      "type": "object"
+    },
+    "JavaScriptDialect": {
+      "enum": [
+        "java_script",
+        "jsx"
+      ],
+      "type": "string"
+    },
+    "JavaScriptExport": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "source": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "names",
+        "range"
+      ],
+      "type": "object"
+    },
+    "JavaScriptImport": {
+      "properties": {
+        "default": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "module": {
+          "type": "string"
+        },
+        "names": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "namespace": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        }
+      },
+      "required": [
+        "id",
+        "module",
+        "names",
+        "range"
+      ],
+      "type": "object"
+    },
+    "JavaScriptParseError": {
+      "properties": {
+        "missing": {
+          "type": "boolean"
+        },
+        "node_kind": {
+          "type": "string"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "raw": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "missing",
+        "node_kind",
+        "range",
+        "raw"
+      ],
+      "type": "object"
+    },
+    "JavaScriptReturn": {
+      "properties": {
+        "expression": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        }
+      },
+      "required": [
+        "id",
+        "range"
+      ],
+      "type": "object"
+    },
+    "JavaScriptSymbol": {
+      "properties": {
+        "decorators": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "doc": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "extends": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "implements": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "$ref": "#/definitions/JavaScriptSymbolKind"
+        },
+        "language": {
+          "type": "string"
+        },
+        "modifiers": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "qualified_name": {
+          "type": "string"
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "syntax": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/JavaScriptSyntaxSummary"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "visibility": {
+          "$ref": "#/definitions/JavaScriptVisibility"
+        }
+      },
+      "required": [
+        "decorators",
+        "id",
+        "kind",
+        "language",
+        "modifiers",
+        "name",
+        "qualified_name",
+        "range",
+        "visibility"
+      ],
+      "type": "object"
+    },
+    "JavaScriptSymbolKind": {
+      "enum": [
+        "class",
+        "function",
+        "method",
+        "constructor",
+        "variable",
+        "field",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "JavaScriptSyntaxDetail": {
+      "properties": {
+        "node_count": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "root_kind": {
+          "type": "string"
+        },
+        "root_named_child_count": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "node_count",
+        "root_kind",
+        "root_named_child_count"
+      ],
+      "type": "object"
+    },
+    "JavaScriptSyntaxNode": {
+      "properties": {
+        "error": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "missing": {
+          "type": "boolean"
+        },
+        "named": {
+          "type": "boolean"
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        },
+        "raw": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "id",
+        "kind",
+        "missing",
+        "named",
+        "range",
+        "raw"
+      ],
+      "type": "object"
+    },
+    "JavaScriptSyntaxSummary": {
+      "properties": {
+        "named_child_count": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "node_kind": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "named_child_count",
+        "node_kind"
+      ],
+      "type": "object"
+    },
+    "JavaScriptTest": {
+      "properties": {
+        "framework": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range": {
+          "$ref": "#/definitions/SourceRange"
+        }
+      },
+      "required": [
+        "framework",
+        "id",
+        "name",
+        "range"
+      ],
+      "type": "object"
+    },
+    "JavaScriptVisibility": {
+      "enum": [
+        "public",
+        "protected",
+        "private",
+        "unknown"
+      ],
+      "type": "string"
+    },
+    "SourceRange": {
+      "properties": {
+        "byte_end": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "byte_start": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "end_column": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "end_line": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "start_column": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "start_line": {
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "byte_end",
+        "byte_start",
+        "end_column",
+        "end_line",
+        "start_column",
+        "start_line"
+      ],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "assignments": {
+      "items": {
+        "$ref": "#/definitions/JavaScriptAssignment"
+      },
+      "type": "array"
+    },
+    "branches": {
+      "items": {
+        "$ref": "#/definitions/JavaScriptBranch"
+      },
+      "type": "array"
+    },
+    "calls": {
+      "items": {
+        "$ref": "#/definitions/JavaScriptCall"
+      },
+      "type": "array"
+    },
+    "comments": {
+      "default": [],
+      "items": {
+        "$ref": "#/definitions/JavaScriptComment"
+      },
+      "type": "array"
+    },
+    "detail": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/JavaScriptSyntaxDetail"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "dialect": {
+      "$ref": "#/definitions/JavaScriptDialect"
+    },
+    "exports": {
+      "items": {
+        "$ref": "#/definitions/JavaScriptExport"
+      },
+      "type": "array"
+    },
+    "imports": {
+      "items": {
+        "$ref": "#/definitions/JavaScriptImport"
+      },
+      "type": "array"
+    },
+    "parse_errors": {
+      "items": {
+        "$ref": "#/definitions/JavaScriptParseError"
+      },
+      "type": "array"
+    },
+    "returns": {
+      "items": {
+        "$ref": "#/definitions/JavaScriptReturn"
+      },
+      "type": "array"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "symbols": {
+      "items": {
+        "$ref": "#/definitions/JavaScriptSymbol"
+      },
+      "type": "array"
+    },
+    "syntax_nodes": {
+      "default": [],
+      "items": {
+        "$ref": "#/definitions/JavaScriptSyntaxNode"
+      },
+      "type": "array"
+    },
+    "tests": {
+      "default": [],
+      "items": {
+        "$ref": "#/definitions/JavaScriptTest"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "assignments",
+    "branches",
+    "calls",
+    "dialect",
+    "exports",
+    "imports",
+    "parse_errors",
+    "returns",
+    "schema_version",
+    "symbols"
+  ],
+  "title": "JavaScriptFile",
+  "type": "object"
+}
