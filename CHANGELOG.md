@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0
+
+- Expanded the built-in registry across document, archive, Office, media, structured-data, code, and model-output formats.
+- Added capability discovery, bounded parser execution, provider boundaries, graph projection, schema and fixture contracts, and fuzz regression coverage.
+
 ## 0.1.0
 
 - Initial public Grist release.
