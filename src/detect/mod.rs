@@ -1060,12 +1060,14 @@ fn add_extension_signal(signals: &mut Vec<Signal>, extension: &str) {
         return;
     };
     // JavaScript and TypeScript deliberately share a large grammar subset.
-    // For an explicit primary-language suffix, prefer the caller's dialect
-    // label over a successful probe by the sibling grammar. Decisive magic
-    // evidence can still override this non-decisive extension signal.
+    // Lean is routed through the generic text decoder and its declarations can
+    // resemble TOML assignments or sections. For these explicit source-file
+    // suffixes, prefer the caller's label over a successful sibling or generic
+    // structure probe. Decisive magic evidence can still override this
+    // non-decisive extension signal.
     let weight = if matches!(
         extension,
-        "js" | "mjs" | "cjs" | "jsx" | "ts" | "mts" | "cts" | "tsx"
+        "js" | "mjs" | "cjs" | "jsx" | "ts" | "mts" | "cts" | "tsx" | "lean"
     ) {
         0.82
     } else {
@@ -1756,7 +1758,7 @@ mod tests {
     fn routes_lean_source_through_the_ontology_free_text_decoder() {
         let detection = detect_path(
             Path::new("proof.lean"),
-            b"theorem identity (n : Nat) : n = n := rfl\n",
+            b"import Mathlib\n\nnamespace OAI\nvariable {V : Type} [NormedAddCommGroup V]\ndef value : Nat := 1\n",
             &Limits::default(),
         );
         assert_eq!(detection.content_kind, ContentKind::Text);
