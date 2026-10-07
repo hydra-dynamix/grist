@@ -1167,7 +1167,7 @@ fn extension_identity(extension: &str) -> Option<(&'static str, &'static str)> {
         "cbor" => ("cbor", "application/cbor"),
         "msgpack" | "mpk" => ("messagepack", "application/msgpack"),
         "pb" | "protobuf" => ("protobuf", "application/x-protobuf"),
-        "txt" => ("text", "text/plain"),
+        "txt" | "lean" => ("text", "text/plain"),
         "pdf" => ("pdf", "application/pdf"),
         "zip" => ("zip", "application/zip"),
         "tar" => ("tar", "application/x-tar"),
@@ -1750,5 +1750,17 @@ mod tests {
         assert_eq!(detection.status, DetectionStatus::Selected);
         #[cfg(not(feature = "rust"))]
         assert_eq!(detection.status, DetectionStatus::Unsupported);
+    }
+
+    #[test]
+    fn routes_lean_source_through_the_ontology_free_text_decoder() {
+        let detection = detect_path(
+            Path::new("proof.lean"),
+            b"theorem identity (n : Nat) : n = n := rfl\n",
+            &Limits::default(),
+        );
+        assert_eq!(detection.content_kind, ContentKind::Text);
+        assert_eq!(detection.file_kind, FileKind::Unknown);
+        assert_eq!(detection.status, DetectionStatus::Selected);
     }
 }
